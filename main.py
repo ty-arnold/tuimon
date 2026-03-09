@@ -12,13 +12,7 @@ while True:
     npc_move = get_turn(npc)
     winner = resolve_turn(player, player_move, npc, npc_move)
     if winner:
-        break
-
-
-
-
-
-
-    
-    
-    
+        break  
+    print(winner)
+    player.print_hp()
+    npc.print_hp()

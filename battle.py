@@ -6,19 +6,59 @@ def get_turn(trainer):
     action_selected = False
     move = None
     while not action_selected:
-        action = display_actions(trainer)
+        action = print_actions(trainer)
         if action == 1:
-            move = display_moves(trainer.party[trainer.selected_mon])
-            if move is not None:
-                action_selected = True
+                trainer.active().print_moves()
+                move = get_move(trainer.party[trainer.selected_mon])
+                if move is not None:
+                        action_selected = True
         elif action == 2:
-            pokemon = display_party(trainer)
-            if pokemon is not None:
-                trainer.selected_mon = trainer.party.index(pokemon)
-                action_selected = True
+                trainer.print_party()
+                pokemon = get_party(trainer)
+                if pokemon is not None:
+                        trainer.selected_mon = trainer.party.index(pokemon)
         elif action == 3:
-            pass
+                pass
     return move
+
+def get_party(trainer):
+    while True:
+        try:
+            cancel = len(trainer.party) + 1
+            choice = int(input("Select a Pokemon: "))
+            if choice == cancel and trainer.active().is_alive() == True:
+                return None
+            selected_mon = trainer.party[choice - 1]
+            if not selected_mon.is_alive():
+                print(f"{selected_mon.name} has already fainted! Please select Pokemon.")
+                continue
+            if choice - 1 == trainer.selected_mon:
+                print(f"{selected_mon.name} is already selected!")
+                return None
+            print(f"You selected {selected_mon.name}!")
+            trainer.selected_mon = choice - 1
+            return selected_mon
+        except (ValueError, IndexError):
+            print("Invalid choice, please select again")
+
+def get_move(pokemon):
+    try:
+        while True:
+            try:
+                cancel = len(pokemon.moveset) + 1
+                choice = int(input("Select a Move: "))
+                if choice == cancel:
+                    return None
+                selected_move = pokemon.moveset[choice - 1]
+                print(f"You selected {selected_move.name}!")
+                return pokemon.moveset[choice - 1]
+            except (ValueError, IndexError):
+                print("Invalid choice, please select again")
+                pokemon.list_moves()
+
+    except KeyboardInterrupt:
+        print("\\nGame Over!")
+        sys.exit(0)
 
 def apply_move(move, attacker, defender):
         print(f"{attacker.party[attacker.selected_mon].name} used {move.name}!")
@@ -48,7 +88,7 @@ def apply_move(move, attacker, defender):
         "stat_spd":     ("speed rose",           "speed fell")
         }
 
-        target.hp           += (move.stat_hp * multiplier)
+        target.hp            = max(0,target.hp + (move.stat_hp * multiplier))
         target.max_hp       += move.stat_max_hp
         target.stat_attk    += move.stat_attk
         target.stat_def     += move.stat_def
@@ -77,6 +117,10 @@ def apply_move(move, attacker, defender):
                 elif new_value < old_value:
                         print(f"{target.name}'s {down_message}!")
 
+# def deal_damage:
+
+# def apply_stats:
+
 def get_type_multiplier(move_type, defender_types):
         multiplier = 1
 
@@ -84,22 +128,50 @@ def get_type_multiplier(move_type, defender_types):
                 multiplier *= type_chart.get(move_type, {}).get(defender_type, 1)
         return multiplier
 
-def take_turn(attacker, attacker_choice, defender):
-        apply_move(attacker_choice, attacker, defender)
-        return check_winner(attacker, defender)
-
 def resolve_turn(player, player_choice, npc, npc_choice):
-        if player.party[player.selected_mon].stat_spd > npc.party[npc.selected_mon].stat_spd:
+        if player.active().stat_spd > npc.active().stat_spd:
                 first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
         else:
                 first, first_choice, second, second_choice = npc, npc_choice, player, player_choice
 
-        winner = take_turn(first, first_choice, second)
+        second_mon_before = second.selected_mon
+
+        apply_move(first_choice, first, second)
+        winner = check_winner(player, npc)
         if winner:
-                return winner
-        return take_turn(second, second_choice, first)
+                return True
+        next_mon(player, npc)
+        
+        if second.selected_mon != second_mon_before:
+               return None
+        
+        apply_move(second_choice, second, first)
+        winner = check_winner(player, npc)
+        if winner:
+                return True
+        next_mon(player, npc)
+        return None
+
+def next_mon(player, npc):
+    if not player.party[player.selected_mon].is_alive():
+        print(f"{player.party[player.selected_mon].name} fainted!")
+        player.print_party()
+        new_mon = get_party(player)
+        if new_mon is not None:
+            player.selected_mon = player.party.index(new_mon)
+
+    if not npc.party[npc.selected_mon].is_alive():
+        print(f"{npc.party[npc.selected_mon].name} fainted!")
+        player.print_party()
+        new_mon = get_party(npc)
+        if new_mon is not None:
+            npc.selected_mon = npc.party.index(new_mon)
                 
 def check_winner(player, npc):
+        print(f"DEBUG player party hp: {[p.hp for p in player.party]}")
+        print(f"DEBUG npc party hp: {[p.hp for p in npc.party]}")
+        print(f"DEBUG player alive: {[p.is_alive() for p in player.party]}")
+        print(f"DEBUG npc alive: {[p.is_alive() for p in npc.party]}")
         if not any(pokemon.is_alive() for pokemon in player.party):
                 print(f"{npc.name} Wins!")
                 return True

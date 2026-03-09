@@ -16,6 +16,11 @@ class Pokemon:
     def is_alive(self):
         return self.hp > 0
 
+    def print_moves(self):
+        for i, move in enumerate(self.moveset):
+            print(f"{i + 1}. {move.name}")
+        print(f"{len(self.moveset) + 1}. Cancel")
+
 class Move:
     def __init__(self, name, type, pp, target, stat_hp, stat_max_hp, dmg_type,
                  stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
@@ -41,3 +46,15 @@ class Trainer:
         self.name = name
         self.party = party
         self.selected_mon = selected_mon
+
+    def print_party(self):
+        print(f"{self.name}'s Party:")
+        for i, pokemon in enumerate(self.party):
+            print(f"{i + 1}. {pokemon.name}")
+        print(f"{len(self.party) + 1}. Cancel")
+
+    def print_hp(self):
+        print(f"{self.name}'s {self.active().name}: {self.active().hp}/{self.active().max_hp}") 
+    
+    def active(self):
+        return self.party[self.selected_mon]
