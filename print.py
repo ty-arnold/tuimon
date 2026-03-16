@@ -19,4 +19,10 @@ def print_stats(player, npc):
             print(f"{key}: {value}")
         for key, value in vars(npc.party[npc.selected_mon]).items():
             print(f"{key}: {value}")
+
+def print_status(player, npc):
+        print(f"DEBUG player party hp: {[p.hp for p in player.party]}")
+        print(f"DEBUG npc party hp: {[p.hp for p in npc.party]}")
+        print(f"DEBUG player alive: {[p.is_alive() for p in player.party]}")
+        print(f"DEBUG npc alive: {[p.is_alive() for p in npc.party]}")
             

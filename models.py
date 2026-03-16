@@ -22,22 +22,13 @@ class Pokemon:
         print(f"{len(self.moveset) + 1}. Cancel")
 
 class Move:
-    def __init__(self, name, type, pp, target, stat_hp, stat_max_hp, dmg_type,
-                 stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
+    def __init__(self, name, type, dmg_type, pp, effects):
         self.name = name
         self.type = type
+        self.dmg_type = dmg_type
         self.pp = pp
         self.max_pp = pp
-        self.target = target
-        self.stat_hp = stat_hp
-        self.stat_max_hp = stat_max_hp
-        self.stat_attk = stat_attk
-        self.stat_def = stat_def
-        self.stat_sp_attk =stat_sp_attk
-        self.stat_sp_def = stat_sp_def
-        self.stat_spd = stat_spd
-        self.dmg_type = dmg_type
-
+        self.effects = effects
     def __repr__(self):
         return self.name
 

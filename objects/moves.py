@@ -5,29 +5,19 @@ scratch = Move(
     type = ["Water"],
     dmg_type = "physical",
     pp = 20,
-    target = "opponent",
-    stat_hp = -50,
-    stat_max_hp = 0, 
-    stat_attk = 0,
-    stat_def = 0,
-    stat_sp_attk = 0,
-    stat_sp_def = 0,
-    stat_spd = 0
+    effects = {
+        "opponent" : {"hp": -20},
+    }
 )
 
 thunder = Move(
     name = "Thunder",
     type = ["Normal"],
-    dmg_type = "physical",
+    dmg_type = "special",
     pp = 20,
-    target = "opponent",
-    stat_hp = -50,
-    stat_max_hp = 0, 
-    stat_attk = 0,
-    stat_def = 0,
-    stat_sp_attk = 0,
-    stat_sp_def = 0,
-    stat_spd = 0
+    effects = {
+        "opponent" : {"hp": -20},
+    }
 )
 
 growl = Move(
@@ -35,14 +25,9 @@ growl = Move(
     type = ["Normal"],
     dmg_type = "physical",
     pp = 20,
-    target = "opponent",
-    stat_hp = 0,
-    stat_max_hp = 0,
-    stat_attk = -20,
-    stat_def = 0,
-    stat_sp_attk = 0,
-    stat_sp_def = 0,
-    stat_spd = 0
+    effects = {
+        "opponent" : {"stat_def": -20},
+    }
 )
 
 agility = Move(
@@ -50,12 +35,18 @@ agility = Move(
     type = ["Normal"],
     dmg_type = "physical",
     pp = 20,
-    target = "self",
-    stat_hp = 0, 
-    stat_max_hp = 0,
-    stat_attk = 0,
-    stat_def = 0,
-    stat_sp_attk = 0,
-    stat_sp_def = 0,
-    stat_spd = 50
+    effects = {
+        "opponent" : {"stat_spd": +20},
+    }
+)
+
+DoubleEdge = Move(
+    name="Double Edge",
+    type = ["Normal"],
+    dmg_type=["physical"],
+    pp = 20,
+    effects={
+        "opponent": {"hp": -100},
+        "self":     {"hp": -30}
+    }
 )

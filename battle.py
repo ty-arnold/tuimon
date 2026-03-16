@@ -1,6 +1,7 @@
 from models import Pokemon, Trainer
 from type_chart import type_chart
 from print import *
+import random
 
 def get_turn(trainer):
     action_selected = False
@@ -62,46 +63,31 @@ def get_move(pokemon):
 
 def apply_move(move, attacker, defender):
         print(f"{attacker.party[attacker.selected_mon].name} used {move.name}!")
-        if move.target == "self":
-                target = attacker.party[attacker.selected_mon]
-                multiplier = 1
-        else:
-                target = defender.party[defender.selected_mon]
-                multiplier = get_type_multiplier(move.type[0], defender.party[defender.selected_mon].type)
 
-        old_stats = {
-        "hp":           target.hp,
-        "max_hp":       target.max_hp,
-        "stat_attk":    target.stat_attk,
-        "stat_def":     target.stat_def,
-        "stat_sp_attk": target.stat_sp_attk,
-        "stat_sp_def":  target.stat_sp_def,
-        "stat_spd":     target.stat_spd
-        }
+        for target_type, stat_changes in move.effects.items():
+                if target_type == "self":
+                        target = attacker.active()
+                        multiplier = 1
+                elif target_type == "opponent":
+                        target = defender.active()
+                        multiplier = get_type_multiplier(move.type[0], defender.active().type)
+                elif target_type == "random":
+                        target = random.choice([attacker.active(), defender.active()])
+                        if target == attacker.active():
+                              multiplier = 1
+                        else:
+                             multiplier = get_type_multiplier(move.type[0], defender.active().type) 
 
-        messages = {
-        "max_hp":       ("max HP increased",     "max HP decreased"),
-        "stat_attk":    ("attack rose",          "attack fell"),
-        "stat_def":     ("defense rose",         "defense fell"),
-        "stat_sp_attk": ("sp. attack rose",      "sp. attack fell"),
-        "stat_sp_def":  ("sp. defense rose",     "sp. defense fell"),
-        "stat_spd":     ("speed rose",           "speed fell")
-        }
+        old_stats = {stat: getattr(target, stat) for stat in stat_changes}
 
-        target.hp            = max(0,target.hp + (move.stat_hp * multiplier))
-        target.max_hp       += move.stat_max_hp
-        target.stat_attk    += move.stat_attk
-        target.stat_def     += move.stat_def
-        target.stat_sp_attk += move.stat_sp_attk
-        target.stat_sp_def  += move.stat_sp_def
-        target.stat_spd     += move.stat_spd
-        
-        if target.hp > old_stats["hp"]:
-                print(f"{target.name} gained {abs(move.stat_hp)} HP!")
-        elif target.hp < old_stats["hp"]:
-                print(f"{target.name} took {abs((move.stat_hp * multiplier))} Damage!")
+        for stat, value in stat_changes.items():
+                current = getattr(target, stat)
+                if stat == "hp":
+                      setattr(target, stat, max(0, current + (value * multiplier)))
+                else:
+                      setattr(target, stat, current + value)
 
-        if move.target == "opponent":
+        if target_type == "opponent":
                 if multiplier == 0:
                         print("It had no effect!")
                 elif multiplier < 1:
@@ -109,17 +95,26 @@ def apply_move(move, attacker, defender):
                 elif multiplier > 1:
                         print("It's super effective!")
 
-        for stat, (up_message, down_message) in messages.items():
+        messages = {
+        "hp":           (" gained {diff} HP",          " took {diff} damage"),
+        "max_hp":       ("'s max HP increased by {diff}", "'s max HP decreased by {diff}"),
+        "stat_attk":    ("'s attack rose by {diff}",      "'s attack fell by {diff}"),
+        "stat_def":     ("'s defense rose by {diff}",     "'s defense fell by {diff}"),
+        "stat_sp_attk": ("'s sp. attack rose by {diff}",  "'s sp. attack fell by {diff}"),
+        "stat_sp_def":  ("'s sp. defense rose by {diff}", "'s sp. defense fell by {diff}"),
+        "stat_spd":     ("'s speed rose by {diff}",       "'s speed fell by {diff}")
+        }
+
+        for stat, old_value in old_stats.items():
                 new_value = getattr(target, stat)
-                old_value = old_stats[stat]
+                diff = abs(new_value - old_value)
+                up_message, down_message = messages[stat]
                 if new_value > old_value:
-                        print(f"{target.name}'s {up_message}!")
+                        print(f"{target.name}{up_message.format(diff=diff)}!")
                 elif new_value < old_value:
-                        print(f"{target.name}'s {down_message}!")
+                        print(f"{target.name}{down_message.format(diff=diff)}!")
 
-# def deal_damage:
-
-# def apply_stats:
+        print_status(attacker, defender)
 
 def get_type_multiplier(move_type, defender_types):
         multiplier = 1
@@ -168,10 +163,6 @@ def next_mon(player, npc):
             npc.selected_mon = npc.party.index(new_mon)
                 
 def check_winner(player, npc):
-        print(f"DEBUG player party hp: {[p.hp for p in player.party]}")
-        print(f"DEBUG npc party hp: {[p.hp for p in npc.party]}")
-        print(f"DEBUG player alive: {[p.is_alive() for p in player.party]}")
-        print(f"DEBUG npc alive: {[p.is_alive() for p in npc.party]}")
         if not any(pokemon.is_alive() for pokemon in player.party):
                 print(f"{npc.name} Wins!")
                 return True
