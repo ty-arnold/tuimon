@@ -1,4 +1,5 @@
 from models import Move
+from objects.status_effects import paralysis, poison, burn, freeze, sleep
 
 scratch = Move(
     name = "Scratch",
@@ -40,7 +41,7 @@ agility = Move(
     }
 )
 
-DoubleEdge = Move(
+doubleedge = Move(
     name="Double Edge",
     type = ["Normal"],
     dmg_type=["physical"],
@@ -49,4 +50,15 @@ DoubleEdge = Move(
         "opponent": {"hp": -100},
         "self":     {"hp": -30}
     }
+)
+
+toxic = Move(
+    name = "Toxic",
+    type = ["Poison"],
+    dmg_type = ["physical"],
+    pp = 20,
+    effects = {
+        "opponent": {"hp": -20},
+    },
+    status_effect = poison
 )
