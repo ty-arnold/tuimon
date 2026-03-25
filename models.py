@@ -37,10 +37,13 @@ class Pokemon:
         print(f"{len(self.moveset) + 1}. Cancel")
 
 class Move:
-    def __init__(self, name, type, dmg_type, pp, effects, status_effect=None):
+    def __init__(self, name, type, category, power, acc, pp, effects, status_effect=None, recoil=0.0):
         self.name = name
         self.type = type
-        self.dmg_type = dmg_type
+        self.category = category
+        self.power = power
+        self.recoil = recoil
+        self.acc = acc
         self.pp = pp
         self.max_pp = pp
         self.effects = effects
