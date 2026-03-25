@@ -16,9 +16,12 @@ test = Move(
     type = ["Normal"],
     category = "physical",
     power = 60,
-    acc = 0.0,
+    acc = 1.0,
     pp = 20,
-    effects = {}
+    effects = {
+        "self":     {"stat_spd": +20},  
+        "opponent": {"stat_spd": -20}
+    }
 )
 
 thunder = Move(

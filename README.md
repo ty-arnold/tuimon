@@ -1,6 +1,6 @@
 # TODO
 
-- add physical/special split
+- implement stat changes as stages (instead of fixed +/- values it increments or deincrements a staged amount)
 - flesh out move application
   - moves like confusion
   - add turn sensitive status moves
@@ -26,3 +26,4 @@
   - [x] moves
   - [x] items
   - [x] swap pokemon
+- [x] add physical/special split
