@@ -62,172 +62,172 @@ def get_move(pokemon):
         sys.exit(0)
 
 def apply_move(move, attacker, defender):
-        print(f"{attacker.active().name} used {move.name}!")
+    print(f"{attacker.active().name} used {move.name}!")
 
-        if random.random() > move.acc:
-                print(f"{attacker.active().name}'s attack missed!")
-                return None
+    if random.random() > move.acc:
+        print(f"{attacker.active().name}'s attack missed!")
+        return None
 
-        old_stats = []
+    old_stats = []
 
-        if move.category != "status":
-                damage, multiplier = calculate_damage(move, attacker, defender)
-                target = defender.active()
+    if move.category != "status":
+        damage, multiplier = calculate_damage(move, attacker, defender)
+        target = defender.active()
 
-                old_stats.append(("hp", target.hp, target))
-                target.hp = max(0, target.hp - damage)
+        old_stats.append(("hp", target.hp, target))
+        target.hp = max(0, target.hp - damage)
 
-                if multiplier == 0:
-                        print("It had no effect!")
-                elif multiplier < 1:
-                        print("It's not very effective...")
-                elif multiplier > 1:
-                        print("It's super effective!")
+        if multiplier == 0:
+            print("It had no effect!")
+        elif multiplier < 1:
+            print("It's not very effective...")
+        elif multiplier > 1:
+            print("It's super effective!")
 
-                if move.recoil > 0:
-                        recoil_damage = int(damage * move.recoil)
-                        old_stats.append(("recoil_hp", attacker.active().hp, attacker.active()))
-                        attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-                        print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
+        if move.recoil > 0:
+            recoil_damage = int(damage * move.recoil)
+            old_stats.append(("recoil_hp", attacker.active().hp, attacker.active()))
+            attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
+            print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
-        for target_type, stat_changes in move.effects.items():
-                if target_type == "self":
-                        target = attacker.active()
-                elif target_type == "opponent":
-                        target = defender.active()
-                elif target_type == "random":
-                        target = random.choice([attacker.active(), defender.active()])
+    for target_type, stat_changes in move.effects.items():
+        if target_type == "self":
+            target = attacker.active()
+        elif target_type == "opponent":
+            target = defender.active()
+        elif target_type == "random":
+            target = random.choice([attacker.active(), defender.active()])
 
-                for stat, value in stat_changes.items():
-                        old_stats.append((stat, getattr(target, stat), target))
-                        current = getattr(target, stat)
-                        if stat == "hp":
-                                setattr(target, stat, max(0, int(current + value)))
-                        else:
-                                setattr(target, stat, int(current + value))
+        for stat, value in stat_changes.items():
+            old_stats.append((stat, getattr(target, stat), target))
+            current = getattr(target, stat)
+            if stat == "hp":
+                setattr(target, stat, max(0, int(current + value)))
+            else:
+                setattr(target, stat, int(current + value))
 
         damage_messages = {
-                "hp":           (" gained {diff} HP",               " took {diff} damage"),
-                "max_hp":       ("'s max HP increased by {diff}",   "'s max HP decreased by {diff}"),
-                "stat_attk":    ("'s attack rose by {diff}",        "'s attack fell by {diff}"),
-                "stat_def":     ("'s defense rose by {diff}",       "'s defense fell by {diff}"),
-                "stat_sp_attk": ("'s sp. attack rose by {diff}",    "'s sp. attack fell by {diff}"),
-                "stat_sp_def":  ("'s sp. defense rose by {diff}",   "'s sp. defense fell by {diff}"),
-                "stat_spd":     ("'s speed rose by {diff}",         "'s speed fell by {diff}")
+            "hp":           (" gained {diff} HP",               " took {diff} damage"),
+            "max_hp":       ("'s max HP increased by {diff}",   "'s max HP decreased by {diff}"),
+            "stat_attk":    ("'s attack rose by {diff}",        "'s attack fell by {diff}"),
+            "stat_def":     ("'s defense rose by {diff}",       "'s defense fell by {diff}"),
+            "stat_sp_attk": ("'s sp. attack rose by {diff}",    "'s sp. attack fell by {diff}"),
+            "stat_sp_def":  ("'s sp. defense rose by {diff}",   "'s sp. defense fell by {diff}"),
+            "stat_spd":     ("'s speed rose by {diff}",         "'s speed fell by {diff}")
         }
 
         for stat, old_value, target in old_stats:
-                new_value = getattr(target, stat)
-                diff = abs(new_value - old_value)
-                up_message, down_message = damage_messages[stat]
-                if new_value > old_value:
-                        print(f"{target.name}{up_message.format(diff=diff)}!")
-                elif new_value < old_value:
-                        print(f"{target.name}{down_message.format(diff=diff)}!")
+            new_value = getattr(target, stat)
+            diff = abs(new_value - old_value)
+            up_message, down_message = damage_messages[stat]
+            if new_value > old_value:
+                print(f"{target.name}{up_message.format(diff=diff)}!")
+            elif new_value < old_value:
+                print(f"{target.name}{down_message.format(diff=diff)}!")
 
         if move.status_effect is not None:
-                effect = move.status_effect
-                status_messages = {
+            effect = move.status_effect
+            status_messages = {
                 "Poison":    " was poisoned!",
                 "Paralysis": " was paralyzed!",
                 "Sleep":     " was put to sleep!",
                 "Burn":      " was burned!",
                 "Freeze":    " was frozen!",
-                }
-                if not any(e.name == effect.name for e in defender.active().status_effect):
-                        if random.random() < effect.chance_to_apply:
-                                print(f"{defender.active().name}{status_messages[effect.name]}")
-                                defender.active().apply_status_effect(effect)
-                        else:
-                                print(f"{defender.active().name} is already affected by {effect.name}!")
+            }
+            if not any(e.name == effect.name for e in defender.active().status_effect):
+                if random.random() < effect.chance_to_apply:
+                    print(f"{defender.active().name}{status_messages[effect.name]}")
+                    defender.active().apply_status_effect(effect)
+                else:
+                    print(f"{defender.active().name} is already affected by {effect.name}!")
 
 def calculate_damage(move, attacker, defender):
-        if move.category == "physical":
-                attack_stat = attacker.active().stat_attk
-                defense_stat = defender.active().stat_def
-        elif move.category == "special":
-                attack_stat = attacker.active().stat_sp_attk
-                defense_stat = defender.active().stat_sp_def
-        else:
-                return 0, 1
+    if move.category == "physical":
+        attack_stat = attacker.active().stat_attk
+        defense_stat = defender.active().stat_def
+    elif move.category == "special":
+        attack_stat = attacker.active().stat_sp_attk
+        defense_stat = defender.active().stat_sp_def
+    else:
+        return 0, 1
         
-        multiplier = get_type_multiplier(move.type[0], defender.active().type)
+    multiplier = get_type_multiplier(move.type[0], defender.active().type)
 
-        critical = 2 if random.random() < (1/16) else 1
-        if critical == 2:
-               print("Critical hit!")
+    critical = 2 if random.random() < (1/16) else 1
+    if critical == 2:
+        print("Critical hit!")
 
-        stab = 1.5 if attacker.active().type == move.type[0] else 1
+    stab = 1.5 if attacker.active().type == move.type[0] else 1
 
-        damage = int(
-                (((2 * attacker.active().lvl * critical / 5) + 2) * move.power * (attack_stat / defense_stat) / 50 + 2)
-                * multiplier * stab
-        )
-        return damage, multiplier
+    damage = int(
+        (((2 * attacker.active().lvl * critical / 5) + 2) * move.power * (attack_stat / defense_stat) / 50 + 2)
+        * multiplier * stab
+    )
+    return damage, multiplier
         
 def process_status_effects(pokemon):
-        effects_to_remove = []
-        for effect in pokemon.status_effect:
-                match effect.name:
-                        case "Poison":
-                                print(f"{pokemon.name} was hurt my poison!")
-                                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
-                        case "Burn":
-                                print(f"{pokemon.name} was hurt by burn!")
-                                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
+    effects_to_remove = []
+    for effect in pokemon.status_effect:
+        match effect.name:
+            case "Poison":
+                print(f"{pokemon.name} was hurt my poison!")
+                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
+            case "Burn":
+                print(f"{pokemon.name} was hurt by burn!")
+                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
                               
-                if effect.check_should_end():
-                        effects_to_remove.append(effect)
+        if effect.check_should_end():
+            effects_to_remove.append(effect)
                 
-                if effect in effects_to_remove:
-                       pokemon.remove_status_effect(effect)
+        if effect in effects_to_remove:
+            pokemon.remove_status_effect(effect)
                               
 def check_can_act(pokemon):
-       return all(effect.can_act() for effect in pokemon.status_effect)
+    return all(effect.can_act() for effect in pokemon.status_effect)
 
 def get_type_multiplier(move_type, defender_types):
-        multiplier = 1
+    multiplier = 1
 
-        for defender_type in defender_types:
-                multiplier *= type_chart.get(move_type, {}).get(defender_type, 1)
-        return multiplier
+    for defender_type in defender_types:
+        multiplier *= type_chart.get(move_type, {}).get(defender_type, 1)
+    return multiplier
 
 def resolve_turn(player, player_choice, npc, npc_choice):
-        player_can_act = check_can_act(player.active())
-        npc_can_act = check_can_act(npc.active())
+    player_can_act = check_can_act(player.active())
+    npc_can_act = check_can_act(npc.active())
 
-        if player.active().stat_spd > npc.active().stat_spd:
-                first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
-                first_can_act, second_can_act = player_can_act, npc_can_act
-        else:
-                first, first_choice, second, second_choice = npc, npc_choice, player, player_choice
-                first_can_act, second_can_act = npc_can_act, player_can_act
+    if player.active().stat_spd > npc.active().stat_spd:
+        first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
+        first_can_act, second_can_act = player_can_act, npc_can_act
+    else:
+        first, first_choice, second, second_choice = npc, npc_choice, player, player_choice
+        first_can_act, second_can_act = npc_can_act, player_can_act
 
-        second_mon_before = second.selected_mon
+    second_mon_before = second.selected_mon
 
-        if first_can_act:
-                apply_move(first_choice, first, second)
-                winner = check_winner(player, npc)
-                if winner:
-                        return True
-                next_mon(player, npc)
-        
-        if second.selected_mon != second_mon_before:
-               return None
-        
-        if second_can_act:
-                apply_move(second_choice, second, first)
-                winner = check_winner(player, npc)
-                if winner:
-                        return True
-                next_mon(player, npc)
-
-        process_status_effects(first.active())
-        process_status_effects(second.active())
+    if first_can_act:
+        apply_move(first_choice, first, second)
         winner = check_winner(player, npc)
         if winner:
-                return True
+            return True
+        next_mon(player, npc)
+        
+    if second.selected_mon != second_mon_before:
         return None
+        
+    if second_can_act:
+        apply_move(second_choice, second, first)
+        winner = check_winner(player, npc)
+        if winner:
+            return True
+        next_mon(player, npc)
+
+    process_status_effects(first.active())
+    process_status_effects(second.active())
+    winner = check_winner(player, npc)
+    if winner:
+        return True
+    return None
 
 def next_mon(player, npc):
     if not player.party[player.selected_mon].is_alive():
@@ -245,10 +245,10 @@ def next_mon(player, npc):
             npc.selected_mon = npc.party.index(new_mon)
                 
 def check_winner(player, npc):
-        if not any(pokemon.is_alive() for pokemon in player.party):
-                print(f"{npc.name} Wins!")
-                return True
-        if not any(pokemon.is_alive() for pokemon in npc.party):
-                print(f"{player.name} Wins!")
-                return True
-        return None
+    if not any(pokemon.is_alive() for pokemon in player.party):
+        print(f"{npc.name} Wins!")
+        return True
+    if not any(pokemon.is_alive() for pokemon in npc.party):
+        print(f"{player.name} Wins!")
+        return True
+    return None
