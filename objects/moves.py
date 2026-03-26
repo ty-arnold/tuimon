@@ -19,8 +19,8 @@ test = Move(
     acc = 1.0,
     pp = 20,
     effects = {
-        "self":     {"stat_spd": +20},  
-        "opponent": {"stat_spd": -20}
+        "self":     {"stat_spd": +1},  
+        "opponent": {"stat_spd": -2}
     }
 )
 
@@ -42,7 +42,7 @@ growl = Move(
     acc = 0.85,
     pp = 20,
     effects = {
-        "opponent" : {"stat_def": -20},
+        "opponent" : {"stat_def": -1},
     }
 )
 
@@ -54,7 +54,7 @@ agility = Move(
     acc = 0.75,
     pp = 20,
     effects = {
-        "opponent" : {"stat_spd": +20},
+        "opponent" : {"stat_spd": +2},
     }
 )
 

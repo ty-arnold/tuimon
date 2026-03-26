@@ -1,6 +1,7 @@
 from models import Pokemon, Trainer
 from type_chart import type_chart
 from print import *
+from mult_tables import *
 import random
 
 def get_turn(trainer):
@@ -64,7 +65,9 @@ def get_move(pokemon):
 def apply_move(move, attacker, defender):
     print(f"{attacker.active().name} used {move.name}!")
 
-    if random.random() > move.acc:
+    move_acc = move.acc * acc_table[attacker.active().stage_acc]
+    evasion  = acc_table[defender.active().stage_eva]
+    if random.random() > move_acc * evasion:
         print(f"{attacker.active().name}'s attack missed!")
         return None
 
@@ -74,7 +77,7 @@ def apply_move(move, attacker, defender):
         damage, multiplier = calculate_damage(move, attacker, defender)
         target = defender.active()
 
-        old_stats.append(("hp", target.hp, target))
+        old_stats.append(("hp", target.hp, target, 0))
         target.hp = max(0, target.hp - damage)
 
         if multiplier == 0:
@@ -98,15 +101,27 @@ def apply_move(move, attacker, defender):
         elif target_type == "random":
             target = random.choice([attacker.active(), defender.active()])
 
-        for stat, value in stat_changes.items():
-            old_stats.append((stat, getattr(target, stat), target))
-            current = getattr(target, stat)
-            if stat == "hp":
-                setattr(target, stat, max(0, int(current + value)))
-            else:
-                setattr(target, stat, int(current + value))
+        for stat, change in stat_changes.items():
+            stage_attr = "stage_" + stat.replace("stat_", "")
+            old_stage = getattr(target, f"stage_{stat.replace('stat_', '')}")
+
+            print(f"DEBUG target: {target.name}")
+            print(f"DEBUG stat: {stat}")
+            print(f"DEBUG change: {change}")
+            print(f"DEBUG stage before: {getattr(target, stage_attr)}")
+
+            actual_change = target.apply_stage_change(stat, change)
+
+            print(f"DEBUG stage after: {getattr(target, stage_attr)}")
+
+            old_stats.append((stat, old_stage, target, actual_change))
 
         damage_messages = {
+        "hp":           (" gained {diff} HP",             " took {diff} damage"),
+        "recoil_hp":    (" took {diff} recoil damage",    " took {diff} recoil damage"),
+        }
+
+        stage_messages = {
             "hp":           (" gained {diff} HP",               " took {diff} damage"),
             "max_hp":       ("'s max HP increased by {diff}",   "'s max HP decreased by {diff}"),
             "stat_attk":    ("'s attack rose by {diff}",        "'s attack fell by {diff}"),
@@ -116,14 +131,28 @@ def apply_move(move, attacker, defender):
             "stat_spd":     ("'s speed rose by {diff}",         "'s speed fell by {diff}")
         }
 
-        for stat, old_value, target in old_stats:
-            new_value = getattr(target, stat)
-            diff = abs(new_value - old_value)
-            up_message, down_message = damage_messages[stat]
-            if new_value > old_value:
-                print(f"{target.name}{up_message.format(diff=diff)}!")
-            elif new_value < old_value:
-                print(f"{target.name}{down_message.format(diff=diff)}!")
+        stage_amount = {1: "", 2: " sharply", 3: " drastically"}
+
+        for stat, old_value, target, actual_change in old_stats:
+            if stat in damage_messages:
+                new_value = getattr(target, stat) if stat != "recoil_hp" else target.hp
+                diff = abs(new_value - old_value)
+                up_message, down_message = damage_messages[stat]
+                if new_value > old_value:
+                    print(f"{target.name}{up_message.format(diff=diff)}!")
+                elif new_value < old_value:
+                    print(f"{target.name}{down_message.format(diff=diff)}!")
+
+            elif stat in stage_messages:
+                if actual_change == 0:
+                    print(f"{target.name}'s {stat} won't go any further!")
+                else:
+                    up_message, down_message = stage_messages[stat]
+                    amount = stage_amount.get(abs(actual_change), " drastically")
+                    if actual_change > 0:
+                        print(f"{target.name}{up_message}{amount}!")
+                    elif actual_change < 0:
+                        print(f"{target.name}{down_message}{amount}!")
 
         if move.status_effect is not None:
             effect = move.status_effect
@@ -143,11 +172,11 @@ def apply_move(move, attacker, defender):
 
 def calculate_damage(move, attacker, defender):
     if move.category == "physical":
-        attack_stat = attacker.active().stat_attk
-        defense_stat = defender.active().stat_def
+        attack_stat = attacker.active().get_stat("stat_attk")
+        defense_stat = defender.active().get_stat("stat_def")
     elif move.category == "special":
-        attack_stat = attacker.active().stat_sp_attk
-        defense_stat = defender.active().stat_sp_def
+        attack_stat = attacker.active().get_stat("stat_attk")
+        defense_stat = defender.active().get_stat("stat_def")
     else:
         return 0, 1
         
@@ -196,7 +225,7 @@ def resolve_turn(player, player_choice, npc, npc_choice):
     player_can_act = check_can_act(player.active())
     npc_can_act = check_can_act(npc.active())
 
-    if player.active().stat_spd > npc.active().stat_spd:
+    if player.active().get_stat("stat_spd") > npc.active().get_stat("stat_spd"):
         first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
         first_can_act, second_can_act = player_can_act, npc_can_act
     else:

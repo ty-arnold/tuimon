@@ -1,23 +1,61 @@
 import random
+from mult_tables import *
 
 class Pokemon:
     def __init__(self, name, lvl, type, moveset, stat_hp, 
                  stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
-        self.name = name
-        self.lvl = lvl
-        self.type = type
-        self.hp = ((((2 * stat_hp) * lvl))/100) + lvl + 10
-        self.max_hp = self.hp
+        self.name    = name
+        self.lvl     = lvl
+        self.type    = type
+        self.hp      = ((((2 * stat_hp) * lvl))/100) + lvl + 10
+        self.max_hp  = self.hp
         self.moveset = moveset
-        self.stat_attk = stat_attk
-        self.stat_def = stat_def
-        self.stat_sp_attk = stat_sp_attk
-        self.stat_sp_def = stat_sp_def
-        self.stat_spd = stat_spd
-        self.status_effect = []
 
+        self.base_stat_attk    = stat_attk
+        self.base_stat_def     = stat_def
+        self.base_stat_sp_attk = stat_sp_attk
+        self.base_stat_sp_def  = stat_sp_def
+        self.base_stat_spd     = stat_spd
+
+        self.stage_attk    = 0
+        self.stage_def     = 0
+        self.stage_sp_attk = 0
+        self.stage_sp_def  = 0
+        self.stage_spd     = 0
+        self.stage_acc     = 0
+        self.stage_eva     = 0 
+
+        self.status_effect = []
+        
     def is_alive(self):
         return self.hp > 0
+    
+    def get_stat(self, stat):
+        stage_map = {
+            "stat_attk":    (self.base_stat_attk,    self.stage_attk),
+            "stat_def":     (self.base_stat_def,     self.stage_def),
+            "stat_sp_attk": (self.base_stat_sp_attk, self.stage_sp_attk),
+            "stat_sp_def":  (self.base_stat_sp_def,  self.stage_sp_def),
+            "stat_spd":     (self.base_stat_spd,     self.stage_spd),
+        }
+        base, stage = stage_map[stat]
+        return int(base * stat_table[stage])
+
+    def apply_stage_change(self, stat, change):
+        stage_attr = {
+            "stat_attk":    "stage_attk",
+            "stat_def":     "stage_def",
+            "stat_sp_attk": "stage_sp_attk",
+            "stat_sp_def":  "stage_sp_def",
+            "stat_spd":     "stage_spd",
+            "acc":          "stage_acc",
+            "eva":          "stage_eva"
+        }
+        attr = stage_attr[stat]
+        current_stage = getattr(self, attr)
+        new_stage = max(-6, min(6, current_stage + change))
+        setattr(self, attr, new_stage)
+        return new_stage - current_stage
     
     def apply_status_effects(self, effect):
         for stat, multiplier in effect.stat_changes.items():
