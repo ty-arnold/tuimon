@@ -27,16 +27,6 @@ def print_battle_status(player, npc):
     print(f"DEBUG npc alive: {[p.is_alive() for p in npc.party]}")
 
 def print_stat_changes(old_stats):
-    stat_messages = {
-        "stat_attk":    ("'s attack rose",        "'s attack fell"),
-        "stat_def":     ("'s defense rose",       "'s defense fell"),
-        "stat_sp_attk": ("'s sp. attack rose",    "'s sp. attack fell"),
-        "stat_sp_def":  ("'s sp. defense rose",   "'s sp. defense fell"),
-        "stat_spd":     ("'s speed rose",         "'s speed fell"),
-        "acc":          ("'s accuracy rose",      "'s accuracy fell"),
-        "eva":          ("'s evasion rose",       "'s evasion fell")
-    }
-
     stat_name = {
         "stat_attk":    "Attack",
         "stat_def":     "Defense",
@@ -45,6 +35,16 @@ def print_stat_changes(old_stats):
         "stat_spd":     "Speed",
         "acc":          "Accuracy",
         "eva":          "Evasion"
+    }
+
+    stat_messages = {
+        "stat_attk":    ("'s attack rose",        "'s attack fell"),
+        "stat_def":     ("'s defense rose",       "'s defense fell"),
+        "stat_sp_attk": ("'s sp. attack rose",    "'s sp. attack fell"),
+        "stat_sp_def":  ("'s sp. defense rose",   "'s sp. defense fell"),
+        "stat_spd":     ("'s speed rose",         "'s speed fell"),
+        "acc":          ("'s accuracy rose",      "'s accuracy fell"),
+        "eva":          ("'s evasion rose",       "'s evasion fell")
     }
 
     stage_amount = {
@@ -56,8 +56,8 @@ def print_stat_changes(old_stats):
     for stat, old_value, target, actual_change in old_stats:
         if stat in stat_messages:
             if actual_change == 0:
-                stat_name = stat_name.get(stat, stat)
-                print(f"{target.name}'s {stat_name} won't go any further!")
+                display_name = stat_name.get(stat, stat)
+                print(f"{target.name}'s {display_name} won't go any further!")
             else:
                 up_message, down_message = stat_messages[stat]
                 amount = stage_amount.get(abs(actual_change), " drastically")
