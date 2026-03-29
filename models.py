@@ -57,14 +57,14 @@ class Pokemon:
         setattr(self, attr, new_stage)
         return new_stage - current_stage
     
-    def apply_status_effects(self, effect):
+    def apply_status_effect(self, effect):
         for stat, multiplier in effect.stat_changes.items():
             original = getattr(self, stat)
             effect.applied_changes[stat] = original
             setattr(self, stat, int(original * multiplier))
         self.status_effect.append(effect)
 
-    def remove_status_effects(self, effect):
+    def remove_status_effect(self, effect):
         for stat, original_value in effect.applied_changes.items():
             setattr(self, stat, original_value)
             self.status_effect.remove(effect)
@@ -103,7 +103,7 @@ class StatusEffect:
         if self.chance_to_act < 1.0:
             if random.random() > self.chance_to_act:
                 return False
-            return True
+        return True
         
     def check_should_end(self):
         if self.duration is not None:

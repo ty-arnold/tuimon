@@ -1,12 +1,11 @@
 # TODO
 
-- implement stat changes as stages (instead of fixed +/- values it increments or deincrements a staged amount)
 - flesh out move application
   - moves like confusion
-  - add turn sensitive status moves
+  - [x] add turn sensitive status moves
   - add moves that trigger multiple times (ex: bullet seed)
-  - order of operations for applying stats + dealing damage
-  - allow application of moves to both attacker and defender
+  - [x] order of operations for applying stats + dealing damage
+  - [x] allow application of moves to both attacker and defender
   - logic for moves like fly and substitute
 - get player name/selected pokemon
 - flesh out item system
@@ -19,6 +18,7 @@
 
 ## Completed
 
+- [x] implement stat changes as stages (instead of fixed +/- values it increments or deincrements a staged amount)
 - [x] add logic for multiple pokemon per trainer
   - [x] swap to next pokemon when active one dies
   - [x] check all pokemon of specific trainer when checking for winner

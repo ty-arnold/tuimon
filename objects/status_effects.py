@@ -2,7 +2,8 @@ from models import StatusEffect
 
 poison = StatusEffect(
     name = "Poison",
-    chance_to_apply = 1.0
+    chance_to_apply = 1.0,
+    chance_to_end = 0.5
 )
 
 paralysis = StatusEffect(

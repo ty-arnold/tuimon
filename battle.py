@@ -63,112 +63,57 @@ def get_move(pokemon):
         sys.exit(0)
 
 def apply_move(move, attacker, defender):
+    old_stats = []
+    damage = float
+
+    can_act, reason = check_can_act(attacker.active())
+    if not can_act:
+        print_cant_act(attacker, reason)
+        return None
+
     print(f"{attacker.active().name} used {move.name}!")
 
+    if check_accuracy(move, attacker, defender) is not True:
+        return None
+
+    if move.category != "status":
+        damage = apply_damage(move, attacker, defender)
+
+    if move.recoil > 0:
+        apply_recoil(move, attacker, damage)
+
+    if move.effects:
+        old_stats = apply_stats(move, attacker, defender, old_stats)
+        print_stat_changes(old_stats)
+
+    if move.status_effect is not None:
+        afflicted, effect = apply_status_effect(move, defender)
+        print_status_effect(defender.active(), effect, afflicted)
+
+def check_accuracy(move, attacker, defender):
     move_acc = move.acc * acc_table[attacker.active().stage_acc]
     evasion  = acc_table[defender.active().stage_eva]
     if random.random() > move_acc * evasion:
         print(f"{attacker.active().name}'s attack missed!")
-        return None
+        return False
+    else:
+        return True
 
-    old_stats = []
+def apply_damage(move, attacker, defender):
+    damage, multiplier = calculate_damage(move, attacker, defender)
+    target = defender.active()
 
-    if move.category != "status":
-        damage, multiplier = calculate_damage(move, attacker, defender)
-        target = defender.active()
+    target.hp = max(0, target.hp - damage)
 
-        old_stats.append(("hp", target.hp, target, 0))
-        target.hp = max(0, target.hp - damage)
-
-        if multiplier == 0:
-            print("It had no effect!")
-        elif multiplier < 1:
-            print("It's not very effective...")
-        elif multiplier > 1:
-            print("It's super effective!")
-
-        if move.recoil > 0:
-            recoil_damage = int(damage * move.recoil)
-            old_stats.append(("recoil_hp", attacker.active().hp, attacker.active()))
-            attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-            print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
-
-    for target_type, stat_changes in move.effects.items():
-        if target_type == "self":
-            target = attacker.active()
-        elif target_type == "opponent":
-            target = defender.active()
-        elif target_type == "random":
-            target = random.choice([attacker.active(), defender.active()])
-
-        for stat, change in stat_changes.items():
-            stage_attr = "stage_" + stat.replace("stat_", "")
-            old_stage = getattr(target, f"stage_{stat.replace('stat_', '')}")
-
-            print(f"DEBUG target: {target.name}")
-            print(f"DEBUG stat: {stat}")
-            print(f"DEBUG change: {change}")
-            print(f"DEBUG stage before: {getattr(target, stage_attr)}")
-
-            actual_change = target.apply_stage_change(stat, change)
-
-            print(f"DEBUG stage after: {getattr(target, stage_attr)}")
-
-            old_stats.append((stat, old_stage, target, actual_change))
-
-        damage_messages = {
-        "hp":           (" gained {diff} HP",             " took {diff} damage"),
-        "recoil_hp":    (" took {diff} recoil damage",    " took {diff} recoil damage"),
-        }
-
-        stage_messages = {
-            "hp":           (" gained {diff} HP",               " took {diff} damage"),
-            "max_hp":       ("'s max HP increased by {diff}",   "'s max HP decreased by {diff}"),
-            "stat_attk":    ("'s attack rose by {diff}",        "'s attack fell by {diff}"),
-            "stat_def":     ("'s defense rose by {diff}",       "'s defense fell by {diff}"),
-            "stat_sp_attk": ("'s sp. attack rose by {diff}",    "'s sp. attack fell by {diff}"),
-            "stat_sp_def":  ("'s sp. defense rose by {diff}",   "'s sp. defense fell by {diff}"),
-            "stat_spd":     ("'s speed rose by {diff}",         "'s speed fell by {diff}")
-        }
-
-        stage_amount = {1: "", 2: " sharply", 3: " drastically"}
-
-        for stat, old_value, target, actual_change in old_stats:
-            if stat in damage_messages:
-                new_value = getattr(target, stat) if stat != "recoil_hp" else target.hp
-                diff = abs(new_value - old_value)
-                up_message, down_message = damage_messages[stat]
-                if new_value > old_value:
-                    print(f"{target.name}{up_message.format(diff=diff)}!")
-                elif new_value < old_value:
-                    print(f"{target.name}{down_message.format(diff=diff)}!")
-
-            elif stat in stage_messages:
-                if actual_change == 0:
-                    print(f"{target.name}'s {stat} won't go any further!")
-                else:
-                    up_message, down_message = stage_messages[stat]
-                    amount = stage_amount.get(abs(actual_change), " drastically")
-                    if actual_change > 0:
-                        print(f"{target.name}{up_message}{amount}!")
-                    elif actual_change < 0:
-                        print(f"{target.name}{down_message}{amount}!")
-
-        if move.status_effect is not None:
-            effect = move.status_effect
-            status_messages = {
-                "Poison":    " was poisoned!",
-                "Paralysis": " was paralyzed!",
-                "Sleep":     " was put to sleep!",
-                "Burn":      " was burned!",
-                "Freeze":    " was frozen!",
-            }
-            if not any(e.name == effect.name for e in defender.active().status_effect):
-                if random.random() < effect.chance_to_apply:
-                    print(f"{defender.active().name}{status_messages[effect.name]}")
-                    defender.active().apply_status_effect(effect)
-                else:
-                    print(f"{defender.active().name} is already affected by {effect.name}!")
+    if multiplier == 0:
+        print("It had no effect!")
+    elif multiplier < 1:
+        print("It's not very effective...")
+    elif multiplier > 1:
+        print("It's super effective!")
+    
+    print(f"{target.name} took {damage} damage!")  
+    return damage  
 
 def calculate_damage(move, attacker, defender):
     if move.category == "physical":
@@ -193,26 +138,6 @@ def calculate_damage(move, attacker, defender):
         * multiplier * stab
     )
     return damage, multiplier
-        
-def process_status_effects(pokemon):
-    effects_to_remove = []
-    for effect in pokemon.status_effect:
-        match effect.name:
-            case "Poison":
-                print(f"{pokemon.name} was hurt my poison!")
-                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
-            case "Burn":
-                print(f"{pokemon.name} was hurt by burn!")
-                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
-                              
-        if effect.check_should_end():
-            effects_to_remove.append(effect)
-                
-        if effect in effects_to_remove:
-            pokemon.remove_status_effect(effect)
-                              
-def check_can_act(pokemon):
-    return all(effect.can_act() for effect in pokemon.status_effect)
 
 def get_type_multiplier(move_type, defender_types):
     multiplier = 1
@@ -220,6 +145,73 @@ def get_type_multiplier(move_type, defender_types):
     for defender_type in defender_types:
         multiplier *= type_chart.get(move_type, {}).get(defender_type, 1)
     return multiplier
+
+def apply_recoil(move, attacker, damage):
+    recoil_damage = int(damage * move.recoil)
+    attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
+    print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
+
+def apply_stats(move, attacker, defender, old_stats):
+    for target_type, stat_changes in move.effects.items():
+        target = None
+        if target_type == "self":
+            target = attacker.active()
+        elif target_type == "opponent":
+            target = defender.active()
+        elif target_type == "random":
+            target = random.choice([attacker.active(), defender.active()])
+
+        for stat, change in stat_changes.items():
+            old_stage = getattr(target, f"stage_{stat.replace('stat_', '')}")
+            actual_change = target.apply_stage_change(stat, change)
+            old_stats.append((stat, old_stage, target, actual_change))
+
+    return old_stats
+
+def apply_status_effect(move, defender):
+    effect = move.status_effect
+    if not any(e.name == effect.name for e in defender.active().status_effect):
+        if random.random() < effect.chance_to_apply:
+            defender.active().apply_status_effect(effect)
+            return True, effect   # afflicted successfully
+        else:
+            return False, effect  # failed to apply
+    else:
+        return False, effect      # already afflicted
+
+def process_status_effects(pokemon):
+    effects_to_remove = []
+    removal_messages = {
+        "Poison":    " was cured of poison!",
+        "Paralysis": " was cured of paralysis!",
+        "Sleep":     " woke up!",
+        "Burn":      " was cured of its burn!",
+        "Freeze":    " thawed out!",
+    }
+
+    for effect in pokemon.status_effect:
+        if effect.check_should_end():
+            effects_to_remove.append(effect)
+            continue  
+
+        match effect.name:
+            case "Poison":
+                print(f"{pokemon.name} was hurt by poison!")
+                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
+            case "Burn":
+                print(f"{pokemon.name} was hurt by burn!")
+                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
+
+    for effect in effects_to_remove:
+        pokemon.remove_status_effect(effect)
+        message = removal_messages.get(effect.name, " is no longer affected!")
+        print(f"{pokemon.name}{message}")
+                              
+def check_can_act(pokemon):
+    for effect in pokemon.status_effect:
+        if not effect.can_act():
+            return False, effect.name
+    return True, None
 
 def resolve_turn(player, player_choice, npc, npc_choice):
     player_can_act = check_can_act(player.active())
