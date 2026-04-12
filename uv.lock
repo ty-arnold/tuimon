@@ -12,6 +12,20 @@ wheels = [
 ]
 
 [[package]]
+name = "beckett"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "inflect" },
+    { name = "requests" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/02/14/41f0803cfbc68120764b9681348cc0699a73f2cbfac910a588f9d3abef5d/beckett-0.8.0.tar.gz", hash = "sha256:f04e9fe0521a39d685a8fd2cb3c828651b04eae2d13b4aa5cf94b1f450237189", size = 1433733, upload-time = "2016-07-22T13:16:46.301Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/6a/d57cb6949e7a308d46800168899b54a0bd72cff171ba560f858ccdc030b4/beckett-0.8.0-py2.py3-none-any.whl", hash = "sha256:fa81900824cd19879f31ce3df6f4349764c77c8382f8d3100d47e9746e23afb6", size = 10595, upload-time = "2016-07-22T13:16:50.19Z" },
+]
+
+[[package]]
 name = "greenlet"
 version = "3.3.2"
 source = { registry = "https://pypi.org/simple" }
@@ -52,6 +66,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f3/fd/d05a4b7acd0154ed758797f0a43b4c0962a843bedfe980115e842c5b2d08/greenlet-3.3.2-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:1fb39a11ee2e4d94be9a76671482be9398560955c9e568550de0224e41104727", size = 1618857, upload-time = "2026-02-20T20:49:37.309Z" },
     { url = "https://files.pythonhosted.org/packages/6f/e1/50ee92a5db521de8f35075b5eff060dd43d39ebd46c2181a2042f7070385/greenlet-3.3.2-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:20154044d9085151bc309e7689d6f7ba10027f8f5a8c0676ad398b951913d89e", size = 1680010, upload-time = "2026-02-20T20:21:13.427Z" },
     { url = "https://files.pythonhosted.org/packages/29/4b/45d90626aef8e65336bed690106d1382f7a43665e2249017e9527df8823b/greenlet-3.3.2-cp314-cp314t-win_amd64.whl", hash = "sha256:c04c5e06ec3e022cbfe2cd4a846e1d4e50087444f875ff6d2c2ad8445495cf1a", size = 237086, upload-time = "2026-02-20T20:20:45.786Z" },
+]
+
+[[package]]
+name = "inflect"
+version = "0.2.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/5d/478a8e9d8b7cc004a36b75369f9caf1c23cd7ba0b97af146b516c49923d9/inflect-0.2.5.tar.gz", hash = "sha256:2014c8dcb2114ebae2941ba3f0fbd98a02c846792a7b72f2da31eb9aa431a818", size = 109756, upload-time = "2015-01-09T21:02:02.001Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/15/2d176749884cbeda0c92e0d09e1303ff53a973eb3c6bb2136803b9d962c9/inflect-0.2.5-py2.py3-none-any.whl", hash = "sha256:0e2358f4f46a54cca3d77b983fa3708b02dc83acd8d28466a67e88b72e5c1b34", size = 58988, upload-time = "2015-01-09T21:01:53.251Z" },
 ]
 
 [[package]]
@@ -192,6 +215,7 @@ name = "pokemongame"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "pokepy" },
     { name = "pyinstaller" },
     { name = "pynvim" },
     { name = "textual" },
@@ -199,9 +223,22 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "pokepy", specifier = ">=0.4.0" },
     { name = "pyinstaller", specifier = ">=6.19.0" },
     { name = "pynvim", specifier = ">=0.6.0" },
     { name = "textual", specifier = ">=8.1.1" },
+]
+
+[[package]]
+name = "pokepy"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beckett" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/1f/484404cf1ea912c27d5a7263f35dcf08ea188ef13d1b13e8fcea891e6919/pokepy-0.4.0.tar.gz", hash = "sha256:545c8f1a9f81d433cfeeb7a6b3f1c611dd81b5d540f4f63d665b3f13c0be8ec7", size = 11976, upload-time = "2019-01-20T18:01:26.008Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/d6/f84d9730e64995a755447314105874a0428836d666ada2faf29a0e63fde3/pokepy-0.4.0-py2.py3-none-any.whl", hash = "sha256:f430782e8aae63ea57a8a796bbefe454cb06a950397589fe2108bc71ff53a7ec", size = 10616, upload-time = "2019-01-20T18:01:22.385Z" },
 ]
 
 [[package]]
@@ -277,6 +314,15 @@ wheels = [
 ]
 
 [[package]]
+name = "requests"
+version = "2.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/6f/183063f01aae1e025cf0130772b55848750a2f3a89bfa11b385b35d7329d/requests-2.10.0.tar.gz", hash = "sha256:63f1815788157130cee16a933b2ee184038e975f0017306d723ac326b5525b54", size = 477617, upload-time = "2016-04-29T22:12:32.122Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/99/b4/63d99ba8e189c47d906b43bae18af4396e336f2b1bfec86af31efe2d2cb8/requests-2.10.0-py2.py3-none-any.whl", hash = "sha256:09bc1b5f3a56cd8c48d433213a8cba51a67d12936568f73b5f1793fcb0c0979e", size = 506877, upload-time = "2016-04-29T22:12:39.027Z" },
+]
+
+[[package]]
 name = "rich"
 version = "14.3.3"
 source = { registry = "https://pypi.org/simple" }
@@ -296,6 +342,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4f/db/cfac1baf10650ab4d1c111714410d2fbb77ac5a616db26775db562c8fab2/setuptools-82.0.1.tar.gz", hash = "sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9", size = 1152316, upload-time = "2026-03-09T12:47:17.221Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl", hash = "sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb", size = 1006223, upload-time = "2026-03-09T12:47:15.026Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/b2/238e2590826bfdd113244a40d9d3eb26918bd798fc187e2360a8367068db/six-1.10.0.tar.gz", hash = "sha256:105f8d68616f8248e24bf0e9372ef04d3cc10104f1980f54d57b2ce73a5ad56a", size = 29630, upload-time = "2015-10-07T03:17:49.113Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/0a/b6723e1bc4c516cb687841499455a8505b44607ab535be01091c0f24f079/six-1.10.0-py2.py3-none-any.whl", hash = "sha256:0ff78c403d9bccf5a425a6d31a12aa6b47f1c21ca4dc2573a7e2f32a97335eb1", size = 10341, upload-time = "2015-10-07T03:17:20.304Z" },
 ]
 
 [[package]]
