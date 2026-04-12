@@ -61,7 +61,7 @@ agility = Move(
 doubleedge = Move(
     name="Double Edge",
     type = ["Normal"],
-    category=["physical"],
+    category="physical",
     power = 80,
     recoil = 30,
     acc = 0.75,
@@ -72,10 +72,22 @@ doubleedge = Move(
 toxic = Move(
     name = "Toxic",
     type = ["Poison"],
-    category = ["physical"],
+    category = "physical",
     power = 20,
     acc = 0.85,
     pp = 20,
     effects = {},
     status_effect = poison
+)
+
+sand_attack = Move(
+    name = "Sand Attack",
+    type = ["Normal"],
+    category = "status",
+    power = 0,
+    acc = 0.85,
+    pp = 20,
+    effects = {
+        "opponent" : {"stat_acc": -1},
+    },
 )

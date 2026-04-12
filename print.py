@@ -43,8 +43,8 @@ def print_stat_changes(old_stats):
         "stat_sp_attk": ("'s sp. attack rose",    "'s sp. attack fell"),
         "stat_sp_def":  ("'s sp. defense rose",   "'s sp. defense fell"),
         "stat_spd":     ("'s speed rose",         "'s speed fell"),
-        "acc":          ("'s accuracy rose",      "'s accuracy fell"),
-        "eva":          ("'s evasion rose",       "'s evasion fell")
+        "stat_acc":     ("'s accuracy rose",      "'s accuracy fell"),
+        "stat_eva":     ("'s evasion rose",       "'s evasion fell")
     }
 
     stage_amount = {

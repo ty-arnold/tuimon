@@ -1,21 +1,35 @@
 import random
 from mult_tables import *
 
+### Global values ###
+iv = 15
+ev = 85
+
 class Pokemon:
     def __init__(self, name, lvl, type, moveset, stat_hp, 
                  stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
+
         self.name    = name
         self.lvl     = lvl
         self.type    = type
-        self.hp      = ((((2 * stat_hp) * lvl))/100) + lvl + 10
-        self.max_hp  = self.hp
         self.moveset = moveset
 
+        self.base_stat_hp      = stat_hp
         self.base_stat_attk    = stat_attk
         self.base_stat_def     = stat_def
         self.base_stat_sp_attk = stat_sp_attk
         self.base_stat_sp_def  = stat_sp_def
         self.base_stat_spd     = stat_spd
+
+        self.hp           = round((((((self.base_stat_hp      + iv) * 2) + ev) * self.lvl) / 100 ) + lvl + 10)
+        self.stat_attk    = round((((((self.base_stat_attk    + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
+        self.stat_def     = round((((((self.base_stat_def     + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
+        self.stat_sp_attk = round((((((self.base_stat_sp_attk + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
+        self.stat_sp_def  = round((((((self.base_stat_sp_def  + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
+        self.stat_spd     = round((((((self.base_stat_spd     + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
+        self.stat_acc     = 1
+        self.stat_eva     = 1
+        self.max_hp  = self.hp
 
         self.stage_attk    = 0
         self.stage_def     = 0
@@ -32,14 +46,19 @@ class Pokemon:
     
     def get_stat(self, stat):
         stage_map = {
-            "stat_attk":    (self.base_stat_attk,    self.stage_attk),
-            "stat_def":     (self.base_stat_def,     self.stage_def),
-            "stat_sp_attk": (self.base_stat_sp_attk, self.stage_sp_attk),
-            "stat_sp_def":  (self.base_stat_sp_def,  self.stage_sp_def),
-            "stat_spd":     (self.base_stat_spd,     self.stage_spd),
+            "stat_attk":    (self.stat_attk,    self.stage_attk),
+            "stat_def":     (self.stat_def,     self.stage_def),
+            "stat_sp_attk": (self.stat_sp_attk, self.stage_sp_attk),
+            "stat_sp_def":  (self.stat_sp_def,  self.stage_sp_def),
+            "stat_spd":     (self.stat_spd,     self.stage_spd),
+            "stat_acc":     (self.stat_acc,     self.stage_acc),
+            "stat_eva":     (self.stat_eva,     self.stage_eva),
         }
         base, stage = stage_map[stat]
-        return int(base * stat_table[stage])
+        if stat == "stat_acc":
+            return round(base * acc_table[stage])
+        else:
+            return round(base * stat_table[stage])
 
     def apply_stage_change(self, stat, change):
         stage_attr = {
@@ -48,8 +67,8 @@ class Pokemon:
             "stat_sp_attk": "stage_sp_attk",
             "stat_sp_def":  "stage_sp_def",
             "stat_spd":     "stage_spd",
-            "acc":          "stage_acc",
-            "eva":          "stage_eva"
+            "stat_acc":     "stage_acc",
+            "stat_eva":     "stage_eva"
         }
         attr = stage_attr[stat]
         current_stage = getattr(self, attr)
