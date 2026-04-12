@@ -3,7 +3,7 @@ import sys
 def print_actions(trainer):
     while True:
         try:
-            print(f"{trainer.name}'s {trainer.party[trainer.selected_mon].name}:")
+            print(f"{trainer.name}'s {trainer.active().name}:")
             print("1. Moves")
             print("2. Pokemon")
             print("3. Items")
@@ -66,7 +66,7 @@ def print_stat_changes(old_stats):
                 elif actual_change < 0:
                     print(f"{target.name}{down_message}{amount}!")
  
-def print_status_effect(target, effect, afflicted):
+def print_status_effect(target, effect, result):
     status_messages = {
         "Poison":    " was poisoned!",
         "Paralysis": " was paralyzed!",
@@ -82,10 +82,14 @@ def print_status_effect(target, effect, afflicted):
         "Freeze":    " is already frozen!",
     }
 
-    if afflicted:
-        print(f"{target.name}{status_messages[effect.name]}")
-    else:
-        print(f"{target.name}{already_messages[effect.name]}")
+    match result:
+        case "afflicted":
+            print(f"{target.name}{status_messages[effect.name]}")
+        case "already":
+            print(f"{target.name}{already_messages[effect.name]}")
+        case "failed":
+            pass
+            
 
 def print_cant_act(attacker, reason):
     cant_act_messages = {
@@ -96,3 +100,35 @@ def print_cant_act(attacker, reason):
     
     message = cant_act_messages.get(reason, " can't move!")
     print(f"{attacker.active().name}{message}")
+
+def debug_print_stats(pokemon):
+    stats = ["stat_attk", "stat_def", "stat_sp_attk", "stat_sp_def", "stat_spd", "stat_acc", "stat_eva"]
+    stat_names = {
+        "stat_attk":    "Attack",
+        "stat_def":     "Defense",
+        "stat_sp_attk": "Special Attack",
+        "stat_sp_def":  "Special Defense",
+        "stat_spd":     "Speed",
+        "stat_acc":     "Accuracy",
+        "stat_eva":     "Evasion",
+    }
+    stage_attr = {
+        "stat_attk":    "stage_attk",
+        "stat_def":     "stage_def",
+        "stat_sp_attk": "stage_sp_attk",
+        "stat_sp_def":  "stage_sp_def",
+        "stat_spd":     "stage_spd",
+        "stat_acc":     "stage_acc",
+        "stat_eva":     "stage_eva",
+    }
+    print(f"--- {pokemon.name} Stats ---")
+    print(f"HP:  {pokemon.hp}/{pokemon.max_hp}")
+    print(f"{'Stat':<20} {'Base':<10} {'Stage':<10} {'Calculated':<10}")
+    print(f"{'-' * 50}")
+    for stat in stats:
+        base       = getattr(pokemon, stat)
+        stage      = getattr(pokemon, stage_attr[stat])
+        calculated = pokemon.get_stat(stat)
+        print(f"{stat_names[stat]:<20} {base:<10} {stage:<10} {calculated:<10}")
+    print(f"{'Status Effects:':<20} {[e.name for e in pokemon.status_effect]}")
+    print(f"{'-' * 50}")

@@ -14,14 +14,12 @@ scratch = Move(
 test = Move(
     name = "Test",
     type = ["Normal"],
-    category = "physical",
+    category = "status",
     power = 60,
     acc = 1.0,
     pp = 20,
-    effects = {
-        "self":     {"stat_spd": +1},  
-        "opponent": {"stat_spd": -2}
-    }
+    effects = {},
+    status_effect = paralysis
 )
 
 thunder = Move(

@@ -55,10 +55,16 @@ class Pokemon:
             "stat_eva":     (self.stat_eva,     self.stage_eva),
         }
         base, stage = stage_map[stat]
-        if stat == "stat_acc":
-            return round(base * acc_table[stage])
+        if stat in ("stat_acc", "stat_eva"):
+            calculated =  base * acc_table[stage]
         else:
-            return round(base * stat_table[stage])
+            calculated = round(base * stat_table[stage])
+
+        for effect in self.status_effect:
+            if stat in effect.stat_modifier:
+                calculated = round(calculated * effect.stat_modifier[stat])
+        
+        return calculated
 
     def apply_stage_change(self, stat, change):
         stage_attr = {
@@ -77,7 +83,7 @@ class Pokemon:
         return new_stage - current_stage
     
     def apply_status_effect(self, effect):
-        for stat, multiplier in effect.stat_changes.items():
+        for stat, multiplier in effect.stat_modifier.items():
             original = getattr(self, stat)
             effect.applied_changes[stat] = original
             setattr(self, stat, int(original * multiplier))
@@ -109,14 +115,15 @@ class Move:
         return self.name
     
 class StatusEffect:
-    def __init__(self, name, chance_to_apply, chance_to_end=None, duration=None, stat_changes=None, chance_to_act=1.0):
+    def __init__(self, name, chance_to_apply, chance_to_end=None, duration=None, stat_modifier=None, chance_to_act=1.0, damage=None):
         self.name = name
         self.chance_to_end = chance_to_end
         self.duration = duration
-        self.stat_changes = stat_changes or {} 
+        self.stat_modifier = stat_modifier or {} 
         self.applied_changes = {}               
         self.chance_to_act = chance_to_act
         self.chance_to_apply = chance_to_apply
+        self.damage = damage
         self.turns_active = 0 
 
     def can_act(self):

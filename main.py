@@ -13,6 +13,10 @@ while True:
     if winner:
         print(winner)
         break  
-    player.print_hp()
-    npc.print_hp()
+    # player.print_hp()
+    debug_print_stats(player.active())
+    print(f"DEBUG status effects: {[e.name for e in player.active().status_effect]}")
+    # npc.print_hp()
+    debug_print_stats(npc.active())
+    print(f"DEBUG status effects: {[e.name for e in npc.active().status_effect]}")
     turn += 1

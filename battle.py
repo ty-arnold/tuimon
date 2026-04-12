@@ -2,7 +2,7 @@ from models import Pokemon, Trainer
 from type_chart import type_chart
 from print import *
 from mult_tables import *
-import random
+import random, copy
 
 def get_turn(trainer):
     action_selected = False
@@ -82,8 +82,8 @@ def apply_move(move, attacker, defender):
         print_stat_changes(old_stats)
 
     if move.status_effect is not None:
-        afflicted, effect = apply_status_effect(move, defender)
-        print_status_effect(defender.active(), effect, afflicted)
+        result, effect = apply_status_effect(move, defender)
+        print_status_effect(defender.active(), effect, result)
 
 def check_accuracy(move, attacker, defender):
     move_acc = move.acc * acc_table[attacker.active().stage_acc]
@@ -165,15 +165,15 @@ def apply_stats(move, attacker, defender, old_stats):
     return old_stats
 
 def apply_status_effect(move, defender):
-    effect = move.status_effect
+    effect = copy.deepcopy(move.status_effect)
     if not any(e.name == effect.name for e in defender.active().status_effect):
         if random.random() < effect.chance_to_apply:
             defender.active().apply_status_effect(effect)
-            return True, effect   
+            return "afflicted", effect  
         else:
-            return False, effect 
+            return "failed", effect 
     else:
-        return False, effect     
+        return "already", effect     
 
 def process_status_effects(pokemon):
     effects_to_remove = []
@@ -190,15 +190,11 @@ def process_status_effects(pokemon):
             effects_to_remove.append(effect)
             continue  
 
-        match effect.name:
-            case "Poison":
-                damage = round(pokemon.hp * 0.1)
-                print(f"{pokemon.name} was hurt by poison!")
-                print(f"{pokemon.name} took {damage} damage!")
-                pokemon.hp = max(0, (pokemon.hp - damage)) 
-            case "Burn":
-                print(f"{pokemon.name} was hurt by burn!")
-                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
+        if effect.damage is not None and effect.damage > 0:
+            damage = round(pokemon.max_hp * effect.damage)
+            pokemon.hp = max(0, pokemon.hp - damage)
+            print(f"{pokemon.name} was hurt by {effect.name}!")
+            print(f"{pokemon.name} took {damage} damage!")
 
     for effect in effects_to_remove:
         pokemon.remove_status_effect(effect)

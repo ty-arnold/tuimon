@@ -3,13 +3,13 @@ from models import StatusEffect
 poison = StatusEffect(
     name = "Poison",
     chance_to_apply = 1.0,
-    chance_to_end = 0.5
+    chance_to_end = 0.5,
+    damage = (1/16)
 )
 
 paralysis = StatusEffect(
     name = "Paralysis",
-    chance_to_end = 0.0,
-    stat_changes = {"stat_spd" : 0.25},
+    stat_modifier = {"stat_spd" : 0.75},
     chance_to_act = 0.75,
     chance_to_apply = 0.30
 )
@@ -23,8 +23,9 @@ sleep = StatusEffect(
 
 burn = StatusEffect(
     name = "Burn",
-    stat_changes = {"stat_attack" : 0.5},
-    chance_to_apply = 0.10
+    stat_modifier = {"stat_attack" : 0.5},
+    chance_to_apply = 0.10,
+    damage = (1/8)
 )
 
 freeze = StatusEffect(
