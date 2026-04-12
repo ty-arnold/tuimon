@@ -44,23 +44,18 @@ def get_party(trainer):
             print("Invalid choice, please select again")
 
 def get_move(pokemon):
-    try:
-        while True:
-            try:
-                cancel = len(pokemon.moveset) + 1
-                choice = int(input("Select a Move: "))
-                if choice == cancel:
-                    return None
-                selected_move = pokemon.moveset[choice - 1]
-                print(f"You selected {selected_move.name}!")
-                return pokemon.moveset[choice - 1]
-            except (ValueError, IndexError):
-                print("Invalid choice, please select again")
-                pokemon.list_moves()
-
-    except KeyboardInterrupt:
-        print("\\nGame Over!")
-        sys.exit(0)
+    while True:
+        try:
+            cancel = len(pokemon.moveset) + 1
+            choice = int(input("Select a Move: "))
+            if choice == cancel:
+                return None
+            selected_move = pokemon.moveset[choice - 1]
+            print(f"You selected {selected_move.name}!")
+            return pokemon.moveset[choice - 1]
+        except (ValueError, IndexError):
+            print("Invalid choice, please select again")
+            pokemon.list_moves()
 
 def apply_move(move, attacker, defender):
     old_stats = []
@@ -106,9 +101,9 @@ def apply_damage(move, attacker, defender):
     target.hp = max(0, target.hp - damage)
 
     if multiplier == 0:
-        print("It had no effect!")
+        print("But it had no effect...")
     elif multiplier < 1:
-        print("It's not very effective...")
+        print("But it's not very effective...")
     elif multiplier > 1:
         print("It's super effective!")
     
@@ -133,7 +128,7 @@ def calculate_damage(move, attacker, defender):
 
     stab = 1.5 if attacker.active().type == move.type[0] else 1
 
-    damage = int(
+    damage = round(
         (((2 * attacker.active().lvl * critical / 5) + 2) * move.power * (attack_stat / defense_stat) / 50 + 2)
         * multiplier * stab
     )
@@ -147,7 +142,7 @@ def get_type_multiplier(move_type, defender_types):
     return multiplier
 
 def apply_recoil(move, attacker, damage):
-    recoil_damage = int(damage * move.recoil)
+    recoil_damage = round(damage * move.recoil)
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
     print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
@@ -163,8 +158,9 @@ def apply_stats(move, attacker, defender, old_stats):
 
         for stat, change in stat_changes.items():
             old_stage = getattr(target, f"stage_{stat.replace('stat_', '')}")
-            actual_change = target.apply_stage_change(stat, change)
-            old_stats.append((stat, old_stage, target, actual_change))
+            if target is not None:
+                actual_change = target.apply_stage_change(stat, change)
+                old_stats.append((stat, old_stage, target, actual_change))
 
     return old_stats
 
@@ -173,11 +169,11 @@ def apply_status_effect(move, defender):
     if not any(e.name == effect.name for e in defender.active().status_effect):
         if random.random() < effect.chance_to_apply:
             defender.active().apply_status_effect(effect)
-            return True, effect   # afflicted successfully
+            return True, effect   
         else:
-            return False, effect  # failed to apply
+            return False, effect 
     else:
-        return False, effect      # already afflicted
+        return False, effect     
 
 def process_status_effects(pokemon):
     effects_to_remove = []
@@ -196,8 +192,10 @@ def process_status_effects(pokemon):
 
         match effect.name:
             case "Poison":
+                damage = round(pokemon.hp * 0.1)
                 print(f"{pokemon.name} was hurt by poison!")
-                pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))
+                print(f"{pokemon.name} took {damage} damage!")
+                pokemon.hp = max(0, (pokemon.hp - damage)) 
             case "Burn":
                 print(f"{pokemon.name} was hurt by burn!")
                 pokemon.hp = max(0, (pokemon.hp - (pokemon.hp * 0.1)))

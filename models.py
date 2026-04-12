@@ -67,7 +67,7 @@ class Pokemon:
     def remove_status_effect(self, effect):
         for stat, original_value in effect.applied_changes.items():
             setattr(self, stat, original_value)
-            self.status_effect.remove(effect)
+        self.status_effect.remove(effect)
 
     def print_moves(self):
         for i, move in enumerate(self.moveset):
@@ -98,6 +98,7 @@ class StatusEffect:
         self.applied_changes = {}               
         self.chance_to_act = chance_to_act
         self.chance_to_apply = chance_to_apply
+        self.turns_active = 0 
 
     def can_act(self):
         if self.chance_to_act < 1.0:
@@ -106,6 +107,11 @@ class StatusEffect:
         return True
         
     def check_should_end(self):
+        self.turns_active += 1
+
+        if self.turns_active < 2:
+            return False
+        
         if self.duration is not None:
             self.duration -= 1
             return self.duration == 0 

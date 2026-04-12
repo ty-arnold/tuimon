@@ -1,5 +1,10 @@
 # TODO
 
+- modify multiplier calculation for second typing
+- modify stab calculation for second typing
+- add handling for flat percentage changes to stats from things like paralysis
+- finish fleshing out status moves
+- set correct values for status moves
 - flesh out move application
   - moves like confusion
   - [x] add turn sensitive status moves
