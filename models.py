@@ -146,10 +146,10 @@ class StatusEffect:
         return False
 
 class Trainer:
-    def __init__(self, name, party, selected_mon):
+    def __init__(self, name, party):
         self.name = name
         self.party = party
-        self.selected_mon = selected_mon
+        self.selected_mon = 0
 
     def print_party(self):
         print(f"{self.name}'s Party:")

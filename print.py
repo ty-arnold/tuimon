@@ -1,4 +1,5 @@
 import sys
+from pokemon_factory import fetch_pokemon_data, create_pokemon_from_api
 
 def print_actions(trainer):
     while True:
@@ -132,3 +133,31 @@ def debug_print_stats(pokemon):
         print(f"{stat_names[stat]:<20} {base:<10} {stage:<10} {calculated:<10}")
     print(f"{'Status Effects:':<20} {[e.name for e in pokemon.status_effect]}")
     print(f"{'-' * 50}")
+
+def build_party(trainer_name, party_size=2):
+    print(f"\n{trainer_name}, choose your pokemon!")
+    party = []
+    while len(party) < party_size:
+        name = input(f"Choose pokemon {len(party) + 1}/{party_size}: ")
+        pokemon = create_pokemon_from_api(name)
+        if pokemon is not None:
+            party.append(pokemon)
+    return party
+
+def debug_print_move(move):
+    print(f"--- {move.name} ---")
+    print(f"Type:     {move.type}")
+    print(f"Category: {move.category}")
+    print(f"Power:    {move.power}")
+    print(f"Accuracy: {move.acc}")
+    print(f"PP:       {move.pp}")
+    print(f"Effects:  {move.effects}")
+    print(f"Recoil:   {move.recoil}")
+    if move.status_effect is not None:
+        print(f"Status Effect: {move.status_effect.name}")
+        print(f"  Chance to Apply: {move.status_effect.chance_to_apply}")
+        print(f"  Chance to Act:   {move.status_effect.chance_to_act}")
+        print(f"  Chance to End:   {move.status_effect.chance_to_end}")
+    else:
+        print(f"Status Effect: None")
+    print(f"{'─' * 20}")

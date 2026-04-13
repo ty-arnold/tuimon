@@ -51,6 +51,9 @@ def get_move(pokemon):
             if choice == cancel:
                 return None
             selected_move = pokemon.moveset[choice - 1]
+            if selected_move.pp <= 0:
+                print(f"{selected_move.name} has no PP left! Choose another move.")
+                continue
             print(f"You selected {selected_move.name}!")
             return pokemon.moveset[choice - 1]
         except (ValueError, IndexError):
@@ -65,6 +68,10 @@ def apply_move(move, attacker, defender):
     if not can_act:
         print_cant_act(attacker, reason)
         return None
+    
+    move.pp -= 1
+    if move.pp <= 0:
+        print(f"{move.name} has no PP left!")
 
     print(f"{attacker.active().name} used {move.name}!")
 

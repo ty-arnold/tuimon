@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 main.spec
+.vscode/
+.DS_Store
+cache/
 
 # Virtual environments
 .venv
