@@ -261,7 +261,9 @@ Log levels:
 - Damage formula based on [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Damage)
 - Type chart based on [Bulbapedia](https://bulbapedia.bulbagarden.net/wiki/Type)
 
-### TODO
+---
+
+## TODO
 
 - test the following functionality:
   - for fly:
@@ -294,7 +296,7 @@ Log levels:
 - add tui
   - textual?
 
-#### Completed
+### Completed
 
 - [x] add scraper or method to get stats of selected pokemon
 - [x] add scraper or method to dynamically get stats of moves of selected pokemon

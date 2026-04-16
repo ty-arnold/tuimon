@@ -9,6 +9,8 @@ main.spec
 .vscode/
 .DS_Store
 cache/
+logs/*
+!logs/.gitkeep
 
 # Virtual environments
 .venv
