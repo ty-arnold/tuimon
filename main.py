@@ -3,18 +3,21 @@ from print import *
 from objects.moves import *
 from objects.trainers import *
 from pokemon_factory import create_pokemon_from_api
+from presets import get_test_player, get_test_npc
 
-# player chooses their pokemon interactively
-player_party = build_party("Ash", party_size=1)
+DEBUG = True
 
-# npc gets pre-defined pokemon
-npc_party = [
-    create_pokemon_from_api("gengar", lvl=50),
-    create_pokemon_from_api("nidorino", lvl=50)
-]
-
-player = Trainer(name="Ash", party=player_party)
-npc    = Trainer(name="Gary", party=npc_party)
+if DEBUG:
+    player = get_test_player()
+    npc    = get_test_npc()
+else:
+    player_party = build_party("Ash", party_size=2)
+    player       = Trainer(name="Ash", party=player_party)
+    npc_party    = [
+        create_pokemon_from_api("gengar",   lvl=55),
+        create_pokemon_from_api("alakazam", lvl=55)
+    ]
+    npc = Trainer(name="Gary", party=npc_party)
 
 print(f"DEBUG player party: {[p.name if p is not None else 'None' for p in player.party]}")
 print(f"DEBUG npc party: {[p.name if p is not None else 'None' for p in npc.party]}")

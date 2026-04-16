@@ -146,13 +146,13 @@ def build_party(trainer_name, party_size=2):
 
 def debug_print_move(move):
     print(f"--- {move.name} ---")
-    print(f"Type:     {move.type}")
-    print(f"Category: {move.category}")
-    print(f"Power:    {move.power}")
-    print(f"Accuracy: {move.acc}")
-    print(f"PP:       {move.pp}")
-    print(f"Effects:  {move.effects}")
-    print(f"Recoil:   {move.recoil}")
+    print(f"Type:         {move.type}")
+    print(f"Category:     {move.category}")
+    print(f"Power:        {move.power}")
+    print(f"Accuracy:     {move.acc}")
+    print(f"PP:           {move.pp}")
+    print(f"Stat Change:  {move.stat_change}")
+    print(f"Recoil:       {move.recoil}")
     if move.status_effect is not None:
         print(f"Status Effect: {move.status_effect.name}")
         print(f"  Chance to Apply: {move.status_effect.chance_to_apply}")

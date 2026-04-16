@@ -38,28 +38,76 @@ def save_pokemon_cache(data):
 
 def move_to_dict(move):
     return {
-        "name":     move.name,
-        "type":     move.type,
-        "category": move.category,
-        "power":    move.power,
-        "acc":      move.acc,
-        "pp":       move.pp,
-        "effects":  move.effects,
-        "recoil":   move.recoil,
+        "name":              move.name,
+        "type":              move.type,
+        "category":          move.category,
+        "power":             move.power,
+        "acc":               move.acc,
+        "pp":                move.pp,
+        "stat_change":       move.stat_change,
+        "recoil":            move.recoil,
+        "lifesteal":         move.lifesteal,
+        "heal":              move.heal,
+        "min_hits":          move.min_hits,
+        "max_hits":          move.max_hits,
+        "crit_rate":         move.crit_rate,
+        "flinch_chance":     move.flinch_chance,
+        "priority":          move.priority,
+        "hits_invulnerable": move.hits_invulnerable or [],
+        "multi_turn":        move.multi_turn,
+        "status_effect":     move.status_effect
     }
 
 def dict_to_move(data):
-    from objects.moves import Move
+    from models import Move
+    from objects.status_effects import poison, paralysis, sleep, burn, freeze
+    import copy
+
+    status_effect_map = {
+        "Poison":    poison,
+        "Paralysis": paralysis,
+        "Sleep":     sleep,
+        "Burn":      burn,
+        "Freeze":    freeze,
+    }
+
+    status_effect = None
+    if data.get("status_effect") is not None:
+        se            = data["status_effect"]
+        base_effect   = status_effect_map.get(se["name"])
+        if base_effect is not None:
+            status_effect = copy.deepcopy(base_effect)
+            status_effect.chance_to_apply = se["chance_to_apply"]
+
+
     return Move(
-        name     = data["name"],
-        type     = data["type"],
-        category = data["category"],
-        power    = data["power"],
-        acc      = data["acc"],
-        pp       = data["pp"],
-        effects  = data["effects"],
-        recoil   = data["recoil"],
+        name              = data["name"],
+        type              = data["type"],
+        category          = data["category"],
+        power             = data["power"],
+        acc               = data["acc"],
+        pp                = data["pp"],
+        stat_change       = data["stat_change"],
+        recoil            = data.get("recoil",            0.0),
+        lifesteal         = data.get("lifesteal",         0.0),
+        heal              = data.get("heal",              0.0),
+        min_hits          = data.get("min_hits",          None),
+        max_hits          = data.get("max_hits",          None),
+        crit_rate         = data.get("crit_rate",         0),
+        flinch_chance     = data.get("flinch_chance",     0.0),
+        priority          = data.get("priority",          0),
+        multi_turn        = data.get("multi_turn",        None),
+        hits_invulnerable = data.get("hits_invulnerable", []),
+        status_effect     = status_effect
     )
+
+def status_effect_to_dict(effect):
+    if effect is None:
+        return None
+    return {
+        "name":            effect.name,
+        "chance_to_apply": effect.chance_to_apply,
+    }
 
 def pokemon_to_dict(pokemon):
     return {

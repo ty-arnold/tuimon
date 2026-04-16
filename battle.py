@@ -1,4 +1,3 @@
-from models import Pokemon, Trainer
 from type_chart import type_chart
 from print import *
 from mult_tables import *
@@ -75,6 +74,32 @@ def apply_move(move, attacker, defender):
 
     print(f"{attacker.active().name} used {move.name}!")
 
+    if move.multi_turn is not None and attacker.locked_move is None:
+        attacker.locked_move        = move
+        attacker.locked_turns       = move.multi_turn["turns"] - 1
+        attacker.is_invulnerable    = move.multi_turn["invulnerable"]
+        attacker.invulnerable_state = move.multi_turn.get("invulnerable_state")
+        print(f"{attacker.active().name} {move.multi_turn['charge_message']}")
+        return None
+    
+    if defender.is_invulnerable:
+        # check if this move can hit through the invulnerable state
+        can_hit = (
+            defender.invulnerable_state is not None and
+            defender.invulnerable_state in (move.hits_invulnerable or [])
+        )
+        if can_hit:
+            print(f"It hit {defender.active().name} out of the sky!" 
+                  if defender.invulnerable_state == "flying"
+                  else f"It hit {defender.active().name}!")
+        else:
+            message = move.multi_turn.get("invulnerable_message", "is invulnerable!") \
+                      if defender.locked_move and defender.locked_move.multi_turn \
+                      else "is invulnerable!"
+            print(f"{defender.active().name} {message}")
+            print(f"{attacker.active().name}'s attack missed!")
+            return None
+
     if check_accuracy(move, attacker, defender) is not True:
         return None
 
@@ -84,8 +109,8 @@ def apply_move(move, attacker, defender):
     if move.recoil > 0:
         apply_recoil(move, attacker, damage)
 
-    if move.effects:
-        old_stats = apply_stats(move, attacker, defender, old_stats)
+    if move.stat_change:
+        old_stats = apply_stat_change(move, attacker, defender, old_stats)
         print_stat_changes(old_stats)
 
     if move.status_effect is not None:
@@ -153,8 +178,8 @@ def apply_recoil(move, attacker, damage):
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
     print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
-def apply_stats(move, attacker, defender, old_stats):
-    for target_type, stat_changes in move.effects.items():
+def apply_stat_change(move, attacker, defender, old_stats):
+    for target_type, stat_changes in move.stat_change.items():
         target = None
         if target_type == "self":
             target = attacker.active()

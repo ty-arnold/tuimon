@@ -199,17 +199,17 @@ def create_move_from_api(move_data):
         "selected-pokemon-me-first":"opponent",
     }
 
-    # build effects dictionary from api stat changes
-    effects = {}
+    # build stat_change dictionary from api stat changes
+    stat_change = {}
     for stat_change in move_data["stat_changes"]:
         stat_name = stat_change_map.get(stat_change["stat"]["name"])
         change    = stat_change["change"]  # positive or negative int
         target    = target_map.get(move_data["target"]["name"], "opponent")
 
         if stat_name is not None:
-            if target not in effects:
-                effects[target] = {}
-            effects[target][stat_name] = change
+            if target not in stat_change:
+                stat_change[target] = {}
+            stat_change[target][stat_name] = change
 
     return Move(
         name     = move_data["name"].replace("-", " ").title(),
@@ -218,7 +218,7 @@ def create_move_from_api(move_data):
         power    = move_data["power"] or 0,
         acc      = (move_data["accuracy"] or 100) / 100,
         pp       = move_data["pp"],
-        effects  = effects,
+        stat_change  = stat_change,
         recoil   = 0.0,
     )
 
