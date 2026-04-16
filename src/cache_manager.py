@@ -60,7 +60,7 @@ def move_to_dict(move):
 
 def dict_to_move(data):
     from models import Move
-    from objects.status_effects import poison, paralysis, sleep, burn, freeze
+    from status_effects import poison, paralysis, sleep, burn, freeze
     import copy
 
     status_effect_map = {
@@ -73,12 +73,11 @@ def dict_to_move(data):
 
     status_effect = None
     if data.get("status_effect") is not None:
-        se            = data["status_effect"]
-        base_effect   = status_effect_map.get(se["name"])
+        se          = data["status_effect"]
+        base_effect = status_effect_map.get(se["name"])
         if base_effect is not None:
             status_effect = copy.deepcopy(base_effect)
             status_effect.chance_to_apply = se["chance_to_apply"]
-
 
     return Move(
         name              = data["name"],
@@ -87,7 +86,7 @@ def dict_to_move(data):
         power             = data["power"],
         acc               = data["acc"],
         pp                = data["pp"],
-        stat_change       = data["stat_change"],
+        stat_change       = data.get("stat_change",       {}),
         recoil            = data.get("recoil",            0.0),
         lifesteal         = data.get("lifesteal",         0.0),
         heal              = data.get("heal",              0.0),

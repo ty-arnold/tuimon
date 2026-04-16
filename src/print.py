@@ -1,4 +1,3 @@
-import sys
 from pokemon_factory import fetch_pokemon_data, create_pokemon_from_api
 
 def print_actions(trainer):

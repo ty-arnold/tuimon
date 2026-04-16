@@ -1,12 +1,11 @@
 # scripts/fetch_gen3_moves.py
 import requests
-import json
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from cache_manager import get_move_cache, save_move_cache, status_effect_to_dict
-from objects.status_effects import poison, paralysis, sleep, burn, freeze
+from src.cache_manager import get_move_cache, save_move_cache, status_effect_to_dict
+from src.status_effects import poison, paralysis, sleep, burn, freeze
 
 BASE_URL  = "https://pokeapi.co/api/v2"
 CACHE_DIR = "cache"
@@ -41,53 +40,50 @@ STATUS_EFFECT_MAP = {
 
 MULTI_TURN_OVERRIDES = {
     "fly": {
-        "invulnerable":           True,
-        "invulnerable_state":     "flying",
-        "charge_message":         "flew up high!",
-        "invulnerable_message":   "is high up in the air!"
-    },
-    "bounce": {
-        "invulnerable":           True,
-        "invulnerable_state":     "flying",
-        "charge_message":         "sprang up!",
-        "invulnerable_message":   "is high up in the air!"
+        "invulnerable":       True,
+        "invulnerable_state": "flying",
+        "charge_turn":        1,        
+        "charge_message":     "flew up high!",
+        "invulnerable_message": "is high up in the air!"
     },
     "dig": {
-        "invulnerable":           True,
-        "invulnerable_state":     "underground",
-        "charge_message":         "dug a hole!",
-        "invulnerable_message":   "is underground!"
+        "invulnerable":       True,
+        "invulnerable_state": "underground",
+        "charge_turn":        1,
+        "charge_message":     "dug a hole!",
+        "invulnerable_message": "is underground!"
     },
-    "dive": {
-        "invulnerable":           True,
-        "invulnerable_state":     "underwater",
-        "charge_message":         "hid underwater!",
-        "invulnerable_message":   "is hiding underwater!"
+    "bounce": {
+        "invulnerable":       True,
+        "invulnerable_state": "flying",
+        "charge_turn":        1,
+        "charge_message":     "sprang up!",
+        "invulnerable_message": "is high up in the air!"
     },
     "skull-bash": {
-        "invulnerable":           False,
-        "invulnerable_state":     None,
-        "charge_message":         "tucked in its head!",
-        "invulnerable_message":   ""
+        "invulnerable":       False,
+        "invulnerable_state": None,
+        "charge_turn":        1,
+        "charge_message":     "tucked in its head!",
     },
     "solar-beam": {
-        "invulnerable":           False,
-        "invulnerable_state":     None,
-        "charge_message":         "absorbed light!",
-        "invulnerable_message":   ""
+        "invulnerable":       False,
+        "invulnerable_state": None,
+        "charge_turn":        1,
+        "charge_message":     "absorbed light!",
     },
-    "razor-wind": {
-        "invulnerable":           False,
-        "invulnerable_state":     None,
-        "charge_message":         "whipped up a whirlwind!",
-        "invulnerable_message":   ""
+    "hyper-beam": {
+        "invulnerable":       False,
+        "invulnerable_state": None,
+        "charge_turn":        2,
+        "charge_message":     "must recharge!",
     },
-    "sky-attack": {
-        "invulnerable":           False,
-        "invulnerable_state":     None,
-        "charge_message":         "is glowing!",
-        "invulnerable_message":   ""
-    }
+    "blast-burn": {
+        "invulnerable":       False,
+        "invulnerable_state": None,
+        "charge_turn":        2,
+        "charge_message":     "must recharge!",
+    },
 }
 
 HITS_INVULNERABLE = {
@@ -138,29 +134,12 @@ def convert_move(move_data):
         "status":   "status"
     }
 
-    meta           = move_data.get("meta") or {}
-    ailment        = meta.get("ailment", {}) or {}
-    ailment_name   = ailment.get("name", "none")
-    ailment_chance = meta.get("ailment_chance", 0)
-    status_effect  = STATUS_EFFECT_MAP.get(ailment_name)
-
-    # api returns 0 for guaranteed effects, treat as 1.0
-    if ailment_chance == 0 and ailment_name != "none":
-        ailment_chance = 1.0
-    else:
-        ailment_chance = ailment_chance / 100
-
-    if status_effect is not None and ailment_chance > 0:
-        import copy
-        status_effect = copy.deepcopy(status_effect)
-        status_effect.chance_to_apply = ailment_chance
-
+    # build stat_change dictionary
     stat_change = {}
     for change in move_data.get("stat_changes", []):
         stat_name = stat_change_map.get(change["stat"]["name"])
         amount    = change["change"]
         target    = target_map.get(move_data["target"]["name"], "opponent")
-
         if stat_name is not None:
             if target not in stat_change:
                 stat_change[target] = {}
@@ -181,48 +160,73 @@ def convert_move(move_data):
     heal          = healing / 100    if healing > 0 else 0.0
     move_name     = move_data["name"].lower()
 
-    # set multi_turn if:
-    # 1. move is in MULTI_TURN_OVERRIDES (manually defined multi turn moves)
-    # 2. OR api indicates variable turn duration
-    is_manual_multi_turn  = move_name in MULTI_TURN_OVERRIDES
-    is_api_multi_turn     = min_turns is not None and min_turns > 1 and move_name in MULTI_TURN_OVERRIDES
+    # extract status effect
+    ailment        = meta.get("ailment", {}) or {}
+    ailment_name   = ailment.get("name", "none")
+    ailment_chance = meta.get("ailment_chance", 0)
+    if ailment_chance == 0 and ailment_name != "none":
+        ailment_chance = 1.0
+    else:
+        ailment_chance = ailment_chance / 100
+    status_effect = STATUS_EFFECT_MAP.get(ailment_name)
+    if status_effect is not None and ailment_chance > 0:
+        import copy
+        status_effect = copy.deepcopy(status_effect)
+        status_effect.chance_to_apply = ailment_chance
 
+    # build multi turn data if applicable
+    is_manual_multi_turn = move_name in MULTI_TURN_OVERRIDES
+    is_api_multi_turn    = min_turns is not None and min_turns > 1 and move_name in MULTI_TURN_OVERRIDES
     multi_turn = None
     if is_manual_multi_turn or is_api_multi_turn:
         multi_turn = {
-            "turns":                2,  # default to 2 turns
+            "turns":                2,
             "invulnerable":         False,
             "invulnerable_state":   None,
             "charge_message":       "is preparing!",
             "invulnerable_message": "is invulnerable!"
         }
-        # apply overrides
         multi_turn.update(MULTI_TURN_OVERRIDES[move_name])
-
-        # override turns from api if available
         if min_turns is not None and min_turns > 1:
             multi_turn["turns"] = max_turns or min_turns
 
-    return {
-        "name":              move_data["name"].replace("-", " ").title(),
-        "type":              [move_data["type"]["name"].capitalize()],
-        "category":          category_map.get(move_data["damage_class"]["name"], "status"),
-        "power":             move_data["power"] or 0,
-        "acc":               (move_data["accuracy"] or 100) / 100,
-        "pp":                move_data["pp"],
-        "stat_change":       stat_change,
-        "recoil":            recoil,
-        "lifesteal":         lifesteal,
-        "heal":              heal,
-        "min_hits":          min_hits,
-        "max_hits":          max_hits,
-        "crit_rate":         crit_rate,
-        "flinch_chance":     flinch_chance,
-        "priority":          move_data.get("priority", 0),
-        "multi_turn":        multi_turn,
-        "hits_invulnerable": HITS_INVULNERABLE.get(move_name, []),
-        "status_effect":     status_effect_to_dict(status_effect),
+    # start with required attributes
+    result = {
+        "name":     move_data["name"].replace("-", " ").title(),
+        "type":     [move_data["type"]["name"].capitalize()],
+        "category": category_map.get(move_data["damage_class"]["name"], "status"),
+        "power":    move_data["power"] or 0,
+        "acc":      (move_data["accuracy"] or 100) / 100,
+        "pp":       move_data["pp"],
     }
+
+    # only add optional attributes if they have non default values
+    if stat_change:
+        result["stat_change"]       = stat_change
+    if recoil > 0.0:
+        result["recoil"]            = recoil
+    if lifesteal > 0.0:
+        result["lifesteal"]         = lifesteal
+    if heal > 0.0:
+        result["heal"]              = heal
+    if min_hits is not None:
+        result["min_hits"]          = min_hits
+    if max_hits is not None:
+        result["max_hits"]          = max_hits
+    if crit_rate > 0:
+        result["crit_rate"]         = crit_rate
+    if flinch_chance > 0.0:
+        result["flinch_chance"]     = flinch_chance
+    if move_data.get("priority", 0) != 0:
+        result["priority"]          = move_data["priority"]
+    if multi_turn is not None:
+        result["multi_turn"]        = multi_turn
+    if HITS_INVULNERABLE.get(move_name):
+        result["hits_invulnerable"] = HITS_INVULNERABLE[move_name]
+    if status_effect is not None:
+        result["status_effect"]     = status_effect_to_dict(status_effect)
+
+    return result
 
 def fetch_all_gen3_moves():
     os.makedirs(CACHE_DIR, exist_ok=True)

@@ -2,10 +2,24 @@ from type_chart import type_chart
 from print import *
 from mult_tables import *
 import random, copy
+from logger import logger, setup_logger
+from debug import dump_battle_state, dump_move
 
 def get_turn(trainer):
+    if trainer.locked_move is not None:
+        move = trainer.locked_move  # store before potentially resetting
+        trainer.locked_turns -= 1
+
+        if trainer.locked_turns == 0:
+            trainer.locked_move        = None
+            trainer.is_invulnerable    = False
+            trainer.invulnerable_state = None
+
+        return move
+        
     action_selected = False
     move = None
+    
     while not action_selected:
         action = print_actions(trainer)
         if action == 1:
@@ -60,6 +74,9 @@ def get_move(pokemon):
             pokemon.list_moves()
 
 def apply_move(move, attacker, defender):
+    logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
+    logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
+
     old_stats = []
     damage = float
 
@@ -73,38 +90,23 @@ def apply_move(move, attacker, defender):
         print(f"{move.name} has no PP left!")
 
     print(f"{attacker.active().name} used {move.name}!")
+    logger.debug(f"{attacker.active().name} used {move.name}!")
 
-    if move.multi_turn is not None and attacker.locked_move is None:
-        attacker.locked_move        = move
-        attacker.locked_turns       = move.multi_turn["turns"] - 1
-        attacker.is_invulnerable    = move.multi_turn["invulnerable"]
-        attacker.invulnerable_state = move.multi_turn.get("invulnerable_state")
-        print(f"{attacker.active().name} {move.multi_turn['charge_message']}")
+    if handle_multiturn(move, attacker):
+        return None
+
+    if handle_invulnerable(move, attacker, defender):
         return None
     
-    if defender.is_invulnerable:
-        # check if this move can hit through the invulnerable state
-        can_hit = (
-            defender.invulnerable_state is not None and
-            defender.invulnerable_state in (move.hits_invulnerable or [])
-        )
-        if can_hit:
-            print(f"It hit {defender.active().name} out of the sky!" 
-                  if defender.invulnerable_state == "flying"
-                  else f"It hit {defender.active().name}!")
-        else:
-            message = move.multi_turn.get("invulnerable_message", "is invulnerable!") \
-                      if defender.locked_move and defender.locked_move.multi_turn \
-                      else "is invulnerable!"
-            print(f"{defender.active().name} {message}")
-            print(f"{attacker.active().name}'s attack missed!")
-            return None
-
     if check_accuracy(move, attacker, defender) is not True:
         return None
 
     if move.category != "status":
         damage = apply_damage(move, attacker, defender)
+
+    if move.multi_turn is not None and move.multi_turn.get("charge_turn") == 2:
+        attacker.locked_move  = move
+        attacker.locked_turns = 1
 
     if move.recoil > 0:
         apply_recoil(move, attacker, damage)
@@ -117,6 +119,52 @@ def apply_move(move, attacker, defender):
         result, effect = apply_status_effect(move, defender)
         print_status_effect(defender.active(), effect, result)
 
+def handle_multiturn(move, attacker):
+    # handle recharge turn - charge_turn 2 means attack first then recharge
+    if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
+        if attacker.locked_move.multi_turn.get("charge_turn") == 2:
+            print(f"{attacker.active().name} {attacker.locked_move.multi_turn['charge_message']}")
+            return True
+
+    # handle normal charge turn - charge_turn 1 means charge first then attack
+    if move.multi_turn is not None and attacker.locked_move is None:
+        attacker.locked_move        = move
+        attacker.locked_turns       = move.multi_turn["turns"] - 1
+        attacker.is_invulnerable    = move.multi_turn["invulnerable"]
+        attacker.invulnerable_state = move.multi_turn.get("invulnerable_state")
+
+        if move.multi_turn.get("charge_turn") == 1:
+            print(f"{attacker.active().name} {move.multi_turn['charge_message']}")
+            return True
+
+    return False
+
+def handle_invulnerable(move, attacker, defender):
+    if not defender.is_invulnerable:
+        return False
+
+    can_hit = (
+        defender.invulnerable_state is not None and
+        defender.invulnerable_state in (move.hits_invulnerable or [])
+    )
+
+    if can_hit:
+        if defender.invulnerable_state == "flying":
+            print(f"It hit {defender.active().name} out of the sky!")
+        else:
+            print(f"It hit {defender.active().name}!")
+        return False
+
+    # use defender's locked move to get the invulnerable message
+    message = "is invulnerable!"
+    if defender.locked_move is not None and defender.locked_move.multi_turn is not None:
+        message = defender.locked_move.multi_turn.get("invulnerable_message", "is invulnerable!")
+
+    print(f"{defender.active().name} {message}")
+    print(f"{attacker.active().name}'s attack missed!")
+    logger.info(f"{attacker.active().name}'s attack missed!")
+    return True
+
 def check_accuracy(move, attacker, defender):
     move_acc = move.acc * acc_table[attacker.active().stage_acc]
     evasion  = acc_table[defender.active().stage_eva]
@@ -128,6 +176,7 @@ def check_accuracy(move, attacker, defender):
 
 def apply_damage(move, attacker, defender):
     damage, multiplier = calculate_damage(move, attacker, defender)
+    logger.debug(f"Damage calculated: {damage} (multiplier: {multiplier})")
     target = defender.active()
 
     target.hp = max(0, target.hp - damage)
@@ -154,7 +203,8 @@ def calculate_damage(move, attacker, defender):
         
     multiplier = get_type_multiplier(move.type[0], defender.active().type)
 
-    critical = 2 if random.random() < (1/16) else 1
+    crit_chance = crit_rate_table.get(move.crit_rate, 1/16)
+    critical    = 2 if random.random() < crit_chance else 1
     if critical == 2:
         print("Critical hit!")
 

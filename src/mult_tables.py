@@ -29,3 +29,11 @@ acc_table = {
     5:  (266/100),
     6:  (300/100),
 }
+
+crit_rate_table = {
+    0: 1/16,   # normal crit chance ~6.25%
+    1: 1/8,    # high crit ratio ~12.5% - moves like Slash, Razor Leaf
+    2: 1/4,    # 25% - with additional items/effects
+    3: 1/3,    # 33%
+    4: 1/2,    # 50%
+}

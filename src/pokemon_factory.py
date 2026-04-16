@@ -1,4 +1,4 @@
-from models import Pokemon
+from models import Pokemon, Move
 from cache_manager import *
 import requests
 
@@ -169,7 +169,6 @@ def check_pokemon_can_learn_move(pokemon_data, move_name):
     return move_name in pokemon_data["moves"]
 
 def create_move_from_api(move_data):
-    from objects.moves import Move
 
     category_map = {
         "physical": "physical",

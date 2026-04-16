@@ -3,7 +3,7 @@ import requests
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from cache_manager import get_pokemon_cache, save_pokemon_cache
+from src.cache_manager import get_pokemon_cache, save_pokemon_cache
 
 BASE_URL = "https://pokeapi.co/api/v2"
 

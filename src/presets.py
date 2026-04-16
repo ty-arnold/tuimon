@@ -52,17 +52,17 @@ def get_test_npc():
     return Trainer(
         name        = "Gary",
         party       = [
+            get_pokemon("blastoise", lvl=50, move_names=[
+                "surf",
+                "ice-beam",
+                "hydro-pump",
+                "withdraw"
+            ]),
             get_pokemon("charizard", lvl=50, move_names=[
                 "flamethrower",
                 "fly",
                 "slash",
                 "fire-spin"
-            ]),
-            get_pokemon("blastoise", lvl=50, move_names=[
-                "surf",
-                "ice-beam",
-                "tackle",
-                "withdraw"
             ])
         ],
     )

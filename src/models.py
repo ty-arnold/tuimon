@@ -6,14 +6,15 @@ iv = 15
 ev = 85
 
 class Pokemon:
-    def __init__(self, name, lvl, type, moveset, stat_hp, 
-                 stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
-
+    def __init__(self, name, lvl, type, moveset,
+                 stat_hp, stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
+        # identity
         self.name    = name
         self.lvl     = lvl
         self.type    = type
         self.moveset = moveset
 
+        # base stats
         self.base_stat_hp      = stat_hp
         self.base_stat_attk    = stat_attk
         self.base_stat_def     = stat_def
@@ -21,26 +22,38 @@ class Pokemon:
         self.base_stat_sp_def  = stat_sp_def
         self.base_stat_spd     = stat_spd
 
-        self.hp           = round((((((self.base_stat_hp      + iv) * 2) + ev) * self.lvl) / 100 ) + lvl + 10)
-        self.stat_attk    = round((((((self.base_stat_attk    + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
-        self.stat_def     = round((((((self.base_stat_def     + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
-        self.stat_sp_attk = round((((((self.base_stat_sp_attk + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
-        self.stat_sp_def  = round((((((self.base_stat_sp_def  + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
-        self.stat_spd     = round((((((self.base_stat_spd     + iv) * 2) + ev) * self.lvl) / 100 ) + 5)
-        self.stat_acc     = 1
-        self.stat_eva     = 1
-        self.max_hp  = self.hp
+        # calculated stats
+        self.hp           = self._calc_hp(stat_hp, iv, ev, lvl)
+        self.max_hp       = self.hp
+        self.stat_attk    = self._calc_stat(stat_attk,    iv, ev, lvl)
+        self.stat_def     = self._calc_stat(stat_def,     iv, ev, lvl)
+        self.stat_sp_attk = self._calc_stat(stat_sp_attk, iv, ev, lvl)
+        self.stat_sp_def  = self._calc_stat(stat_sp_def,  iv, ev, lvl)
+        self.stat_spd     = self._calc_stat(stat_spd,     iv, ev, lvl)
+        self.stat_acc     = 1.0
+        self.stat_eva     = 1.0
 
+        # battle stages
         self.stage_attk    = 0
         self.stage_def     = 0
         self.stage_sp_attk = 0
         self.stage_sp_def  = 0
         self.stage_spd     = 0
         self.stage_acc     = 0
-        self.stage_eva     = 0 
+        self.stage_eva     = 0
 
+        # status
         self.status_effect = []
-        
+
+    def _calc_hp(self, base, iv, ev, lvl):
+        return round((((base + iv) * 2 + ev) * lvl / 100) + lvl + 10)
+
+    def _calc_stat(self, base, iv, ev, lvl):
+        return round((((base + iv) * 2 + ev) * lvl / 100) + 5)
+
+    def active(self):
+        return self
+
     def is_alive(self):
         return self.hp > 0
     
@@ -101,17 +114,17 @@ class Pokemon:
 
 class Move:
     def __init__(self, name, type, category, power, acc, pp, stat_change,
-        recoil            = 0.0,
-        lifesteal         = 0.0,
-        heal              = 0.0,
-        min_hits          = None,
-        max_hits          = None,
-        crit_rate         = 0,
-        flinch_chance     = 0.0,
-        priority          = 0,
-        hits_invulnerable = None,
-        status_effect     = None,
-        multi_turn        = None):
+                recoil            = 0.0,
+                lifesteal         = 0.0,
+                heal              = 0.0,
+                min_hits          = None,
+                max_hits          = None,
+                crit_rate         = 0,
+                flinch_chance     = 0.0,
+                priority          = 0,
+                hits_invulnerable = None,
+                status_effect     = None,
+                multi_turn        = None):
 
         self.name              = name
         self.type              = type
@@ -136,16 +149,22 @@ class Move:
         return self.name
     
 class StatusEffect:
-    def __init__(self, name, chance_to_apply, chance_to_end=None, duration=None, stat_modifier=None, chance_to_act=1.0, damage=None):
-        self.name = name
-        self.chance_to_end = chance_to_end
-        self.duration = duration
-        self.stat_modifier = stat_modifier or {} 
+    def __init__(self, name, chance_to_apply, 
+                 chance_to_end = None, 
+                 duration      = None, 
+                 stat_modifier = None, 
+                 chance_to_act = 1.0, 
+                 damage        = None):
+        
+        self.name            = name
+        self.chance_to_end   = chance_to_end
+        self.duration        = duration
+        self.stat_modifier   = stat_modifier or {} 
         self.applied_changes = {}               
-        self.chance_to_act = chance_to_act
+        self.chance_to_act   = chance_to_act
         self.chance_to_apply = chance_to_apply
-        self.damage = damage
-        self.turns_active = 0 
+        self.damage          = damage
+        self.turns_active    = 0 
 
     def can_act(self):
         if self.chance_to_act < 1.0:
