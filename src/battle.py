@@ -9,31 +9,27 @@ def get_turn(trainer):
     if trainer.locked_move is not None:
         move = trainer.locked_move  # store before potentially resetting
         trainer.locked_turns -= 1
-
-        if trainer.locked_turns == 0:
-            trainer.locked_move        = None
-            trainer.is_invulnerable    = False
-            trainer.invulnerable_state = None
-
+        # don't clear here - let resolve_turn handle it after damage
         return move
-        
+
     action_selected = False
     move = None
-    
+
     while not action_selected:
         action = print_actions(trainer)
         if action == 1:
-                trainer.active().print_moves()
-                move = get_move(trainer.party[trainer.selected_mon])
-                if move is not None:
-                        action_selected = True
+            trainer.active().print_moves()
+            move = get_move(trainer.party[trainer.selected_mon])
+            if move is not None:
+                action_selected = True
         elif action == 2:
-                trainer.print_party()
-                pokemon = get_party(trainer)
-                if pokemon is not None:
-                        trainer.selected_mon = trainer.party.index(pokemon)
+            trainer.print_party()
+            pokemon = get_party(trainer)
+            if pokemon is not None:
+                trainer.selected_mon = trainer.party.index(pokemon)
         elif action == 3:
-                pass
+            # placeholder for items :)
+            pass
     return move
 
 def get_party(trainer):
@@ -92,13 +88,19 @@ def apply_move(move, attacker, defender):
     print(f"{attacker.active().name} used {move.name}!")
     logger.debug(f"{attacker.active().name} used {move.name}!")
 
-    if handle_multiturn(move, attacker):
-        return None
+    if move.multi_turn is not None: 
+        if handle_multiturn(move, attacker):
+            return None
 
-    if handle_invulnerable(move, attacker, defender):
-        return None
-    
-    if check_accuracy(move, attacker, defender) is not True:
+    if defender.is_invulnerable:
+        if handle_invulnerability(move, attacker, defender):
+            logger.debug(f"{attacker.active().name}'s attack missed!")
+            print(f"{attacker.active().name}'s attack missed!") 
+            return None
+
+    if not check_accuracy(move, attacker, defender):
+        logger.debug(f"{attacker.active().name}'s attack missed!")
+        print(f"{attacker.active().name}'s attack missed!") 
         return None
 
     if move.category != "status":
@@ -107,6 +109,11 @@ def apply_move(move, attacker, defender):
     if move.multi_turn is not None and move.multi_turn.get("charge_turn") == 2:
         attacker.locked_move  = move
         attacker.locked_turns = 1
+
+    if move.heal > 0:
+        heal_amount = round(attacker.active().max_hp * move.heal)
+        attacker.active().hp = min(attacker.active().max_hp, attacker.active().hp + heal_amount)
+        logger.info(f"{attacker.active().name} restored {heal_amount} HP!")
 
     if move.recoil > 0:
         apply_recoil(move, attacker, damage)
@@ -139,40 +146,31 @@ def handle_multiturn(move, attacker):
 
     return False
 
-def handle_invulnerable(move, attacker, defender):
-    if not defender.is_invulnerable:
-        return False
-
+def handle_invulnerability(move, attacker, defender):
     can_hit = (
         defender.invulnerable_state is not None and
         defender.invulnerable_state in (move.hits_invulnerable or [])
     )
-
     if can_hit:
         if defender.invulnerable_state == "flying":
-            print(f"It hit {defender.active().name} out of the sky!")
+            logger.info(f"It hit {defender.active().name} out of the sky!")
         else:
-            print(f"It hit {defender.active().name}!")
+            logger.info(f"It hit {defender.active().name}!")
         return False
 
-    # use defender's locked move to get the invulnerable message
+    # print invulnerable state message but NOT the missed message
     message = "is invulnerable!"
     if defender.locked_move is not None and defender.locked_move.multi_turn is not None:
         message = defender.locked_move.multi_turn.get("invulnerable_message", "is invulnerable!")
-
-    print(f"{defender.active().name} {message}")
-    print(f"{attacker.active().name}'s attack missed!")
-    logger.info(f"{attacker.active().name}'s attack missed!")
+    logger.info(f"{defender.active().name} {message}")
     return True
 
 def check_accuracy(move, attacker, defender):
     move_acc = move.acc * acc_table[attacker.active().stage_acc]
     evasion  = acc_table[defender.active().stage_eva]
     if random.random() > move_acc * evasion:
-        print(f"{attacker.active().name}'s attack missed!")
         return False
-    else:
-        return True
+    return True
 
 def apply_damage(move, attacker, defender):
     damage, multiplier = calculate_damage(move, attacker, defender)
@@ -304,6 +302,7 @@ def resolve_turn(player, player_choice, npc, npc_choice):
 
     if first_can_act:
         apply_move(first_choice, first, second)
+        clear_move_lock(first)
         winner = check_winner(player, npc)
         if winner:
             return True
@@ -314,6 +313,7 @@ def resolve_turn(player, player_choice, npc, npc_choice):
         
     if second_can_act:
         apply_move(second_choice, second, first)
+        clear_move_lock(second)
         winner = check_winner(player, npc)
         if winner:
             return True
@@ -325,6 +325,12 @@ def resolve_turn(player, player_choice, npc, npc_choice):
     if winner:
         return True
     return None
+
+def clear_move_lock(trainer):
+    if trainer.locked_move is not None and trainer.locked_turns == 0:
+        trainer.locked_move        = None
+        trainer.is_invulnerable    = False
+        trainer.invulnerable_state = None
 
 def next_mon(player, npc):
     if not player.party[player.selected_mon].is_alive():
@@ -344,8 +350,8 @@ def next_mon(player, npc):
 def check_winner(player, npc):
     if not any(pokemon.is_alive() for pokemon in player.party):
         print(f"{npc.name} Wins!")
-        return True
+        return npc      # return trainer object instead of True
     if not any(pokemon.is_alive() for pokemon in npc.party):
         print(f"{player.name} Wins!")
-        return True
+        return player   # return trainer object instead of True
     return None

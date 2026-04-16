@@ -150,21 +150,24 @@ class Move:
     
 class StatusEffect:
     def __init__(self, name, chance_to_apply, 
-                 chance_to_end = None, 
-                 duration      = None, 
-                 stat_modifier = None, 
-                 chance_to_act = 1.0, 
-                 damage        = None):
+                 chance_to_end    = None, 
+                 duration         = None, 
+                 stat_modifier    = None, 
+                 chance_to_act    = 1.0, 
+                 damage           = None,
+                 use_turn_counter = False):
         
-        self.name            = name
-        self.chance_to_end   = chance_to_end
-        self.duration        = duration
-        self.stat_modifier   = stat_modifier or {} 
-        self.applied_changes = {}               
-        self.chance_to_act   = chance_to_act
-        self.chance_to_apply = chance_to_apply
-        self.damage          = damage
-        self.turns_active    = 0 
+        self.name             = name
+        self.chance_to_end    = chance_to_end
+        self.duration         = duration
+        self.stat_modifier    = stat_modifier or {} 
+        self.applied_changes  = {}               
+        self.chance_to_act    = chance_to_act
+        self.chance_to_apply  = chance_to_apply
+        self.damage           = damage
+        self.turns_active     = 0
+        self.use_turn_counter = use_turn_counter
+        self.turn_counter     = None
 
     def can_act(self):
         if self.chance_to_act < 1.0:
@@ -177,12 +180,18 @@ class StatusEffect:
 
         if self.turns_active < 2:
             return False
-        
+
+        if self.use_turn_counter and self.turn_counter is not None:
+            self.turn_counter -= 1
+            return self.turn_counter == 0  # returns True when counter hits 0
+
         if self.duration is not None:
             self.duration -= 1
-            return self.duration == 0 
-        elif self.chance_to_end is not None:
+            return self.duration == 0
+
+        if self.chance_to_end is not None:
             return random.random() < self.chance_to_end
+
         return False
 
 class Trainer:

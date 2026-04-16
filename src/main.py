@@ -21,12 +21,8 @@ else:
     ]
     npc = Trainer(name="Gary", party=npc_party)
 
-# print(f"DEBUG player party: {[p.name if p is not None else 'None' for p in player.party]}")
-# print(f"DEBUG npc party: {[p.name if p is not None else 'None' for p in npc.party]}")
-# print(f"DEBUG player selected_mon: {player.selected_mon}")
-# print(f"DEBUG npc selected_mon: {npc.selected_mon}")
-
 turn = 1
+
 print("Battle Start!")
 while True:
     dump_battle_state(player, npc, turn=turn)
@@ -34,10 +30,13 @@ while True:
     player_move = get_turn(player)
     npc_move = get_turn(npc)
 
-    logger.debug(f"Player chose: {player_move.name}")
-    dump_move(player_move)
-    logger.debug(f"NPC chose: {npc_move.name}")
-    dump_move(npc_move)
+    logger.debug(f"Player chose: {player_move.name if player_move else 'charge/recharge turn'}")
+    logger.debug(f"NPC chose: {npc_move.name if npc_move else 'charge/recharge turn'}")
+
+    if player_move:
+        dump_move(player_move)
+    if npc_move:
+        dump_move(npc_move)
 
     winner = resolve_turn(player, player_move, npc, npc_move)
     if winner:

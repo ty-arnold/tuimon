@@ -54,6 +54,7 @@ if __name__ == "__main__":
         "charizard",
         "blastoise",
         "alakazam",
+        "pidgeot"
         # add any others you need here
     ]
     for name in pokemon_to_fetch:

@@ -1,6 +1,7 @@
 # presets.py
 from cache_manager import get_move_cache, dict_to_move, get_pokemon_cache, dict_to_pokemon
 from models import Trainer
+from pokemon_factory import create_pokemon_from_api
 
 move_cache    = get_move_cache()
 pokemon_cache = get_pokemon_cache()
@@ -16,6 +17,7 @@ def get_pokemon(name, lvl=50, move_names=None):
     key = name.lower()
     if key not in pokemon_cache:
         print(f"Pokemon '{name}' not found in cache!")
+        create_pokemon_from_api(name)
         return None
 
     moveset = []
@@ -33,11 +35,11 @@ def get_test_player():
     return Trainer(
         name        = "Ash",
         party       = [
-            get_pokemon("nidorino", lvl=50, move_names=[
-                "tackle",
-                "double-kick",
-                "thunder-wave",
-                "horn-attack"
+            get_pokemon("pidgeot", lvl=50, move_names=[
+                "fly",
+                "quick-attack",
+                "gust",
+                "growl"
             ]),
             get_pokemon("gengar", lvl=50, move_names=[
                 "shadow-ball",
@@ -53,9 +55,9 @@ def get_test_npc():
         name        = "Gary",
         party       = [
             get_pokemon("blastoise", lvl=50, move_names=[
-                "surf",
+                "toxic",
                 "ice-beam",
-                "hydro-pump",
+                "gust",
                 "withdraw"
             ]),
             get_pokemon("charizard", lvl=50, move_names=[
