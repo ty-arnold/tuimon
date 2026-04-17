@@ -1,5 +1,5 @@
 import random
-from mult_tables import *
+from src.mult_tables import *
 
 ### Global values ###
 iv = 15
@@ -108,9 +108,10 @@ class Pokemon:
         self.status_effect.remove(effect)
 
     def print_moves(self):
+        from game_print import game_print
         for i, move in enumerate(self.moveset):
-            print(f"{i + 1}. {move.name}")
-        print(f"{len(self.moveset) + 1}. Cancel")
+            game_print(f"{i + 1}. {move.name}")
+        game_print(f"{len(self.moveset) + 1}. Cancel")
 
 class Move:
     def __init__(self, name, type, category, power, acc, pp, stat_change,
@@ -201,17 +202,18 @@ class Trainer:
         self.selected_mon        = 0
         self.locked_move         = None
         self.locked_turns        = 0
-        self.is_invulnerable     = False
         self.invulnerable_state  = None
 
     def print_party(self):
-        print(f"{self.name}'s Party:")
+        from game_print import game_print
+        game_print(f"{self.name}'s Party:")
         for i, pokemon in enumerate(self.party):
-            print(f"{i + 1}. {pokemon.name}")
-        print(f"{len(self.party) + 1}. Cancel")
+            game_print(f"{i + 1}. {pokemon.name}")
+        game_print(f"{len(self.party) + 1}. Cancel")
 
     def print_hp(self):
-        print(f"{self.name}'s {self.active().name}: {self.active().hp}/{self.active().max_hp}") 
+        from game_print import game_print
+        game_print(f"{self.name}'s {self.active().name}: {self.active().hp}/{self.active().max_hp}") 
     
     def active(self):
         return self.party[self.selected_mon]

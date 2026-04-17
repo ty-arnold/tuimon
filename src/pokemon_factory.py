@@ -1,5 +1,6 @@
 from models import Pokemon, Move
 from cache_manager import *
+from game_print import game_print
 import requests
 
 BASE_URL = "https://pokeapi.co/api/v2"
@@ -24,13 +25,13 @@ def fetch_pokemon_data(name):
     # since moves are chosen interactively each time
     cache = get_pokemon_cache()
     if name in cache:
-        print(f"Loading {name.capitalize()} from cache...")
+        game_print(f"Loading {name.capitalize()} from cache...")
         return cache[name]  # return raw stat data, moveset chosen fresh each time
 
     try:
         response = requests.get(f"{BASE_URL}/pokemon/{name}")
         if response.status_code != 200:
-            print(f"Could not find pokemon '{name}'. Please try again.")
+            game_print(f"Could not find pokemon '{name}'. Please try again.")
             return None
 
         data = response.json()
@@ -41,7 +42,7 @@ def fetch_pokemon_data(name):
         gen_introduced   = int(species_data["generation"]["url"].split("/")[-2])
 
         if gen_introduced > 3:
-            print(f"{name.capitalize()} is not available in generation 3!")
+            game_print(f"{name.capitalize()} is not available in generation 3!")
             return None
 
         # format and cache the stat data
@@ -59,11 +60,11 @@ def fetch_pokemon_data(name):
 
         cache[name] = formatted
         save_pokemon_cache(cache)
-        print(f"Fetched {name.capitalize()} from API and cached!")
+        game_print(f"Fetched {name.capitalize()} from API and cached!")
         return formatted
 
     except requests.exceptions.ConnectionError:
-        print("Could not connect to the PokeAPI. Check your internet connection.")
+        game_print("Could not connect to the PokeAPI. Check your internet connection.")
         return None
 
 def create_pokemon_from_api(name, lvl=50):
@@ -71,7 +72,7 @@ def create_pokemon_from_api(name, lvl=50):
     if data is None:
         return None
 
-    print(f"\n{data['name']} fetched! Now choose 4 moves.")
+    game_print(f"\n{data['name']} fetched! Now choose 4 moves.")
     moveset = build_moveset(data)
 
     return dict_to_pokemon(data, lvl=lvl, moveset=moveset)
@@ -81,13 +82,13 @@ def fetch_move_data(move_name):
 
     # handle empty input
     if not move_name:
-        print("Please enter a move name.")
+        game_print("Please enter a move name.")
         return None
 
     # check cache first
     cache = get_move_cache()
     if move_name in cache:
-        print(f"Loading {move_name} from cache...")
+        game_print(f"Loading {move_name} from cache...")
         return dict_to_move(cache[move_name])
 
     # fetch from api
@@ -95,28 +96,28 @@ def fetch_move_data(move_name):
         response = requests.get(f"{BASE_URL}/move/{move_name}", timeout=5)
         
         if response.status_code == 404:
-            print(f"Move '{move_name}' does not exist. Please try again.")
+            game_print(f"Move '{move_name}' does not exist. Please try again.")
             return None
         elif response.status_code != 200:
-            print(f"Error fetching move '{move_name}' (status code {response.status_code}). Please try again.")
+            game_print(f"Error fetching move '{move_name}' (status code {response.status_code}). Please try again.")
             return None
 
         move = create_move_from_api(response.json())
         if move is not None:
             cache[move_name] = move_to_dict(move)
             save_move_cache(cache)
-            print(f"Fetched {move_name} from API and cached!")
+            game_print(f"Fetched {move_name} from API and cached!")
 
         return move
 
     except requests.exceptions.ConnectionError:
-        print("Could not connect to the PokeAPI. Check your internet connection.")
+        game_print("Could not connect to the PokeAPI. Check your internet connection.")
         return None
     except requests.exceptions.Timeout:
-        print(f"Request timed out fetching '{move_name}'. Please try again.")
+        game_print(f"Request timed out fetching '{move_name}'. Please try again.")
         return None
     except Exception as e:
-        print(f"Unexpected error fetching '{move_name}': {e}")
+        game_print(f"Unexpected error fetching '{move_name}': {e}")
         return None
 
 def build_moveset(pokemon_data, moveset_size=4):
@@ -126,10 +127,10 @@ def build_moveset(pokemon_data, moveset_size=4):
         pokemon_name = pokemon_data["name"].lower()
         if pokemon_name in pokemon_registry:
             template = pokemon_registry[pokemon_name]
-            print(f"Default moveset loaded from template!")
+            game_print(f"Default moveset loaded from template!")
             return template["moveset"][:moveset_size]
 
-        print(f"No template found for {pokemon_name.capitalize()}, loading moves from API...")
+        game_print(f"No template found for {pokemon_name.capitalize()}, loading moves from API...")
         default_moves = []
         for move in pokemon_data["moves"][:moveset_size]:
             move = fetch_move_data(move)
@@ -148,16 +149,16 @@ def build_moveset(pokemon_data, moveset_size=4):
 
         # handle empty input
         if not move_name or not move_name.strip():
-            print("Please enter a move name.")
+            game_print("Please enter a move name.")
             continue
 
         if not check_pokemon_can_learn_move(pokemon_data, move_name):
-            print(f"{pokemon_data['name']} cannot learn {move_name}!")
+            game_print(f"{pokemon_data['name']} cannot learn {move_name}!")
             continue
 
         move = fetch_move_data(move_name)
         if move is not None:
-            print(f"{move.name} added to moveset!")
+            game_print(f"{move.name} added to moveset!")
             moveset.append(move)
 
     return moveset
@@ -225,7 +226,7 @@ def create_pokemon(name, lvl=50, **overrides):
     # look up base template
     base = pokemon_registry.get(name.lower())
     if base is None:
-        print(f"Pokemon '{name}' not found!")
+        game_print(f"Pokemon '{name}' not found!")
         return None
 
     # merge base with any overrides

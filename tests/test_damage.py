@@ -56,11 +56,15 @@ class TestDamageCalculation(unittest.TestCase):
     def test_not_very_effective_halves_damage(self):
         attacker        = make_trainer(pokemon=[make_pokemon()])
         defender_normal = make_trainer(pokemon=[make_pokemon(type=["Normal"])])
-        defender_resist = make_trainer(pokemon=[make_pokemon(type=["Grass"])])  # grass resists water
+        defender_resist = make_trainer(pokemon=[make_pokemon(type=["Grass"])])
         move = make_move(type=["Water"], category="special", power=50)
-        damage_normal, _ = calculate_damage(move, attacker, defender_normal)
-        damage_resist, _ = calculate_damage(move, attacker, defender_resist)
-        self.assertAlmostEqual(damage_resist, damage_normal * 0.5, delta=2)
+        
+        _, multiplier_normal = calculate_damage(move, attacker, defender_normal)
+        _, multiplier_resist = calculate_damage(move, attacker, defender_resist)
+        
+        # check multipliers directly rather than damage values to avoid rounding issues
+        self.assertEqual(multiplier_normal, 1)
+        self.assertEqual(multiplier_resist, 0.5)
 
     def test_no_effect_deals_zero_damage(self):
         attacker = make_trainer(pokemon=[make_pokemon()])

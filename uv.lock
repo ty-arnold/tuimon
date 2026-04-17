@@ -279,25 +279,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pokemongame"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "pyinstaller" },
-    { name = "pynvim" },
-    { name = "requests" },
-    { name = "textual" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pyinstaller", specifier = ">=6.19.0" },
-    { name = "pynvim", specifier = ">=0.6.0" },
-    { name = "requests", specifier = ">=2.33.1" },
-    { name = "textual", specifier = ">=8.1.1" },
-]
-
-[[package]]
 name = "pygments"
 version = "2.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -421,6 +402,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/72/23/8c709655c5f2208ee82ab81b8104802421865535c278a7649b842b129db1/textual-8.1.1.tar.gz", hash = "sha256:eef0256a6131f06a20ad7576412138c1f30f92ddeedd055953c08d97044bc317", size = 1843002, upload-time = "2026-03-10T10:01:38.493Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/50/21/421b02bf5943172b7a9320712a5e0d74a02a8f7597284e3f8b5b06c70b8d/textual-8.1.1-py3-none-any.whl", hash = "sha256:6712f96e335cd782e76193dee16b9c8875fe0699d923bc8d3f1228fd23e773a6", size = 719598, upload-time = "2026-03-10T10:01:48.318Z" },
+]
+
+[[package]]
+name = "tuimon"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pyinstaller" },
+    { name = "pynvim" },
+    { name = "requests" },
+    { name = "textual" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyinstaller", specifier = ">=6.19.0" },
+    { name = "pynvim", specifier = ">=0.6.0" },
+    { name = "requests", specifier = ">=2.33.1" },
+    { name = "textual", specifier = ">=8.1.1" },
 ]
 
 [[package]]

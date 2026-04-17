@@ -1,30 +1,32 @@
-from pokemon_factory import fetch_pokemon_data, create_pokemon_from_api
+from pokemon_factory import create_pokemon_from_api
+from logger import logger
+from game_print import game_print
 
 def print_actions(trainer):
     while True:
         try:
-            print(f"{trainer.name}'s {trainer.active().name}:")
-            print("1. Moves")
-            print("2. Pokemon")
-            print("3. Items")
+            game_print(f"{trainer.name}'s {trainer.active().name}:")
+            game_print("1. Moves")
+            game_print("2. Pokemon")
+            game_print("3. Items")
             choice = int(input("Select an action: "))
             if choice not in range(1, 4):
                 raise ValueError
             return choice
         except ValueError:
-            print("Invalid choice, please select again.")
+            game_print("Invalid choice, please select again.")
     
 def print_stats(player, npc):
     for key, value in vars(player.party[player.selected_mon]).items():
-        print(f"{key}: {value}")
+        game_print(f"{key}: {value}")
     for key, value in vars(npc.party[npc.selected_mon]).items():
-        print(f"{key}: {value}")
+        game_print(f"{key}: {value}")
 
 def print_battle_status(player, npc):
-    print(f"DEBUG player party hp: {[p.hp for p in player.party]}")
-    print(f"DEBUG npc party hp: {[p.hp for p in npc.party]}")
-    print(f"DEBUG player alive: {[p.is_alive() for p in player.party]}")
-    print(f"DEBUG npc alive: {[p.is_alive() for p in npc.party]}")
+    game_print(f"DEBUG player party hp: {[p.hp for p in player.party]}")
+    game_print(f"DEBUG npc party hp: {[p.hp for p in npc.party]}")
+    game_print(f"DEBUG player alive: {[p.is_alive() for p in player.party]}")
+    game_print(f"DEBUG npc alive: {[p.is_alive() for p in npc.party]}")
 
 def print_stat_changes(old_stats):
     stat_name = {
@@ -57,14 +59,14 @@ def print_stat_changes(old_stats):
         if stat in stat_messages:
             if actual_change == 0:
                 display_name = stat_name.get(stat, stat)
-                print(f"{target.name}'s {display_name} won't go any further!")
+                game_print(f"{target.name}'s {display_name} won't go any further!")
             else:
                 up_message, down_message = stat_messages[stat]
                 amount = stage_amount.get(abs(actual_change), " drastically")
                 if actual_change > 0:
-                    print(f"{target.name}{up_message}{amount}!")
+                    game_print(f"{target.name}{up_message}{amount}!")
                 elif actual_change < 0:
-                    print(f"{target.name}{down_message}{amount}!")
+                    game_print(f"{target.name}{down_message}{amount}!")
  
 def print_status_effect(target, effect, result):
     status_messages = {
@@ -84,9 +86,9 @@ def print_status_effect(target, effect, result):
 
     match result:
         case "afflicted":
-            print(f"{target.name}{status_messages[effect.name]}")
+            game_print(f"{target.name}{status_messages[effect.name]}")
         case "already":
-            print(f"{target.name}{already_messages[effect.name]}")
+            game_print(f"{target.name}{already_messages[effect.name]}")
         case "failed":
             pass
             
@@ -99,7 +101,7 @@ def print_cant_act(attacker, reason):
     }
     
     message = cant_act_messages.get(reason, " can't move!")
-    print(f"{attacker.active().name}{message}")
+    game_print(f"{attacker.active().name}{message}")
 
 def debug_print_stats(pokemon):
     stats = ["stat_attk", "stat_def", "stat_sp_attk", "stat_sp_def", "stat_spd", "stat_acc", "stat_eva"]
@@ -121,20 +123,20 @@ def debug_print_stats(pokemon):
         "stat_acc":     "stage_acc",
         "stat_eva":     "stage_eva",
     }
-    print(f"--- {pokemon.name} Stats ---")
-    print(f"HP:  {pokemon.hp}/{pokemon.max_hp}")
-    print(f"{'Stat':<20} {'Base':<10} {'Stage':<10} {'Calculated':<10}")
-    print(f"{'-' * 50}")
+    game_print(f"--- {pokemon.name} Stats ---")
+    game_print(f"HP:  {pokemon.hp}/{pokemon.max_hp}")
+    game_print(f"{'Stat':<20} {'Base':<10} {'Stage':<10} {'Calculated':<10}")
+    game_print(f"{'-' * 50}")
     for stat in stats:
         base       = getattr(pokemon, stat)
         stage      = getattr(pokemon, stage_attr[stat])
         calculated = pokemon.get_stat(stat)
-        print(f"{stat_names[stat]:<20} {base:<10} {stage:<10} {calculated:<10}")
-    print(f"{'Status Effects:':<20} {[e.name for e in pokemon.status_effect]}")
-    print(f"{'-' * 50}")
+        game_print(f"{stat_names[stat]:<20} {base:<10} {stage:<10} {calculated:<10}")
+    game_print(f"{'Status Effects:':<20} {[e.name for e in pokemon.status_effect]}")
+    game_print(f"{'-' * 50}")
 
 def build_party(trainer_name, party_size=2):
-    print(f"\n{trainer_name}, choose your pokemon!")
+    game_print(f"\n{trainer_name}, choose your pokemon!")
     party = []
     while len(party) < party_size:
         name = input(f"Choose pokemon {len(party) + 1}/{party_size}: ")
@@ -144,19 +146,19 @@ def build_party(trainer_name, party_size=2):
     return party
 
 def debug_print_move(move):
-    print(f"--- {move.name} ---")
-    print(f"Type:         {move.type}")
-    print(f"Category:     {move.category}")
-    print(f"Power:        {move.power}")
-    print(f"Accuracy:     {move.acc}")
-    print(f"PP:           {move.pp}")
-    print(f"Stat Change:  {move.stat_change}")
-    print(f"Recoil:       {move.recoil}")
+    game_print(f"--- {move.name} ---")
+    game_print(f"Type:         {move.type}")
+    game_print(f"Category:     {move.category}")
+    game_print(f"Power:        {move.power}")
+    game_print(f"Accuracy:     {move.acc}")
+    game_print(f"PP:           {move.pp}")
+    game_print(f"Stat Change:  {move.stat_change}")
+    game_print(f"Recoil:       {move.recoil}")
     if move.status_effect is not None:
-        print(f"Status Effect: {move.status_effect.name}")
-        print(f"  Chance to Apply: {move.status_effect.chance_to_apply}")
-        print(f"  Chance to Act:   {move.status_effect.chance_to_act}")
-        print(f"  Chance to End:   {move.status_effect.chance_to_end}")
+        game_print(f"Status Effect: {move.status_effect.name}")
+        game_print(f"  Chance to Apply: {move.status_effect.chance_to_apply}")
+        game_print(f"  Chance to Act:   {move.status_effect.chance_to_act}")
+        game_print(f"  Chance to End:   {move.status_effect.chance_to_end}")
     else:
-        print(f"Status Effect: None")
-    print(f"{'─' * 20}")
+        game_print(f"Status Effect: None")
+    game_print(f"{'─' * 20}")

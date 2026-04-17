@@ -197,7 +197,6 @@ Represents a player or NPC with a party of Pokemon.
 | `selected_mon` | Index of active Pokemon |
 | `locked_move` | Currently locked multi-turn move |
 | `locked_turns` | Turns remaining on locked move |
-| `is_invulnerable` | Whether trainer's active Pokemon is invulnerable |
 | `invulnerable_state` | Current invulnerability state (flying, underground, etc.) |
 
 ### StatusEffect

@@ -20,7 +20,6 @@ def dump_trainer(trainer):
     logger.debug(f"  Selected Mon:       {trainer.selected_mon}")
     logger.debug(f"  Locked Move:        {trainer.locked_move.name if trainer.locked_move else None}")
     logger.debug(f"  Locked Turns:       {trainer.locked_turns}")
-    logger.debug(f"  Is Invulnerable:    {trainer.is_invulnerable}")
     logger.debug(f"  Invulnerable State: {trainer.invulnerable_state}")
     logger.debug(f"  Party:")
     for pokemon in trainer.party:

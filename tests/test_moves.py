@@ -44,7 +44,6 @@ class TestMoves(unittest.TestCase):
             "invulnerable_message": "is high up in the air!"
         })
         handle_multiturn(move, attacker)
-        self.assertTrue(attacker.is_invulnerable)
         self.assertEqual(attacker.invulnerable_state, "flying")
 
     def test_status_move_does_not_deal_damage(self):
@@ -62,3 +61,91 @@ class TestMoves(unittest.TestCase):
         move = make_move(category="status", power=0, acc=1.0, heal=0.5)
         apply_move(move, attacker, defender)
         self.assertGreater(attacker.active().hp, 10)
+
+    def test_regular_move_cannot_hit_invulnerable_pokemon(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+
+        # set defender to be invulnerable via fly
+        defender.invulnerable_state = "flying"
+
+        tackle   = make_move(name="Tackle", category="physical", power=40, acc=1.0)
+        hp_before = defender.active().hp
+
+        apply_move(tackle, attacker, defender)
+
+        # hp should be unchanged since tackle cant hit a flying pokemon
+        self.assertEqual(defender.active().hp, hp_before)
+
+    def test_hits_invulnerable_move_can_hit_invulnerable_pokemon(self):
+        attacker = make_trainer(pokemon=[make_pokemon(stat_sp_attk=100)])
+        defender = make_trainer(pokemon=[make_pokemon(stat_sp_def=100)])
+
+        # set defender to be invulnerable via fly
+        defender.invulnerable_state = "flying"
+
+        # lock the defender into fly so handle_invulnerability can read the state
+        fly = make_move(
+            name  = "Fly",
+            multi_turn = {
+                "turns":                2,
+                "charge_turn":          1,
+                "invulnerable":         True,
+                "invulnerable_state":   "flying",
+                "charge_message":       "flew up high!",
+                "invulnerable_message": "is high up in the air!"
+            }
+        )
+        defender.locked_move = fly
+
+        gust = make_move(
+            name              = "Gust",
+            type              = ["Flying"],
+            category          = "special",
+            power             = 40,
+            acc               = 1.0,
+            hits_invulnerable = ["flying"]
+        )
+        hp_before = defender.active().hp
+
+        apply_move(gust, attacker, defender)
+
+        # hp should be reduced since gust can hit flying pokemon
+        self.assertLess(defender.active().hp, hp_before)
+
+    def test_hits_invulnerable_move_cannot_hit_different_invulnerable_state(self):
+        attacker = make_trainer(pokemon=[make_pokemon(stat_sp_attk=100)])
+        defender = make_trainer(pokemon=[make_pokemon(stat_sp_def=100)])
+
+        # set defender to be invulnerable via fly
+        defender.invulnerable_state = "flying"
+
+        # lock the defender into fly
+        fly = make_move(
+            name       = "Fly",
+            multi_turn = {
+                "turns":                2,
+                "charge_turn":          1,
+                "invulnerable":         True,
+                "invulnerable_state":   "flying",
+                "charge_message":       "flew up high!",
+                "invulnerable_message": "is high up in the air!"
+            }
+        )
+        defender.locked_move = fly
+
+        # surf can hit underwater pokemon but NOT flying pokemon
+        surf = make_move(
+            name              = "Surf",
+            type              = ["Water"],
+            category          = "special",
+            power             = 90,
+            acc               = 1.0,
+            hits_invulnerable = ["underwater"]  # only hits underwater, not flying
+        )
+        hp_before = defender.active().hp
+
+        apply_move(surf, attacker, defender)
+
+        # hp should be unchanged since surf cannot hit a flying pokemon
+        self.assertEqual(defender.active().hp, hp_before)

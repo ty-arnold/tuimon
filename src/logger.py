@@ -28,5 +28,7 @@ def setup_logger(debug=False):
         logger.addHandler(file_handler)
 
     return logger
-# global logger instance
-logger = setup_logger(debug=False)
+
+# default null logger - does nothing until setup_logger is called
+logger = logging.getLogger("pokemon_battle")
+logger.addHandler(logging.NullHandler())

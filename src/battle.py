@@ -1,9 +1,9 @@
 from type_chart import type_chart
-from print import *
+from game_print import game_print
+from print import print_actions, print_cant_act, print_stat_changes, print_status_effect
 from mult_tables import *
 import random, copy
-from logger import logger, setup_logger
-from debug import dump_battle_state, dump_move
+from logger import logger
 
 def get_turn(trainer):
     if trainer.locked_move is not None:
@@ -41,16 +41,55 @@ def get_party(trainer):
                 return None
             selected_mon = trainer.party[choice - 1]
             if not selected_mon.is_alive():
-                print(f"{selected_mon.name} has already fainted! Please select Pokemon.")
+                game_print(f"{selected_mon.name} has already fainted! Please select Pokemon.")
                 continue
             if choice - 1 == trainer.selected_mon:
-                print(f"{selected_mon.name} is already selected!")
+                game_print(f"{selected_mon.name} is already selected!")
                 return None
-            print(f"You selected {selected_mon.name}!")
+            game_print(f"You selected {selected_mon.name}!")
             trainer.selected_mon = choice - 1
             return selected_mon
         except (ValueError, IndexError):
-            print("Invalid choice, please select again")
+            game_print("Invalid choice, please select again")
+
+def resolve_turn(player, player_choice, npc, npc_choice):
+    player_can_act = check_can_act(player.active())
+    npc_can_act = check_can_act(npc.active())
+
+    if player.active().get_stat("stat_spd") > npc.active().get_stat("stat_spd"):
+        first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
+        first_can_act, second_can_act = player_can_act, npc_can_act
+    else:
+        first, first_choice, second, second_choice = npc, npc_choice, player, player_choice
+        first_can_act, second_can_act = npc_can_act, player_can_act
+
+    second_mon_before = second.selected_mon
+
+    if first_can_act:
+        apply_move(first_choice, first, second)
+        clear_move_lock(first)
+        winner = check_winner(player, npc)
+        if winner:
+            return True
+        next_mon(player, npc)
+        
+    if second.selected_mon != second_mon_before:
+        return None
+        
+    if second_can_act:
+        apply_move(second_choice, second, first)
+        clear_move_lock(second)
+        winner = check_winner(player, npc)
+        if winner:
+            return True
+        next_mon(player, npc)
+
+    process_status_effects(first.active())
+    process_status_effects(second.active())
+    winner = check_winner(player, npc)
+    if winner:
+        return True
+    return None
 
 def get_move(pokemon):
     while True:
@@ -61,12 +100,12 @@ def get_move(pokemon):
                 return None
             selected_move = pokemon.moveset[choice - 1]
             if selected_move.pp <= 0:
-                print(f"{selected_move.name} has no PP left! Choose another move.")
+                game_print(f"{selected_move.name} has no PP left! Choose another move.")
                 continue
-            print(f"You selected {selected_move.name}!")
+            game_print(f"You selected {selected_move.name}!")
             return pokemon.moveset[choice - 1]
         except (ValueError, IndexError):
-            print("Invalid choice, please select again")
+            game_print("Invalid choice, please select again")
             pokemon.list_moves()
 
 def apply_move(move, attacker, defender):
@@ -83,24 +122,21 @@ def apply_move(move, attacker, defender):
     
     move.pp -= 1
     if move.pp <= 0:
-        print(f"{move.name} has no PP left!")
+        game_print(f"{move.name} has no PP left!")
 
-    print(f"{attacker.active().name} used {move.name}!")
-    logger.debug(f"{attacker.active().name} used {move.name}!")
+    game_print(f"{attacker.active().name} used {move.name}!")
 
     if move.multi_turn is not None: 
         if handle_multiturn(move, attacker):
             return None
 
-    if defender.is_invulnerable:
+    if defender.invulnerable_state is not None:
         if handle_invulnerability(move, attacker, defender):
-            logger.debug(f"{attacker.active().name}'s attack missed!")
-            print(f"{attacker.active().name}'s attack missed!") 
+            game_print(f"{attacker.active().name}'s attack missed!") 
             return None
 
     if not check_accuracy(move, attacker, defender):
-        logger.debug(f"{attacker.active().name}'s attack missed!")
-        print(f"{attacker.active().name}'s attack missed!") 
+        game_print(f"{attacker.active().name}'s attack missed!") 
         return None
 
     if move.category != "status":
@@ -130,27 +166,24 @@ def handle_multiturn(move, attacker):
     # handle recharge turn - charge_turn 2 means attack first then recharge
     if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
         if attacker.locked_move.multi_turn.get("charge_turn") == 2:
-            print(f"{attacker.active().name} {attacker.locked_move.multi_turn['charge_message']}")
+            game_print(f"{attacker.active().name} {attacker.locked_move.multi_turn['charge_message']}")
             return True
 
     # handle normal charge turn - charge_turn 1 means charge first then attack
     if move.multi_turn is not None and attacker.locked_move is None:
         attacker.locked_move        = move
         attacker.locked_turns       = move.multi_turn["turns"] - 1
-        attacker.is_invulnerable    = move.multi_turn["invulnerable"]
         attacker.invulnerable_state = move.multi_turn.get("invulnerable_state")
 
         if move.multi_turn.get("charge_turn") == 1:
-            print(f"{attacker.active().name} {move.multi_turn['charge_message']}")
+            game_print(f"{attacker.active().name} {move.multi_turn['charge_message']}")
             return True
 
     return False
 
 def handle_invulnerability(move, attacker, defender):
-    can_hit = (
-        defender.invulnerable_state is not None and
-        defender.invulnerable_state in (move.hits_invulnerable or [])
-    )
+    can_hit = defender.invulnerable_state in (move.hits_invulnerable or [])
+    
     if can_hit:
         if defender.invulnerable_state == "flying":
             logger.info(f"It hit {defender.active().name} out of the sky!")
@@ -180,13 +213,13 @@ def apply_damage(move, attacker, defender):
     target.hp = max(0, target.hp - damage)
 
     if multiplier == 0:
-        print("But it had no effect...")
+        game_print("But it had no effect...")
     elif multiplier < 1:
-        print("But it's not very effective...")
+        game_print("But it's not very effective...")
     elif multiplier > 1:
-        print("It's super effective!")
+        game_print("It's super effective!")
     
-    print(f"{target.name} took {damage} damage!")  
+    game_print(f"{target.name} took {damage} damage!")  
     return damage  
 
 def calculate_damage(move, attacker, defender):
@@ -204,7 +237,7 @@ def calculate_damage(move, attacker, defender):
     crit_chance = crit_rate_table.get(move.crit_rate, 1/16)
     critical    = 2 if random.random() < crit_chance else 1
     if critical == 2:
-        print("Critical hit!")
+        game_print("Critical hit!")
 
     stab = 1.5 if attacker.active().type == move.type[0] else 1
 
@@ -224,7 +257,7 @@ def get_type_multiplier(move_type, defender_types):
 def apply_recoil(move, attacker, damage):
     recoil_damage = round(damage * move.recoil)
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-    print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
+    game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
 def apply_stat_change(move, attacker, defender, old_stats):
     for target_type, stat_changes in move.stat_change.items():
@@ -273,13 +306,13 @@ def process_status_effects(pokemon):
         if effect.damage is not None and effect.damage > 0:
             damage = round(pokemon.max_hp * effect.damage)
             pokemon.hp = max(0, pokemon.hp - damage)
-            print(f"{pokemon.name} was hurt by {effect.name}!")
-            print(f"{pokemon.name} took {damage} damage!")
+            game_print(f"{pokemon.name} was hurt by {effect.name}!")
+            game_print(f"{pokemon.name} took {damage} damage!")
 
     for effect in effects_to_remove:
         pokemon.remove_status_effect(effect)
         message = removal_messages.get(effect.name, " is no longer affected!")
-        print(f"{pokemon.name}{message}")
+        game_print(f"{pokemon.name}{message}")
                               
 def check_can_act(pokemon):
     for effect in pokemon.status_effect:
@@ -287,61 +320,21 @@ def check_can_act(pokemon):
             return False, effect.name
     return True, None
 
-def resolve_turn(player, player_choice, npc, npc_choice):
-    player_can_act = check_can_act(player.active())
-    npc_can_act = check_can_act(npc.active())
-
-    if player.active().get_stat("stat_spd") > npc.active().get_stat("stat_spd"):
-        first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
-        first_can_act, second_can_act = player_can_act, npc_can_act
-    else:
-        first, first_choice, second, second_choice = npc, npc_choice, player, player_choice
-        first_can_act, second_can_act = npc_can_act, player_can_act
-
-    second_mon_before = second.selected_mon
-
-    if first_can_act:
-        apply_move(first_choice, first, second)
-        clear_move_lock(first)
-        winner = check_winner(player, npc)
-        if winner:
-            return True
-        next_mon(player, npc)
-        
-    if second.selected_mon != second_mon_before:
-        return None
-        
-    if second_can_act:
-        apply_move(second_choice, second, first)
-        clear_move_lock(second)
-        winner = check_winner(player, npc)
-        if winner:
-            return True
-        next_mon(player, npc)
-
-    process_status_effects(first.active())
-    process_status_effects(second.active())
-    winner = check_winner(player, npc)
-    if winner:
-        return True
-    return None
-
 def clear_move_lock(trainer):
     if trainer.locked_move is not None and trainer.locked_turns == 0:
         trainer.locked_move        = None
-        trainer.is_invulnerable    = False
         trainer.invulnerable_state = None
 
 def next_mon(player, npc):
     if not player.party[player.selected_mon].is_alive():
-        print(f"{player.party[player.selected_mon].name} fainted!")
+        game_print(f"{player.party[player.selected_mon].name} fainted!")
         player.print_party()
         new_mon = get_party(player)
         if new_mon is not None:
             player.selected_mon = player.party.index(new_mon)
 
     if not npc.party[npc.selected_mon].is_alive():
-        print(f"{npc.party[npc.selected_mon].name} fainted!")
+        game_print(f"{npc.party[npc.selected_mon].name} fainted!")
         player.print_party()
         new_mon = get_party(npc)
         if new_mon is not None:
@@ -349,9 +342,9 @@ def next_mon(player, npc):
                 
 def check_winner(player, npc):
     if not any(pokemon.is_alive() for pokemon in player.party):
-        print(f"{npc.name} Wins!")
+        game_print(f"{npc.name} Wins!")
         return npc      # return trainer object instead of True
     if not any(pokemon.is_alive() for pokemon in npc.party):
-        print(f"{player.name} Wins!")
+        game_print(f"{player.name} Wins!")
         return player   # return trainer object instead of True
     return None
