@@ -1,4 +1,6 @@
+from __future__ import annotations
 import random
+from typing import Optional
 from src.mult_tables import *
 
 ### Global values ###
@@ -6,58 +8,57 @@ iv = 15
 ev = 85
 
 class Pokemon:
-    def __init__(self, name, lvl, type, moveset,
-                 stat_hp, stat_attk, stat_def, stat_sp_attk, stat_sp_def, stat_spd):
-        # identity
-        self.name    = name
-        self.lvl     = lvl
-        self.type    = type
-        self.moveset = moveset
+    def __init__(
+        self,
+        name:         str,
+        lvl:          int,
+        type:         list[str],
+        moveset:      list[Move],
+        stat_hp:      int,
+        stat_attk:    int,
+        stat_def:     int,
+        stat_sp_attk: int,
+        stat_sp_def:  int,
+        stat_spd:     int
+    ):
+        self.name:         str               = name
+        self.lvl:          int               = lvl
+        self.type:         list[str]         = type
+        self.moveset:      list[Move]        = moveset
 
-        # base stats
-        self.base_stat_hp      = stat_hp
-        self.base_stat_attk    = stat_attk
-        self.base_stat_def     = stat_def
-        self.base_stat_sp_attk = stat_sp_attk
-        self.base_stat_sp_def  = stat_sp_def
-        self.base_stat_spd     = stat_spd
+        self.hp:           int               = self._calc_hp(stat_hp,      iv, ev, lvl)
+        self.max_hp:       int               = self.hp
+        self.stat_attk:    int               = self._calc_stat(stat_attk,    iv, ev, lvl)
+        self.stat_def:     int               = self._calc_stat(stat_def,     iv, ev, lvl)
+        self.stat_sp_attk: int               = self._calc_stat(stat_sp_attk, iv, ev, lvl)
+        self.stat_sp_def:  int               = self._calc_stat(stat_sp_def,  iv, ev, lvl)
+        self.stat_spd:     int               = self._calc_stat(stat_spd,     iv, ev, lvl)
+        self.stat_acc:     float             = 1.0
+        self.stat_eva:     float             = 1.0
 
-        # calculated stats
-        self.hp           = self._calc_hp(stat_hp, iv, ev, lvl)
-        self.max_hp       = self.hp
-        self.stat_attk    = self._calc_stat(stat_attk,    iv, ev, lvl)
-        self.stat_def     = self._calc_stat(stat_def,     iv, ev, lvl)
-        self.stat_sp_attk = self._calc_stat(stat_sp_attk, iv, ev, lvl)
-        self.stat_sp_def  = self._calc_stat(stat_sp_def,  iv, ev, lvl)
-        self.stat_spd     = self._calc_stat(stat_spd,     iv, ev, lvl)
-        self.stat_acc     = 1.0
-        self.stat_eva     = 1.0
+        self.stage_attk:    int              = 0
+        self.stage_def:     int              = 0
+        self.stage_sp_attk: int              = 0
+        self.stage_sp_def:  int              = 0
+        self.stage_spd:     int              = 0
+        self.stage_acc:     int              = 0
+        self.stage_eva:     int              = 0
 
-        # battle stages
-        self.stage_attk    = 0
-        self.stage_def     = 0
-        self.stage_sp_attk = 0
-        self.stage_sp_def  = 0
-        self.stage_spd     = 0
-        self.stage_acc     = 0
-        self.stage_eva     = 0
+        self.status_effect: list[StatusEffect] = []
 
-        # status
-        self.status_effect = []
-
-    def _calc_hp(self, base, iv, ev, lvl):
+    def _calc_hp(self, base: int, iv: int, ev: int, lvl: int) -> int:
         return round((((base + iv) * 2 + ev) * lvl / 100) + lvl + 10)
 
-    def _calc_stat(self, base, iv, ev, lvl):
+    def _calc_stat(self, base: int, iv: int, ev: int, lvl: int) -> int:
         return round((((base + iv) * 2 + ev) * lvl / 100) + 5)
 
-    def active(self):
+    def active(self) -> Pokemon:
         return self
 
-    def is_alive(self):
+    def is_alive(self) -> bool:
         return self.hp > 0
     
-    def get_stat(self, stat):
+    def get_stat(self, stat: str) -> int:
         stage_map = {
             "stat_attk":    (self.stat_attk,    self.stage_attk),
             "stat_def":     (self.stat_def,     self.stage_def),
@@ -79,7 +80,7 @@ class Pokemon:
         
         return calculated
 
-    def apply_stage_change(self, stat, change):
+    def apply_stage_change(self, stat: str, change: int) -> int:
         stage_attr = {
             "stat_attk":    "stage_attk",
             "stat_def":     "stage_def",
@@ -95,14 +96,14 @@ class Pokemon:
         setattr(self, attr, new_stage)
         return new_stage - current_stage
     
-    def apply_status_effect(self, effect):
+    def apply_status_effect(self, effect: StatusEffect) -> None:
         for stat, multiplier in effect.stat_modifier.items():
             original = getattr(self, stat)
             effect.applied_changes[stat] = original
             setattr(self, stat, int(original * multiplier))
         self.status_effect.append(effect)
 
-    def remove_status_effect(self, effect):
+    def remove_status_effect(self, effect: StatusEffect) -> None:
         for stat, original_value in effect.applied_changes.items():
             setattr(self, stat, original_value)
         self.status_effect.remove(effect)
@@ -114,72 +115,86 @@ class Pokemon:
         game_print(f"{len(self.moveset) + 1}. Cancel")
 
 class Move:
-    def __init__(self, name, type, category, power, pp, stat_change,
-                acc                = None,
-                stat_change_chance = 1.0,
-                recoil             = 0.0,
-                lifesteal          = 0.0,
-                heal               = 0.0,
-                min_hits           = None,
-                max_hits           = None,
-                crit_rate          = 0,
-                flinch_chance      = 0.0,
-                priority           = 0,
-                hits_invulnerable  = None,
-                status_effect      = None,
-                multi_turn         = None):
-
-        self.name               = name
-        self.type               = type
-        self.category           = category
-        self.power              = power
-        self.acc                = acc
-        self.pp                 = pp
-        self.stat_change        = stat_change
-        self.stat_change_chance = stat_change_chance
-        self.recoil             = recoil
-        self.lifesteal          = lifesteal
-        self.heal               = heal
-        self.min_hits           = min_hits
-        self.max_hits           = max_hits
-        self.crit_rate          = crit_rate
-        self.flinch_chance      = flinch_chance
-        self.priority           = priority
-        self.hits_invulnerable  = hits_invulnerable
-        self.status_effect      = status_effect
-        self.multi_turn         = multi_turn
+    def __init__(
+        self,
+        name:               str,
+        type:               list[str],
+        category:           str,
+        power:              int,
+        acc:                Optional[float]        = None,
+        pp:                 int                    = 20,
+        stat_change:        Optional[dict]         = None,
+        recoil:             float                  = 0.0,
+        lifesteal:          float                  = 0.0,
+        heal:               float                  = 0.0,
+        min_hits:           Optional[int]          = None,
+        max_hits:           Optional[int]          = None,
+        crit_rate:          int                    = 0,
+        flinch_chance:      float                  = 0.0,
+        priority:           int                    = 0,
+        multi_turn:         Optional[dict]         = None,
+        hits_invulnerable:  Optional[list[str]]    = None,
+        # damage_modifier:    Optional[dict]       = None,
+        status_effect:      Optional[StatusEffect] = None,
+        stat_change_chance: float                  = 1.0,
+    ):
+        self.name:               str                      = name
+        self.type:               list[str]                = type
+        self.category:           str                      = category
+        self.power:              int                      = power
+        self.acc:                Optional[float]          = acc
+        self.pp:                 int                      = pp
+        self.stat_change:        dict                     = stat_change or {}
+        self.recoil:             float                    = recoil
+        self.lifesteal:          float                    = lifesteal
+        self.heal:               float                    = heal
+        self.min_hits:           Optional[int]            = min_hits
+        self.max_hits:           Optional[int]            = max_hits
+        self.crit_rate:          int                      = crit_rate
+        self.flinch_chance:      float                    = flinch_chance
+        self.priority:           int                      = priority
+        self.multi_turn:         Optional[dict]           = multi_turn
+        self.hits_invulnerable:  list[str]                = hits_invulnerable or []
+        # self.damage_modifier:    dict                   = damage_modifier or {}
+        self.status_effect:      Optional[StatusEffect]   = status_effect
+        self.stat_change_chance: float                    = stat_change_chance
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
     
 class StatusEffect:
-    def __init__(self, name, chance_to_apply, 
-                 chance_to_end    = None, 
-                 duration         = None, 
-                 stat_modifier    = None, 
-                 chance_to_act    = 1.0, 
-                 damage           = None,
-                 use_turn_counter = False):
-        
-        self.name             = name
-        self.chance_to_end    = chance_to_end
-        self.duration         = duration
-        self.stat_modifier    = stat_modifier or {} 
-        self.applied_changes  = {}               
-        self.chance_to_act    = chance_to_act
-        self.chance_to_apply  = chance_to_apply
-        self.damage           = damage
-        self.turns_active     = 0
-        self.use_turn_counter = use_turn_counter
-        self.turn_counter     = None
+    def __init__(
+        self,
+        name:             str,
+        chance_to_apply:  float,
+        chance_to_end:    Optional[float]        = None,
+        duration:         Optional[int]          = None,
+        stat_changes:     Optional[dict]         = None,
+        chance_to_act:    float                  = 1.0,
+        stat_modifier:    Optional[dict]         = None,
+        damage:           Optional[float]        = None,
+        use_turn_counter: bool                   = False,
+    ):
+        self.name:             str                = name
+        self.chance_to_apply:  float              = chance_to_apply
+        self.chance_to_end:    Optional[float]    = chance_to_end
+        self.duration:         Optional[int]      = duration
+        self.stat_changes:     dict               = stat_changes or {}
+        self.applied_changes:  dict               = {}
+        self.chance_to_act:    float              = chance_to_act
+        self.stat_modifier:    dict               = stat_modifier or {}
+        self.damage:           Optional[float]    = damage
+        self.use_turn_counter: bool               = use_turn_counter
+        self.turn_counter:     Optional[int]      = None
+        self.turns_active:     int                = 0
 
-    def can_act(self):
+    def can_act(self) -> bool:
         if self.chance_to_act < 1.0:
             if random.random() > self.chance_to_act:
                 return False
         return True
         
-    def check_should_end(self):
+    def check_should_end(self) -> bool:
         self.turns_active += 1
 
         if self.turns_active < 2:
@@ -197,15 +212,19 @@ class StatusEffect:
             return random.random() < self.chance_to_end
 
         return False
-
+    
 class Trainer:
-    def __init__(self, name, party):
-        self.name:               str         = name
-        self.party:              list        = party
-        self.selected_mon:       int         = 0
-        self.locked_move:        Move | None = None
-        self.locked_turns:       int         = 0
-        self.invulnerable_state: str | None  = None
+    def __init__(
+        self,
+        name:         str,
+        party:        list[Pokemon]
+    ):
+        self.name:               str                  = name
+        self.party:              list[Pokemon]        = party
+        self.selected_mon:       int                  = 0
+        self.locked_move:        Optional[Move]       = None
+        self.locked_turns:       int                  = 0
+        self.invulnerable_state: Optional[str]        = None
 
     def print_party(self):
         from game_print import game_print
@@ -218,5 +237,5 @@ class Trainer:
         from game_print import game_print
         game_print(f"{self.name}'s {self.active().name}: {self.active().hp}/{self.active().max_hp}") 
     
-    def active(self):
+    def active(self) -> Pokemon:
         return self.party[self.selected_mon]
