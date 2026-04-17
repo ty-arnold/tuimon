@@ -1,10 +1,10 @@
-# tests/test_moves.py
-import unittest
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
+import unittest
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.battle import apply_move, handle_multiturn
+from src.battle import apply_move, handle_multiturn, check_accuracy, apply_stat_change
 from helpers import make_pokemon, make_move, make_trainer
 
 class TestMoves(unittest.TestCase):
@@ -149,3 +149,74 @@ class TestMoves(unittest.TestCase):
 
         # hp should be unchanged since surf cannot hit a flying pokemon
         self.assertEqual(defender.active().hp, hp_before)
+
+    def test_never_miss_move_always_hits(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+        move     = make_move(acc=None)  # None = never misses
+        # run 100 times to ensure it never misses
+        for _ in range(100):
+            result = check_accuracy(move, attacker, defender)
+            self.assertTrue(result)
+
+    def test_zero_accuracy_move_always_misses(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+        move     = make_move(acc=0.0)
+        for _ in range(100):
+            result = check_accuracy(move, attacker, defender)
+            self.assertFalse(result)
+
+    def test_lifesteal_restores_attacker_hp(self):
+        attacker          = make_trainer(pokemon=[make_pokemon(stat_attk=100, stat_hp=100)])
+        defender          = make_trainer(pokemon=[make_pokemon(stat_def=50)])
+        attacker.active().hp = 50  # set hp low
+        move = make_move(category="physical", power=80, acc=1.0, lifesteal=0.5)
+        apply_move(move, attacker, defender)
+        self.assertGreater(attacker.active().hp, 50)
+
+    def test_pp_decrements_even_on_miss(self):
+        attacker  = make_trainer(pokemon=[make_pokemon()])
+        defender  = make_trainer(pokemon=[make_pokemon()])
+        move      = make_move(acc=0.0, pp=10)  # always misses
+        pp_before = move.pp
+        apply_move(move, attacker, defender)
+        self.assertEqual(move.pp, pp_before - 1)  # pp still decrements on miss
+
+    def test_multi_turn_sets_locked_move(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        move     = make_move(multi_turn={
+            "turns":                2,
+            "charge_turn":          1,
+            "invulnerable":         True,
+            "invulnerable_state":   "flying",
+            "charge_message":       "flew up high!",
+            "invulnerable_message": "is high up in the air!"
+        })
+        handle_multiturn(move, attacker)
+        self.assertEqual(attacker.locked_move, move)
+        self.assertEqual(attacker.locked_turns, 1)
+
+    def test_stat_change_chance_prevents_change(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+        move     = make_move(
+            category          = "status",
+            stat_change       = {"opponent": {"stat_def": -1}},
+            stat_change_chance = 0.0  # never triggers
+        )
+        stage_before = defender.active().stage_def
+        apply_stat_change(move, attacker, defender, [])
+        self.assertEqual(defender.active().stage_def, stage_before)
+
+    def test_stat_change_guaranteed_applies(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+        move     = make_move(
+            category          = "status",
+            stat_change       = {"opponent": {"stat_def": -1}},
+            stat_change_chance = 1.0  # always triggers
+        )
+        stage_before = defender.active().stage_def
+        apply_stat_change(move, attacker, defender, [])
+        self.assertEqual(defender.active().stage_def, stage_before - 1)

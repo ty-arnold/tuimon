@@ -1,6 +1,7 @@
 # tests/helpers.py
 import sys
 import os
+from typing import Optional
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from src.models import Pokemon, Move, Trainer
@@ -24,10 +25,11 @@ def make_pokemon(name="Testmon", lvl=50, type=["Normal"],
     )
 
 def make_move(name="Test Move", type=["Normal"], category="physical",
-              power=50, acc=1.0, pp=20, stat_change=None,
+              power=50, acc: Optional[float] = 1.0, pp=20, stat_change=None,
               recoil=0.0, lifesteal=0.0, heal=0.0,
               status_effect=None, multi_turn=None,
-              hits_invulnerable=None, damage_modifier=None):
+              hits_invulnerable=None, damage_modifier=None,
+              stat_change_chance=1.0):
     return Move(
         name              = name,
         type              = type,
@@ -43,6 +45,7 @@ def make_move(name="Test Move", type=["Normal"], category="physical",
         multi_turn        = multi_turn,
         hits_invulnerable = hits_invulnerable or [],
         # damage_modifier   = damage_modifier or {},
+        stat_change_chance = stat_change_chance,
     )
 
 def make_trainer(name="Trainer", pokemon=None):

@@ -113,7 +113,7 @@ def apply_move(move, attacker, defender):
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
 
     old_stats = []
-    damage = float
+    damage = 0
 
     can_act, reason = check_can_act(attacker.active())
     if not can_act:
@@ -145,6 +145,9 @@ def apply_move(move, attacker, defender):
     if move.multi_turn is not None and move.multi_turn.get("charge_turn") == 2:
         attacker.locked_move  = move
         attacker.locked_turns = 1
+
+    if move.lifesteal > 0 and damage > 0:
+        apply_lifesteal(move, attacker, damage)
 
     if move.heal > 0:
         heal_amount = round(attacker.active().max_hp * move.heal)
@@ -232,10 +235,12 @@ def calculate_damage(move, attacker, defender):
         attack_stat = attacker.active().get_stat("stat_attk")
         defense_stat = defender.active().get_stat("stat_def")
     elif move.category == "special":
-        attack_stat = attacker.active().get_stat("stat_attk")
-        defense_stat = defender.active().get_stat("stat_def")
+        attack_stat = attacker.active().get_stat("stat_sp_attk")
+        defense_stat = defender.active().get_stat("stat_sp_def")
     else:
         return 0, 1
+    
+    logger.debug(f"calculate_damage: attack={attack_stat} defense={defense_stat}")
         
     multiplier = get_type_multiplier(move.type[0], defender.active().type)
 
@@ -263,6 +268,14 @@ def apply_recoil(move, attacker, damage):
     recoil_damage = round(damage * move.recoil)
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
     game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
+
+def apply_lifesteal(move, attacker, damage):
+    heal_amount = round(damage * move.lifesteal)
+    attacker.active().hp = min(
+        attacker.active().max_hp,
+        attacker.active().hp + heal_amount
+    )
+    game_print(f"{attacker.active().name} drained {heal_amount} HP!")
 
 def apply_stat_change(move, attacker, defender, old_stats):
     # roll against stat change chance before applying

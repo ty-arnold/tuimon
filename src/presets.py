@@ -39,7 +39,7 @@ def get_test_player():
                 "fly",
                 "quick-attack",
                 "aerial-ace",
-                "acid"
+                "ancient-power"
             ]),
             get_pokemon("gengar", lvl=50, move_names=[
                 "shadow-ball",

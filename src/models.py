@@ -200,12 +200,12 @@ class StatusEffect:
 
 class Trainer:
     def __init__(self, name, party):
-        self.name                = name
-        self.party               = party
-        self.selected_mon        = 0
-        self.locked_move         = None
-        self.locked_turns        = 0
-        self.invulnerable_state  = None
+        self.name:               str         = name
+        self.party:              list        = party
+        self.selected_mon:       int         = 0
+        self.locked_move:        Move | None = None
+        self.locked_turns:       int         = 0
+        self.invulnerable_state: str | None  = None
 
     def print_party(self):
         from game_print import game_print

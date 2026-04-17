@@ -23,7 +23,7 @@ sleep = StatusEffect(
 
 burn = StatusEffect(
     name = "Burn",
-    stat_modifier = {"stat_attack" : 0.5},
+    stat_modifier = {"stat_attk" : 0.5},
     chance_to_apply = 0.10,
     damage = (1/8)
 )

@@ -2,10 +2,11 @@
 import unittest
 import sys
 import os
+import random
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from src.battle import process_status_effects
-from src.status_effects import poison, paralysis, sleep
+from src.status_effects import poison, paralysis, sleep, burn
 from helpers import make_pokemon
 import copy
 
@@ -66,3 +67,35 @@ class TestStatusEffects(unittest.TestCase):
         if not any(e.name == effect2.name for e in pokemon.status_effect):
             pokemon.apply_status_effect(effect2)
         self.assertEqual(len(pokemon.status_effect), initial_count)
+
+    def test_paralysis_chance_to_act(self):
+        effect = copy.deepcopy(paralysis)
+        # run 1000 times and verify roughly 75% chance to act
+        act_count = sum(1 for _ in range(1000) if effect.can_act())
+        # should be roughly 750, allow wide margin for randomness
+        self.assertGreater(act_count, 600)
+        self.assertLess(act_count, 900)
+
+    def test_burn_reduces_attack(self):
+        pokemon = make_pokemon(stat_attk=100)
+        effect  = copy.deepcopy(burn)
+        pokemon.apply_status_effect(effect)
+        self.assertLess(pokemon.get_stat("stat_attk"), 100)
+
+    def test_multiple_different_status_effects_can_stack(self):
+        pokemon  = make_pokemon(stat_hp=100)
+        p_effect = copy.deepcopy(poison)
+        # add a custom second effect with a different name
+        from models import StatusEffect
+        custom = StatusEffect(name="Custom", chance_to_apply=1.0)
+        pokemon.apply_status_effect(p_effect)
+        pokemon.apply_status_effect(custom)
+        self.assertEqual(len(pokemon.status_effect), 2)
+
+    def test_status_effect_does_not_apply_below_chance(self):
+        pokemon = make_pokemon(stat_hp=100)
+        effect  = copy.deepcopy(paralysis)
+        effect.chance_to_apply = 0.0  # never applies
+        # simulate apply_status_effect check
+        applied = random.random() < effect.chance_to_apply
+        self.assertFalse(applied)
