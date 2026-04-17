@@ -114,37 +114,40 @@ class Pokemon:
         game_print(f"{len(self.moveset) + 1}. Cancel")
 
 class Move:
-    def __init__(self, name, type, category, power, acc, pp, stat_change,
-                recoil            = 0.0,
-                lifesteal         = 0.0,
-                heal              = 0.0,
-                min_hits          = None,
-                max_hits          = None,
-                crit_rate         = 0,
-                flinch_chance     = 0.0,
-                priority          = 0,
-                hits_invulnerable = None,
-                status_effect     = None,
-                multi_turn        = None):
+    def __init__(self, name, type, category, power, pp, stat_change,
+                acc                = None,
+                stat_change_chance = 1.0,
+                recoil             = 0.0,
+                lifesteal          = 0.0,
+                heal               = 0.0,
+                min_hits           = None,
+                max_hits           = None,
+                crit_rate          = 0,
+                flinch_chance      = 0.0,
+                priority           = 0,
+                hits_invulnerable  = None,
+                status_effect      = None,
+                multi_turn         = None):
 
-        self.name              = name
-        self.type              = type
-        self.category          = category
-        self.power             = power
-        self.acc               = acc
-        self.pp                = pp
-        self.stat_change       = stat_change
-        self.recoil            = recoil
-        self.lifesteal         = lifesteal
-        self.heal              = heal
-        self.min_hits          = min_hits
-        self.max_hits          = max_hits
-        self.crit_rate         = crit_rate
-        self.flinch_chance     = flinch_chance
-        self.priority          = priority
-        self.hits_invulnerable = hits_invulnerable
-        self.status_effect     = status_effect
-        self.multi_turn        = multi_turn
+        self.name               = name
+        self.type               = type
+        self.category           = category
+        self.power              = power
+        self.acc                = acc
+        self.pp                 = pp
+        self.stat_change        = stat_change
+        self.stat_change_chance = stat_change_chance
+        self.recoil             = recoil
+        self.lifesteal          = lifesteal
+        self.heal               = heal
+        self.min_hits           = min_hits
+        self.max_hits           = max_hits
+        self.crit_rate          = crit_rate
+        self.flinch_chance      = flinch_chance
+        self.priority           = priority
+        self.hits_invulnerable  = hits_invulnerable
+        self.status_effect      = status_effect
+        self.multi_turn         = multi_turn
     
     def __repr__(self):
         return self.name

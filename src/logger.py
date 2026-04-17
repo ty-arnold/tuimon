@@ -1,34 +1,37 @@
-# logger.py
 import logging
 import os
 from datetime import datetime
 
-LOG_DIR = "logs"
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOG_DIR  = os.path.join(ROOT_DIR, "logs")
 
 def setup_logger(debug=False):
     os.makedirs(LOG_DIR, exist_ok=True)
-
-    logger = logging.getLogger("pokemon_battle")
+    logger = logging.getLogger("tuimon")
     logger.setLevel(logging.DEBUG)
+    logger.propagate = False  # prevent messages from propagating to root logger
 
-    # only add handlers if none exist yet
-    if not logger.handlers:
-        # console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG if debug else logging.INFO)
-        console_handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.handlers.clear()
 
-        # file handler
-        timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_handler = logging.FileHandler(f"{LOG_DIR}/battle_{timestamp}.log")
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    # console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
 
-        logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
+    # file handler
+    timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_handler = logging.FileHandler(
+        f"{LOG_DIR}/battle_{timestamp}.log",
+        mode  = "a",
+        delay = False
+    )
+    file_handler.setLevel(logging.DEBUG if debug else logging.INFO)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
 
     return logger
 
 # default null logger - does nothing until setup_logger is called
-logger = logging.getLogger("pokemon_battle")
-logger.addHandler(logging.NullHandler())
+logger = logging.getLogger("tuimon")

@@ -39,9 +39,16 @@ def dump_move(move):
     logger.debug(f"  Flinch Chance:     {move.flinch_chance}")
     logger.debug(f"  Priority:          {move.priority}")
     logger.debug(f"  Stat Changes:      {move.stat_change}")
-    logger.debug(f"  Multi Turn:        {move.multi_turn}")
+    logger.debug(f"  Stat Change Chance {move.stat_change_chance}")
     logger.debug(f"  Hits Invulnerable: {move.hits_invulnerable}")
     logger.debug(f"  Status Effect:     {move.status_effect.name if move.status_effect else None}")
+
+    if move.multi_turn is not None:
+        logger.debug(f"  Multi Turn:")
+        for key, value in move.multi_turn.items():
+            logger.debug(f"    {key:<22} {value}")
+    else:
+        logger.debug(f"  Multi Turn:        None")
 
 def dump_battle_state(player, npc, turn=None):
     if turn:

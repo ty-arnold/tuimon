@@ -2,7 +2,6 @@
 import requests
 import os
 import sys
-from src.print import game_print
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.cache_manager import get_pokemon_cache, save_pokemon_cache
 
@@ -13,12 +12,12 @@ def fetch_and_cache_pokemon(name):
     name  = name.lower()
 
     if name in cache:
-        game_print(f"{name} already in cache, skipping.")
+        print(f"{name} already in cache, skipping.")
         return
 
     response = requests.get(f"{BASE_URL}/pokemon/{name}")
     if response.status_code != 200:
-        game_print(f"Failed to fetch {name}: {response.status_code}")
+        print(f"Failed to fetch {name}: {response.status_code}")
         return
 
     data = response.json()
@@ -29,7 +28,7 @@ def fetch_and_cache_pokemon(name):
     gen_introduced   = int(species_data["generation"]["url"].split("/")[-2])
 
     if gen_introduced > 3:
-        game_print(f"{name} is not available in generation 3!")
+        print(f"{name} is not available in generation 3!")
         return
 
     formatted = {
@@ -48,7 +47,7 @@ def fetch_and_cache_pokemon(name):
 
     cache[name] = formatted
     save_pokemon_cache(cache)
-    game_print(f"Fetched and cached {name.capitalize()}!")
+    print(f"Fetched and cached {name.capitalize()}!")
 
 if __name__ == "__main__":
     pokemon_to_fetch = [

@@ -199,6 +199,11 @@ def handle_invulnerability(move, attacker, defender):
     return True
 
 def check_accuracy(move, attacker, defender):
+    # acc of None means the move never misses
+    if move.acc is None:
+        logger.debug(f"{move.name} never misses!")
+        return True
+
     move_acc = move.acc * acc_table[attacker.active().stage_acc]
     evasion  = acc_table[defender.active().stage_eva]
     if random.random() > move_acc * evasion:
@@ -260,6 +265,12 @@ def apply_recoil(move, attacker, damage):
     game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
 def apply_stat_change(move, attacker, defender, old_stats):
+    # roll against stat change chance before applying
+    if move.stat_change_chance < 1.0:
+        if random.random() > move.stat_change_chance:
+            logger.debug(f"Stat change failed to trigger ({move.stat_change_chance * 100}% chance)")
+            return old_stats  # stat change didn't trigger, return unchanged
+
     for target_type, stat_changes in move.stat_change.items():
         target = None
         if target_type == "self":
@@ -269,11 +280,14 @@ def apply_stat_change(move, attacker, defender, old_stats):
         elif target_type == "random":
             target = random.choice([attacker.active(), defender.active()])
 
+        if target is None:
+            continue
+
         for stat, change in stat_changes.items():
-            old_stage = getattr(target, f"stage_{stat.replace('stat_', '')}")
-            if target is not None:
-                actual_change = target.apply_stage_change(stat, change)
-                old_stats.append((stat, old_stage, target, actual_change))
+            stage_attr = "stage_" + stat.replace("stat_", "")
+            old_stage  = getattr(target, stage_attr)
+            actual_change = target.apply_stage_change(stat, change)
+            old_stats.append((stat, old_stage, target, actual_change))
 
     return old_stats
 

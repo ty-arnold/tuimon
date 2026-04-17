@@ -9,14 +9,14 @@ pokemon_cache = get_pokemon_cache()
 def get_move(name):
     key = name.lower().replace(" ", "-")
     if key not in move_cache:
-        game_print(f"Move '{name}' not found in cache!")
+        print(f"Move '{name}' not found in cache!")
         return None
     return dict_to_move(move_cache[key])
 
 def get_pokemon(name, lvl=50, move_names=None):
     key = name.lower()
     if key not in pokemon_cache:
-        game_print(f"Pokemon '{name}' not found in cache!")
+        print(f"Pokemon '{name}' not found in cache!")
         create_pokemon_from_api(name)
         return None
 
@@ -38,8 +38,8 @@ def get_test_player():
             get_pokemon("pidgeot", lvl=50, move_names=[
                 "fly",
                 "quick-attack",
-                "gust",
-                "growl"
+                "aerial-ace",
+                "acid"
             ]),
             get_pokemon("gengar", lvl=50, move_names=[
                 "shadow-ball",

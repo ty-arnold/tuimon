@@ -1,12 +1,14 @@
 # scripts/fetch_gen3_moves.py
-import requests
-import os
 import sys
-from src.print import game_print
+import os
+import requests
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.cache_manager import get_move_cache, save_move_cache, status_effect_to_dict
-from src.status_effects import poison, paralysis, sleep, burn, freeze
+# add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
+
+# import only what the script actually needs
+from cache_manager  import get_move_cache, save_move_cache, status_effect_to_dict
+from status_effects import poison, paralysis, sleep, burn, freeze
 
 BASE_URL  = "https://pokeapi.co/api/v2"
 CACHE_DIR = "cache"
@@ -100,14 +102,14 @@ HITS_INVULNERABLE = {
 }
 
 def fetch_move_names_for_generation(gen):
-    game_print(f"Fetching gen {gen} move list...")
+    print(f"Fetching gen {gen} move list...")
     response = requests.get(f"{BASE_URL}/generation/{gen}")
     if response.status_code != 200:
-        game_print(f"Failed to fetch gen {gen} data: {response.status_code}")
+        print(f"Failed to fetch gen {gen} data: {response.status_code}")
         return []
     data  = response.json()
     moves = [m["name"] for m in data["moves"]]
-    game_print(f"Found {len(moves)} moves in gen {gen}")
+    print(f"Found {len(moves)} moves in gen {gen}")
     return moves
 
 def fetch_all_move_names():
@@ -118,13 +120,13 @@ def fetch_all_move_names():
 
     # deduplicate while preserving order
     unique_moves = list(dict.fromkeys(all_moves))
-    game_print(f"\nTotal unique moves across gen 1-3: {len(unique_moves)}")
+    print(f"\nTotal unique moves across gen 1-3: {len(unique_moves)}")
     return unique_moves
 
 def fetch_move_data(move_name):
     response = requests.get(f"{BASE_URL}/move/{move_name}")
     if response.status_code != 200:
-        game_print(f"Failed to fetch move {move_name}: {response.status_code}")
+        print(f"Failed to fetch move {move_name}: {response.status_code}")
         return None
     return response.json()
 
@@ -148,8 +150,10 @@ def convert_move(move_data):
 
     # extract meta data safely
     meta          = move_data.get("meta") or {}
+    accuracy      = move_data["accuracy"]
     min_turns     = meta.get("min_turns")
     max_turns     = meta.get("max_turns")
+    stat_chance   = meta.get("stat_chance", 0)
     drain         = meta.get("drain", 0)
     healing       = meta.get("healing", 0)
     min_hits      = meta.get("min_hits")
@@ -197,13 +201,15 @@ def convert_move(move_data):
         "type":     [move_data["type"]["name"].capitalize()],
         "category": category_map.get(move_data["damage_class"]["name"], "status"),
         "power":    move_data["power"] or 0,
-        "acc":      (move_data["accuracy"] or 100) / 100,
+        "acc":      None if move_data["accuracy"] is None else move_data["accuracy"] / 100,
         "pp":       move_data["pp"],
     }
 
     # only add optional attributes if they have non default values
     if stat_change:
         result["stat_change"]       = stat_change
+    if stat_chance > 0:
+        result["stat_change_chance"] = stat_chance / 100
     if recoil > 0.0:
         result["recoil"]            = recoil
     if lifesteal > 0.0:
@@ -239,38 +245,38 @@ def fetch_all_gen3_moves():
     fetched    = 0
     failed     = 0
 
-    game_print(f"\nStarting fetch for {total} moves...\n")
+    print(f"\nStarting fetch for {total} moves...\n")
 
     for i, move_name in enumerate(move_names, 1):
-        game_print(f"[{i}/{total}] Processing {move_name}...", end=" ")
+        print(f"[{i}/{total}] Processing {move_name}...", end=" ")
 
         if move_name in cache:
-            game_print("already cached, skipping.")
+            print("already cached, skipping.")
             skipped += 1
             continue
 
         move_data = fetch_move_data(move_name)
         if move_data is None:
-            game_print("FAILED.")
+            print("FAILED.")
             failed += 1
             continue
 
         cache[move_name] = convert_move(move_data)
-        game_print("done.")
+        print("done.")
         fetched += 1
 
         # save every 10 moves in case of interruption
         if fetched % 10 == 0:
             save_move_cache(cache)
-            game_print(f"--- Progress saved ({fetched} fetched so far) ---")
+            print(f"--- Progress saved ({fetched} fetched so far) ---")
 
     # final save
     save_move_cache(cache)
-    game_print(f"\nComplete!")
-    game_print(f"Fetched:  {fetched}")
-    game_print(f"Skipped:  {skipped}")
-    game_print(f"Failed:   {failed}")
-    game_print(f"Total moves in cache: {len(cache)}")
+    print(f"\nComplete!")
+    print(f"Fetched:  {fetched}")
+    print(f"Skipped:  {skipped}")
+    print(f"Failed:   {failed}")
+    print(f"Total moves in cache: {len(cache)}")
 
 if __name__ == "__main__":
     fetch_all_gen3_moves()

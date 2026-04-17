@@ -1,23 +1,24 @@
 import sys
-from battle import resolve_turn, get_turn
-from game_print import *
-from models import Trainer
-from pokemon_factory import create_pokemon_from_api
-from presets import get_test_player, get_test_npc
-from logger import logger, setup_logger
-from debug import dump_battle_state, dump_move
+import logging
 
-def exit_game():
-    game_print("\nExiting Game!")
-    sys.exit(0)
-
-DEBUG = True
+DEBUG       = True
 ENABLE_LOGS = True
 
-try:
-    if ENABLE_LOGS:
-        setup_logger(debug=DEBUG)
+from logger import setup_logger
+if ENABLE_LOGS:
+    setup_logger(debug=DEBUG)
 
+logger = logging.getLogger("tuimon")
+
+from battle          import resolve_turn, get_turn
+from print           import build_party, print_actions
+from presets         import get_test_player, get_test_npc
+from debug           import dump_battle_state, dump_move
+from models          import Trainer
+from game_print      import game_print
+from pokemon_factory import create_pokemon_from_api
+
+try:
     if DEBUG:
         player = get_test_player()
         npc    = get_test_npc()
@@ -54,4 +55,5 @@ try:
         turn += 1
 
 except KeyboardInterrupt:
-    exit_game()
+    game_print("\nThanks for playing!")
+    sys.exit(0)

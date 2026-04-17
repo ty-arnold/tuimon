@@ -80,24 +80,25 @@ def dict_to_move(data):
             status_effect.chance_to_apply = se["chance_to_apply"]
 
     return Move(
-        name              = data["name"],
-        type              = data["type"],
-        category          = data["category"],
-        power             = data["power"],
-        acc               = data["acc"],
-        pp                = data["pp"],
-        stat_change       = data.get("stat_change",       {}),
-        recoil            = data.get("recoil",            0.0),
-        lifesteal         = data.get("lifesteal",         0.0),
-        heal              = data.get("heal",              0.0),
-        min_hits          = data.get("min_hits",          None),
-        max_hits          = data.get("max_hits",          None),
-        crit_rate         = data.get("crit_rate",         0),
-        flinch_chance     = data.get("flinch_chance",     0.0),
-        priority          = data.get("priority",          0),
-        multi_turn        = data.get("multi_turn",        None),
-        hits_invulnerable = data.get("hits_invulnerable", []),
-        status_effect     = status_effect
+        name               = data["name"],
+        type               = data["type"],
+        category           = data["category"],
+        power              = data["power"],
+        pp                 = data["pp"],
+        acc                = data.get("acc", None),
+        stat_change        = data.get("stat_change",       {}),
+        stat_change_chance = data.get("stat_change_chance", 1.0),
+        recoil             = data.get("recoil",            0.0),
+        lifesteal          = data.get("lifesteal",         0.0),
+        heal               = data.get("heal",              0.0),
+        min_hits           = data.get("min_hits",          None),
+        max_hits           = data.get("max_hits",          None),
+        crit_rate          = data.get("crit_rate",         0),
+        flinch_chance      = data.get("flinch_chance",     0.0),
+        priority           = data.get("priority",          0),
+        multi_turn         = data.get("multi_turn",        None),
+        hits_invulnerable  = data.get("hits_invulnerable", []),
+        status_effect      = status_effect
     )
 
 def status_effect_to_dict(effect):
