@@ -6,7 +6,7 @@ from mult_tables import *
 import random, copy
 from logger import logger
 
-def get_turn(trainer):
+def get_turn(trainer: Trainer) -> Move | None:
     if trainer.locked_move is not None:
         move = trainer.locked_move  # store before potentially resetting
         trainer.locked_turns -= 1
@@ -31,7 +31,7 @@ def get_turn(trainer):
             pass
     return move
 
-def get_party(trainer):
+def get_party(trainer: Trainer) -> Pokemon | None:
     while True:
         try:
             cancel = len(trainer.party) + 1
@@ -58,9 +58,9 @@ def get_party(trainer):
         except (ValueError, IndexError):
             game_print("Invalid choice, please select again")
 
-def resolve_turn(player, player_choice, npc, npc_choice):
-    player_can_act = check_can_act(player.active())
-    npc_can_act = check_can_act(npc.active())
+def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move) -> bool | None:
+    player_can_act, player_cant_act_reason = check_can_act(player.active())
+    npc_can_act,    npc_cant_act_reason    = check_can_act(npc.active())
 
     order = get_turn_order(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
 
@@ -93,24 +93,57 @@ def resolve_turn(player, player_choice, npc, npc_choice):
         return True
     return None
     
-def get_turn_order(player, player_choice, npc, npc_choice, player_can_act, npc_can_act) -> TurnOrder:
-    # checks priority first, higher priority supercedes speed
-    if player_choice.priority == npc_choice.priority:
-        if player.active().get_stat("stat_spd") > npc.active().get_stat("stat_spd"):
-            return TurnOrder(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
-        elif npc.active().get_stat("stat_spd") > player.active().get_stat("stat_spd"):
-            return TurnOrder(npc, npc_choice, player, player_choice, npc_can_act, player_can_act)
-        else:
-            if random.random() > 0.5:
-                return TurnOrder(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
-            else:
-                return TurnOrder(npc, npc_choice, player, player_choice, npc_can_act, player_can_act)
-    elif player_choice.priority > npc_choice.priority:
-        return TurnOrder(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
-    else:
-        return TurnOrder(npc, npc_choice, player, player_choice, npc_can_act, player_can_act)
+def get_turn_order(
+    player:        Trainer,
+    player_choice: Move,
+    npc:           Trainer,
+    npc_choice:    Move,
+    player_can_act: bool,
+    npc_can_act:    bool
+) -> TurnOrder:
 
-def get_move(pokemon):
+    player_goes_first = _determine_first(player, player_choice, npc, npc_choice)
+
+    if player_goes_first:
+        return TurnOrder(
+            first          = player,
+            first_choice   = player_choice,
+            second         = npc,
+            second_choice  = npc_choice,
+            first_can_act  = player_can_act,
+            second_can_act = npc_can_act
+        )
+    else:
+        return TurnOrder(
+            first          = npc,
+            first_choice   = npc_choice,
+            second         = player,
+            second_choice  = player_choice,
+            first_can_act  = npc_can_act,
+            second_can_act = player_can_act
+        )
+
+def _determine_first(
+    player:        Trainer,
+    player_choice: Move,
+    npc:           Trainer,
+    npc_choice:    Move
+) -> bool:
+    # priority takes precedence over speed
+    if player_choice.priority != npc_choice.priority:
+        return player_choice.priority > npc_choice.priority
+
+    # equal priority - check speed
+    player_spd = player.active().get_stat("stat_spd")
+    npc_spd    = npc.active().get_stat("stat_spd")
+
+    if player_spd != npc_spd:
+        return player_spd > npc_spd
+
+    # speed tie - randomize
+    return random.random() > 0.5
+
+def get_move(pokemon: Pokemon) -> Move | None:
     while True:
         try:
             cancel = len(pokemon.moveset) + 1
@@ -125,9 +158,9 @@ def get_move(pokemon):
             return pokemon.moveset[choice - 1]
         except (ValueError, IndexError):
             game_print("Invalid choice, please select again")
-            pokemon.list_moves()
+            pokemon.print_moves()
 
-def apply_move(move, attacker, defender):
+def apply_move(move: Move, attacker: Trainer, defender: Trainer) -> None:
     logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
 
@@ -150,7 +183,7 @@ def apply_move(move, attacker, defender):
             return None
 
     if defender.invulnerable_state is not None:
-        if handle_invulnerability(move, attacker, defender):
+        if handle_invulnerability(move, defender):
             game_print(f"{attacker.active().name}'s attack missed!") 
             return None
 
@@ -184,7 +217,7 @@ def apply_move(move, attacker, defender):
         result, effect = apply_status_effect_from_move(move, defender)
         print_status_effect(defender.active(), effect, result)
 
-def handle_multiturn(move, attacker):
+def handle_multiturn(move: Move, attacker: Trainer) -> bool:
     # handle recharge turn - charge_turn 2 means attack first then recharge
     if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
         if attacker.locked_move.multi_turn.get("charge_turn") == 2:
@@ -203,7 +236,7 @@ def handle_multiturn(move, attacker):
 
     return False
 
-def handle_invulnerability(move, attacker, defender):
+def handle_invulnerability(move: Move, defender: Trainer) -> bool:
     can_hit = defender.invulnerable_state in (move.hits_invulnerable or [])
     
     if can_hit:
@@ -220,7 +253,7 @@ def handle_invulnerability(move, attacker, defender):
     logger.info(f"{defender.active().name} {message}")
     return True
 
-def check_accuracy(move, attacker, defender):
+def check_accuracy(move: Move, attacker: Trainer, defender: Trainer) -> bool:
     # acc of None means the move never misses
     if move.acc is None:
         logger.debug(f"{move.name} never misses!")
@@ -232,7 +265,7 @@ def check_accuracy(move, attacker, defender):
         return False
     return True
 
-def apply_damage(move, attacker, defender):
+def apply_damage(move: Move, attacker: Trainer, defender: Trainer) -> int:
     damage, multiplier = calculate_damage(move, attacker, defender)
     logger.debug(f"Damage calculated: {damage} (multiplier: {multiplier})")
     target = defender.active()
@@ -249,7 +282,7 @@ def apply_damage(move, attacker, defender):
     game_print(f"{target.name} took {damage} damage!")  
     return damage  
 
-def calculate_damage(move, attacker, defender):
+def calculate_damage(move: Move, attacker: Trainer, defender: Trainer) -> tuple:
     if move.category == "physical":
         attack_stat = attacker.active().get_stat("stat_attk")
         defense_stat = defender.active().get_stat("stat_def")
@@ -276,19 +309,19 @@ def calculate_damage(move, attacker, defender):
     )
     return damage, multiplier
 
-def get_type_multiplier(move_type, defender_types):
+def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
     multiplier = 1
 
     for defender_type in defender_types:
         multiplier *= type_chart.get(move_type, {}).get(defender_type, 1)
     return multiplier
 
-def apply_recoil(move, attacker, damage):
+def apply_recoil(move: Move, attacker: Trainer, damage: int) -> None:
     recoil_damage = round(damage * move.recoil)
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
     game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
-def apply_lifesteal(move, attacker, damage):
+def apply_lifesteal(move, attacker, damage) -> None:
     heal_amount = round(damage * move.lifesteal)
     attacker.active().hp = min(
         attacker.active().max_hp,
@@ -296,7 +329,7 @@ def apply_lifesteal(move, attacker, damage):
     )
     game_print(f"{attacker.active().name} drained {heal_amount} HP!")
 
-def apply_stat_change(move, attacker, defender, old_stats):
+def apply_stat_change(move: Move, attacker: Trainer, defender: Trainer, old_stats) -> dict:
     # roll against stat change chance before applying
     if move.stat_change_chance < 1.0:
         if random.random() > move.stat_change_chance:
@@ -396,19 +429,19 @@ def process_status_effects(pokemon: Pokemon) -> None:
 
     remove_expired_effects(pokemon, effects_to_remove)
                               
-def check_can_act(pokemon):
+def check_can_act(pokemon: Pokemon) -> tuple[bool, str | None]:
     effects = get_all_effects(pokemon)
     for effect in effects:
         if not effect.can_act():
             return False, effect.name
     return True, None
 
-def clear_move_lock(trainer):
+def clear_move_lock(trainer: Trainer) -> None:
     if trainer.locked_move is not None and trainer.locked_turns == 0:
         trainer.locked_move        = None
         trainer.invulnerable_state = None
 
-def next_mon(player, npc):
+def next_mon(player: Trainer, npc: Trainer) -> None:
     if not player.party[player.selected_mon].is_alive():
         game_print(f"{player.party[player.selected_mon].name} fainted!")
         player.print_party()
@@ -423,7 +456,7 @@ def next_mon(player, npc):
         if new_mon is not None:
             npc.selected_mon = npc.party.index(new_mon)
                 
-def check_winner(player, npc):
+def check_winner(player: Trainer, npc: Trainer) -> Trainer | None:
     if not any(pokemon.is_alive() for pokemon in player.party):
         game_print(f"{npc.name} Wins!")
         return npc      # return trainer object instead of True

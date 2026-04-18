@@ -67,7 +67,7 @@ class Pokemon:
     def is_alive(self) -> bool:
         return self.hp > 0
     
-    def get_stat(self, stat: str):
+    def get_stat(self, stat: str) -> int:
         stage_map = {
             "stat_attk":    (self.stat_attk,    self.stage_attk),
             "stat_def":     (self.stat_def,     self.stage_def),
@@ -135,7 +135,7 @@ class Pokemon:
         else:
             self.minor_status.remove(effect)
 
-    def print_moves(self):
+    def print_moves(self) -> None:
         from game_print import game_print
         for i, move in enumerate(self.moveset):
             game_print(f"{i + 1}. {move.name}")
@@ -255,14 +255,14 @@ class Trainer:
         self.locked_turns:       int                  = 0
         self.invulnerable_state: Optional[str]        = None
 
-    def print_party(self):
+    def print_party(self) -> None:
         from game_print import game_print
         game_print(f"{self.name}'s Party:")
         for i, pokemon in enumerate(self.party):
             game_print(f"{i + 1}. {pokemon.name}")
         game_print(f"{len(self.party) + 1}. Cancel")
 
-    def print_hp(self):
+    def print_hp(self) -> None:
         from game_print import game_print
         game_print(f"{self.name}'s {self.active().name}: {self.active().hp}/{self.active().max_hp}") 
     

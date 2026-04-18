@@ -4,7 +4,7 @@ import os
 from typing import Optional
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.models import Pokemon, Move, Trainer
+from src.models import Pokemon, Move, Trainer, StatusEffect
 from src.status_effects import poison, paralysis, sleep, burn, freeze
 import copy
 
@@ -24,28 +24,41 @@ def make_pokemon(name="Testmon", lvl=50, type=["Normal"],
         stat_spd     = stat_spd,
     )
 
-def make_move(name="Test Move", type=["Normal"], category="physical",
-              power=50, acc: Optional[float] = 1.0, pp=20, stat_change=None,
-              recoil=0.0, lifesteal=0.0, heal=0.0,
-              status_effect=None, multi_turn=None,
-              hits_invulnerable=None, damage_modifier=None,
-              stat_change_chance=1.0):
+def make_move(
+    name:               str                     = "Test Move",
+    type:               list[str]               = ["Normal"],
+    category:           str                     = "physical",
+    power:              int                     = 50,
+    acc:                Optional[float]         = 1.0,
+    pp:                 int                     = 20,
+    stat_change:        Optional[dict]          = None,
+    recoil:             float                   = 0.0,
+    lifesteal:          float                   = 0.0,
+    heal:               float                   = 0.0,
+    status_effect:      Optional[StatusEffect]  = None,
+    multi_turn:         Optional[dict]          = None,
+    hits_invulnerable:  Optional[list[str]]     = None,
+    # damage_modifier:    Optional[dict]          = None,
+    stat_change_chance: float                   = 1.0,
+    priority:           int                     = 0,  # add this
+) -> Move:
     return Move(
-        name              = name,
-        type              = type,
-        category          = category,
-        power             = power,
-        acc               = acc,
-        pp                = pp,
-        stat_change       = stat_change or {},
-        recoil            = recoil,
-        lifesteal         = lifesteal,
-        heal              = heal,
-        status_effect     = status_effect,
-        multi_turn        = multi_turn,
-        hits_invulnerable = hits_invulnerable or [],
-        # damage_modifier   = damage_modifier or {},
+        name               = name,
+        type               = type,
+        category           = category,
+        power              = power,
+        acc                = acc,
+        pp                 = pp,
+        stat_change        = stat_change or {},
+        recoil             = recoil,
+        lifesteal          = lifesteal,
+        heal               = heal,
+        status_effect      = status_effect,
+        multi_turn         = multi_turn,
+        hits_invulnerable  = hits_invulnerable or [],
+        # damage_modifier    = damage_modifier or {},
         stat_change_chance = stat_change_chance,
+        priority           = priority,  # add this
     )
 
 def make_trainer(name="Trainer", pokemon=None):
