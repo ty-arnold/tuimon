@@ -38,3 +38,17 @@ freeze = StatusEffect(
     chance_to_apply = 0.10,
     is_major = True
 )
+
+confusion = StatusEffect(
+    name            = "Confusion",
+    chance_to_apply = 1.0,
+    chance_to_end   = 0.25,
+    chance_to_act   = 1.0,  # always acts, but may hurt itself via process_effect
+)
+
+curse = StatusEffect(
+    name            = "Curse",
+    chance_to_apply = 1.0,
+    chance_to_end   = None,    # curse never ends on its own
+    damage          = 0.25,    # deals 25% max hp per turn
+)

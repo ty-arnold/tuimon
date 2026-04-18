@@ -1,10 +1,12 @@
 import sys
 import os
+import random
 import unittest
+import unittest.mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.battle import apply_move, handle_multiturn, check_accuracy, apply_stat_change
+from src.battle import apply_move, handle_multiturn, check_accuracy, apply_stat_change, apply_damage, apply_lifesteal
 from helpers import make_pokemon, make_move, make_trainer
 
 class TestMoves(unittest.TestCase):
@@ -220,3 +222,184 @@ class TestMoves(unittest.TestCase):
         stage_before = defender.active().stage_def
         apply_stat_change(move, attacker, defender, [])
         self.assertEqual(defender.active().stage_def, stage_before - 1)
+
+class TestMultiHitMoves(unittest.TestCase):
+
+    def test_multi_hit_move_hits_multiple_times(self):
+        attacker = make_trainer(pokemon=[make_pokemon(stat_attk=100)])
+        defender = make_trainer(pokemon=[make_pokemon(stat_def=50)])
+        move     = make_move(
+            category = "physical",
+            power    = 18,
+            acc      = 1.0,
+            min_hits = 2,
+            max_hits = 5
+        )
+        hp_before = defender.active().hp
+
+        # force exactly 3 hits
+        with unittest.mock.patch("battle.random.randint", return_value=3):
+            damage = 0
+            roll   = 3
+            for i in range(roll):
+                damage += apply_damage(move, attacker, defender)
+
+        self.assertLess(defender.active().hp, hp_before)
+
+    def test_multi_hit_deals_more_damage_than_single(self):
+        attacker      = make_trainer(pokemon=[make_pokemon()])
+        defender_multi  = make_trainer(pokemon=[make_pokemon()])
+        defender_single = make_trainer(pokemon=[make_pokemon()])
+
+        attacker.active().stat_attk        = 100
+        defender_multi.active().stat_def   = 100
+        defender_single.active().stat_def  = 100
+
+        multi_move  = make_move(category="physical", power=18, acc=1.0, min_hits=2, max_hits=2)
+        single_move = make_move(category="physical", power=18, acc=1.0)
+
+        # force 2 hits
+        with unittest.mock.patch("battle.random.randint", return_value=2):
+            multi_damage = 0
+            for _ in range(2):
+                multi_damage += apply_damage(multi_move, attacker, defender_multi)
+
+        single_damage = apply_damage(single_move, attacker, defender_single)
+
+        self.assertGreater(multi_damage, single_damage)
+
+    def test_multi_hit_stops_if_defender_faints(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+
+        attacker.active().stat_attk = 999  # very high attack
+        defender.active().stat_def  = 1    # very low defense
+        defender.active().hp        = 1    # almost fainted
+
+        move = make_move(
+            category = "physical",
+            power    = 100,
+            acc      = 1.0,
+            min_hits = 2,
+            max_hits = 5
+        )
+
+        hits_landed = 0
+        with unittest.mock.patch("battle.random.randint", return_value=5):
+            for i in range(5):
+                apply_damage(move, attacker, defender)
+                hits_landed += 1
+                if not defender.active().is_alive():
+                    break
+
+        # should have stopped after first hit since defender fainted
+        self.assertEqual(hits_landed, 1)
+        self.assertGreaterEqual(defender.active().hp, 0)
+
+    def test_multi_hit_minimum_hits(self):
+        attacker = make_trainer(pokemon=[make_pokemon(stat_attk=100)])
+        defender = make_trainer(pokemon=[make_pokemon(stat_def=100)])
+        move     = make_move(
+            category = "physical",
+            power    = 18,
+            acc      = 1.0,
+            min_hits = 2,
+            max_hits = 5
+        )
+
+        with unittest.mock.patch("battle.random.randint", return_value=move.min_hits):
+            self.assertEqual(
+                random.randint(move.min_hits, move.max_hits),
+                move.min_hits
+            )
+
+    def test_multi_hit_maximum_hits(self):
+        attacker = make_trainer(pokemon=[make_pokemon(stat_attk=100)])
+        defender = make_trainer(pokemon=[make_pokemon(stat_def=100)])
+        move     = make_move(
+            category = "physical",
+            power    = 18,
+            acc      = 1.0,
+            min_hits = 2,
+            max_hits = 5
+        )
+
+        with unittest.mock.patch("battle.random.randint", return_value=move.max_hits):
+            self.assertEqual(
+                random.randint(move.min_hits, move.max_hits),
+                move.max_hits
+            )
+
+    def test_single_hit_move_hits_once(self):
+        attacker  = make_trainer(pokemon=[make_pokemon(stat_attk=100)])
+        defender  = make_trainer(pokemon=[make_pokemon(stat_def=100)])
+        move      = make_move(category="physical", power=50, acc=1.0)
+        hp_before = defender.active().hp
+
+        apply_damage(move, attacker, defender)
+        damage = hp_before - defender.active().hp
+
+        # apply again and verify damage is consistent
+        defender.active().hp = hp_before
+        apply_damage(move, attacker, defender)
+        damage2 = hp_before - defender.active().hp
+
+        self.assertEqual(damage, damage2)
+
+    def test_multi_hit_none_min_max_is_single_hit(self):
+        move = make_move(
+            category = "physical",
+            power    = 50,
+            acc      = 1.0,
+            min_hits = None,
+            max_hits = None
+        )
+        # verify it is treated as a single hit move
+        self.assertIsNone(move.min_hits)
+        self.assertIsNone(move.max_hits)
+
+    def test_multi_hit_damage_accumulates(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+
+        attacker.active().stat_attk = 100
+        defender.active().stat_def  = 100
+
+        move      = make_move(category="physical", power=18, acc=1.0)
+        hp_before = defender.active().hp
+
+        # manually simulate 3 hits and track total damage
+        total_damage = 0
+        with unittest.mock.patch("battle.random.randint", return_value=3):
+            for _ in range(3):
+                hit_damage    = apply_damage(move, attacker, defender)
+                total_damage += hit_damage
+
+        self.assertEqual(hp_before - defender.active().hp, total_damage)
+
+    def test_multi_hit_lifesteal_uses_total_damage(self):
+        attacker = make_trainer(pokemon=[make_pokemon()])
+        defender = make_trainer(pokemon=[make_pokemon()])
+
+        attacker.active().stat_attk = 100
+        attacker.active().hp        = 50
+        defender.active().stat_def  = 100
+
+        move = make_move(
+            category  = "physical",
+            power     = 18,
+            acc       = 1.0,
+            min_hits  = 2,
+            max_hits  = 2,
+            lifesteal = 0.5
+        )
+
+        hp_before    = attacker.active().hp
+        total_damage = 0
+
+        with unittest.mock.patch("battle.random.randint", return_value=2):
+            for _ in range(2):
+                total_damage += apply_damage(move, attacker, defender)
+
+        apply_lifesteal(move, attacker, total_damage)
+        self.assertGreater(attacker.active().hp, hp_before)

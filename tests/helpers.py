@@ -21,7 +21,7 @@ def make_pokemon(name="Testmon", lvl=50, type=["Normal"],
         stat_def     = stat_def,
         stat_sp_attk = stat_sp_attk,
         stat_sp_def  = stat_sp_def,
-        stat_spd     = stat_spd,
+        stat_spd     = stat_spd
     )
 
 def make_move(
@@ -35,6 +35,8 @@ def make_move(
     recoil:             float                   = 0.0,
     lifesteal:          float                   = 0.0,
     heal:               float                   = 0.0,
+    min_hits:           Optional[int]           = None,
+    max_hits:           Optional[int]           = None,
     status_effect:      Optional[StatusEffect]  = None,
     multi_turn:         Optional[dict]          = None,
     hits_invulnerable:  Optional[list[str]]     = None,
@@ -53,6 +55,8 @@ def make_move(
         recoil             = recoil,
         lifesteal          = lifesteal,
         heal               = heal,
+        min_hits           = min_hits,
+        max_hits           = max_hits,
         status_effect      = status_effect,
         multi_turn         = multi_turn,
         hits_invulnerable  = hits_invulnerable or [],

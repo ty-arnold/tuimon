@@ -123,12 +123,7 @@ def get_turn_order(
             second_can_act = player_can_act
         )
 
-def _determine_first(
-    player:        Trainer,
-    player_choice: Move,
-    npc:           Trainer,
-    npc_choice:    Move
-) -> bool:
+def _determine_first(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move) -> bool:
     # priority takes precedence over speed
     if player_choice.priority != npc_choice.priority:
         return player_choice.priority > npc_choice.priority
@@ -192,7 +187,25 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer) -> None:
         return None
 
     if move.category != "status":
-        damage = apply_damage(move, attacker, defender)
+        if move.min_hits is not None and move.max_hits is not None:
+            # multi hit move
+            roll         = random.randint(move.min_hits, move.max_hits)
+            damage       = 0
+            hits_landed  = 0
+
+            for i in range(roll):
+                hit_damage = apply_damage(move, attacker, defender)
+                damage    += hit_damage
+                hits_landed += 1
+
+                # stop if defender faints mid-combo
+                if not defender.active().is_alive():
+                    break
+
+            game_print(f"Hit {hits_landed} time(s)!")
+        else:
+            # single hit move
+            damage = apply_damage(move, attacker, defender)
 
     if move.multi_turn is not None and move.multi_turn.get("charge_turn") == 2:
         attacker.locked_move  = move
@@ -377,6 +390,7 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
     if effect.check_should_end():
         return True
 
+    # Confusion is handled in check_can_act since it influences attackers chance to attack
     match effect.name:
         case "Poison" | "Curse":
             if effect.damage is not None:
@@ -390,11 +404,6 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
                 pokemon.hp = max(0, pokemon.hp - damage)
                 game_print(f"{pokemon.name} was hurt by its burn!")
                 game_print(f"{pokemon.name} took {damage} damage!")
-        case "Confusion":
-            if random.random() < 0.33:
-                damage = round(pokemon.max_hp * 0.1)
-                pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(f"{pokemon.name} hurt itself in confusion!")
             else:
                 game_print(f"{pokemon.name} is confused!")
 
@@ -429,10 +438,19 @@ def process_status_effects(pokemon: Pokemon) -> None:
 
     remove_expired_effects(pokemon, effects_to_remove)
                               
-def check_can_act(pokemon: Pokemon) -> tuple[bool, str | None]:
-    effects = get_all_effects(pokemon)
-    for effect in effects:
-        if not effect.can_act():
+def check_can_act(pokemon: Pokemon) -> tuple[bool, Optional[str]]:
+    all_effects = get_all_effects(pokemon)
+    for effect in all_effects:
+        if effect.name == "Confusion":
+            if random.random() < 0.5:  # 50% chance to hurt itself
+                damage = round(pokemon.max_hp * 0.1)
+                pokemon.hp = max(0, pokemon.hp - damage)
+                game_print(f"{pokemon.name} hurt itself in confusion!")
+                game_print(f"{pokemon.name} took {damage} damage!")
+                return False, "Confusion"  # skip attack this turn
+            else:
+                game_print(f"{pokemon.name} is confused!")
+        elif not effect.can_act():
             return False, effect.name
     return True, None
 
