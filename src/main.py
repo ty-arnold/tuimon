@@ -23,12 +23,17 @@ try:
         player = get_test_player()
         npc    = get_test_npc()
     else:
-        player_party = build_party("Ash", party_size=2)
-        player       = Trainer(name="Ash", party=player_party)
-        npc_party    = [
+        player_party_raw = build_party("Ash", party_size=2)
+        player_party     = [p for p in player_party_raw if p is not None]
+        assert len(player_party) > 0, "Failed to create player party!"
+        player = Trainer(name="Ash", party=player_party)
+
+        npc_party_raw = [
             create_pokemon_from_api("gengar",   lvl=55),
             create_pokemon_from_api("alakazam", lvl=55)
         ]
+        npc_party = [p for p in npc_party_raw if p is not None]
+        assert len(npc_party) > 0, "Failed to create NPC party!"
         npc = Trainer(name="Gary", party=npc_party)
 
     turn = 1

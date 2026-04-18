@@ -1,6 +1,8 @@
+from typing import Optional
 from pokemon_factory import create_pokemon_from_api
 from logger import logger
 from game_print import game_print
+from models import Pokemon, StatusEffect
 
 def print_actions(trainer):
     while True:
@@ -68,13 +70,21 @@ def print_stat_changes(old_stats):
                 elif actual_change < 0:
                     game_print(f"{target.name}{down_message}{amount}!")
  
-def print_status_effect(target, effect, result):
+def print_status_effect(target: Pokemon, effect: Optional[StatusEffect], result: str) -> None:
+
+    if effect is not None:
+        return
+    
+    assert effect is not None
+    
     status_messages = {
         "Poison":    " was poisoned!",
         "Paralysis": " was paralyzed!",
         "Sleep":     " was put to sleep!",
         "Burn":      " was burned!",
         "Freeze":    " was frozen!",
+        "Confusion": " became confused!",
+        "Curse":     " was cursed!",
     }
     already_messages = {
         "Poison":    " is already poisoned!",
@@ -82,16 +92,26 @@ def print_status_effect(target, effect, result):
         "Sleep":     " is already asleep!",
         "Burn":      " is already burned!",
         "Freeze":    " is already frozen!",
+        "Confusion": " is already confused!",
+        "Curse":     " is already cursed!",
+    }
+    major_status_messages = {
+        "Poison":    " already has a status condition!",
+        "Paralysis": " already has a status condition!",
+        "Sleep":     " already has a status condition!",
+        "Burn":      " already has a status condition!",
+        "Freeze":    " already has a status condition!",
     }
 
-    match result:
-        case "afflicted":
-            game_print(f"{target.name}{status_messages[effect.name]}")
-        case "already":
-            game_print(f"{target.name}{already_messages[effect.name]}")
-        case "failed":
-            pass
-            
+    if result == "afflicted":
+        game_print(f"{target.name}{status_messages.get(effect.name, ' was affected!')}")
+    elif result == "already":
+        if effect.is_major and target.major_status is not None:
+            game_print(f"{target.name}{major_status_messages.get(effect.name, ' already has a status condition!')}")
+        else:
+            game_print(f"{target.name}{already_messages.get(effect.name, ' is already affected!')}")
+    elif result == "failed":
+        pass  # no message on failed application
 
 def print_cant_act(attacker, reason):
     cant_act_messages = {
@@ -132,14 +152,14 @@ def debug_print_stats(pokemon):
         stage      = getattr(pokemon, stage_attr[stat])
         calculated = pokemon.get_stat(stat)
         game_print(f"{stat_names[stat]:<20} {base:<10} {stage:<10} {calculated:<10}")
-    game_print(f"{'Status Effects:':<20} {[e.name for e in pokemon.status_effect]}")
+    game_print(f"{'Major Status Effect:':<20} {[e.name for e in pokemon.major_status]}")
+    game_print(f"{'Minor Status Effect:':<20} {[e.name for e in pokemon.minor_status]}")
     game_print(f"{'-' * 50}")
 
-def build_party(trainer_name, party_size=2):
-    game_print(f"\n{trainer_name}, choose your pokemon!")
-    party = []
+def build_party(trainer_name: str, party_size: int = 2) -> list[Pokemon]:
+    party: list[Pokemon] = []
     while len(party) < party_size:
-        name = input(f"Choose pokemon {len(party) + 1}/{party_size}: ")
+        name    = input(f"Choose pokemon {len(party) + 1}/{party_size}: ")
         pokemon = create_pokemon_from_api(name)
         if pokemon is not None:
             party.append(pokemon)

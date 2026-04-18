@@ -24,19 +24,31 @@ class TestDamageCalculation(unittest.TestCase):
         self.assertEqual(damage, 0)
 
     def test_higher_attack_deals_more_damage(self):
-        defender     = make_trainer(pokemon=[make_pokemon(stat_def=100)])
-        attacker_low  = make_trainer(pokemon=[make_pokemon(stat_attk=50)])
-        attacker_high = make_trainer(pokemon=[make_pokemon(stat_attk=150)])
-        move = make_move(category="physical", power=50)
+        defender       = make_trainer(pokemon=[make_pokemon()])
+        attacker_low   = make_trainer(pokemon=[make_pokemon()])
+        attacker_high  = make_trainer(pokemon=[make_pokemon()])
+        move           = make_move(category="physical", power=50)
+
+        # directly override stats
+        defender.active().stat_def         = 100
+        attacker_low.active().stat_attk    = 50
+        attacker_high.active().stat_attk   = 200
+
         damage_low,  _ = calculate_damage(move, attacker_low,  defender)
         damage_high, _ = calculate_damage(move, attacker_high, defender)
         self.assertGreater(damage_high, damage_low)
 
     def test_higher_defense_takes_less_damage(self):
-        attacker      = make_trainer(pokemon=[make_pokemon(stat_attk=100)])
-        defender_low  = make_trainer(pokemon=[make_pokemon(stat_def=50)])
-        defender_high = make_trainer(pokemon=[make_pokemon(stat_def=150)])
-        move = make_move(category="physical", power=50)
+        attacker       = make_trainer(pokemon=[make_pokemon()])
+        defender_low   = make_trainer(pokemon=[make_pokemon()])
+        defender_high  = make_trainer(pokemon=[make_pokemon()])
+        move           = make_move(category="physical", power=50)
+
+        # directly override stats to guarantee different ratios
+        attacker.active().stat_attk      = 100
+        defender_low.active().stat_def   = 50
+        defender_high.active().stat_def  = 200
+
         damage_low,  _ = calculate_damage(move, attacker, defender_low)
         damage_high, _ = calculate_damage(move, attacker, defender_high)
         self.assertGreater(damage_low, damage_high)

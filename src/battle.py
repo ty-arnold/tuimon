@@ -1,6 +1,7 @@
 from type_chart import type_chart
 from game_print import game_print
 from print import print_actions, print_cant_act, print_stat_changes, print_status_effect
+from models import *
 from mult_tables import *
 import random, copy
 from logger import logger
@@ -25,8 +26,6 @@ def get_turn(trainer):
         elif action == 2:
             trainer.print_party()
             pokemon = get_party(trainer)
-            if pokemon is not None:
-                trainer.selected_mon = trainer.party.index(pokemon)
         elif action == 3:
             # placeholder for items :)
             pass
@@ -37,11 +36,18 @@ def get_party(trainer):
         try:
             cancel = len(trainer.party) + 1
             choice = int(input("Select a Pokemon: "))
-            if choice == cancel and trainer.active().is_alive() == True:
-                return None
+
+            # check cancel first before any indexing
+            if choice == cancel:
+                if trainer.active().is_alive():
+                    return None
+                else:
+                    game_print("You must select a pokemon!")
+                    continue
+
             selected_mon = trainer.party[choice - 1]
             if not selected_mon.is_alive():
-                game_print(f"{selected_mon.name} has already fainted! Please select Pokemon.")
+                game_print(f"{selected_mon.name} has already fainted! Please select another Pokemon.")
                 continue
             if choice - 1 == trainer.selected_mon:
                 game_print(f"{selected_mon.name} is already selected!")
@@ -56,40 +62,53 @@ def resolve_turn(player, player_choice, npc, npc_choice):
     player_can_act = check_can_act(player.active())
     npc_can_act = check_can_act(npc.active())
 
-    if player.active().get_stat("stat_spd") > npc.active().get_stat("stat_spd"):
-        first, first_choice, second, second_choice = player, player_choice, npc, npc_choice
-        first_can_act, second_can_act = player_can_act, npc_can_act
-    else:
-        first, first_choice, second, second_choice = npc, npc_choice, player, player_choice
-        first_can_act, second_can_act = npc_can_act, player_can_act
+    order = get_turn_order(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
 
-    second_mon_before = second.selected_mon
+    second_mon_before = order.second.selected_mon
 
-    if first_can_act:
-        apply_move(first_choice, first, second)
-        clear_move_lock(first)
+    if order.first_can_act:
+        apply_move(order.first_choice, order.first, order.second)
+        clear_move_lock(order.first)
         winner = check_winner(player, npc)
         if winner:
             return True
         next_mon(player, npc)
-        
-    if second.selected_mon != second_mon_before:
+
+    # checks if the second pokemon fainted - if so, skip its move turn
+    if order.second.selected_mon != second_mon_before:
         return None
         
-    if second_can_act:
-        apply_move(second_choice, second, first)
-        clear_move_lock(second)
+    if order.second_can_act:
+        apply_move(order.second_choice, order.second, order.first)
+        clear_move_lock(order.second)
         winner = check_winner(player, npc)
         if winner:
             return True
         next_mon(player, npc)
 
-    process_status_effects(first.active())
-    process_status_effects(second.active())
+    process_status_effects(order.first.active())
+    process_status_effects(order.second.active())
     winner = check_winner(player, npc)
     if winner:
         return True
     return None
+    
+def get_turn_order(player, player_choice, npc, npc_choice, player_can_act, npc_can_act) -> TurnOrder:
+    # checks priority first, higher priority supercedes speed
+    if player_choice.priority == npc_choice.priority:
+        if player.active().get_stat("stat_spd") > npc.active().get_stat("stat_spd"):
+            return TurnOrder(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
+        elif npc.active().get_stat("stat_spd") > player.active().get_stat("stat_spd"):
+            return TurnOrder(npc, npc_choice, player, player_choice, npc_can_act, player_can_act)
+        else:
+            if random.random() > 0.5:
+                return TurnOrder(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
+            else:
+                return TurnOrder(npc, npc_choice, player, player_choice, npc_can_act, player_can_act)
+    elif player_choice.priority > npc_choice.priority:
+        return TurnOrder(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
+    else:
+        return TurnOrder(npc, npc_choice, player, player_choice, npc_can_act, player_can_act)
 
 def get_move(pokemon):
     while True:
@@ -162,7 +181,7 @@ def apply_move(move, attacker, defender):
         print_stat_changes(old_stats)
 
     if move.status_effect is not None:
-        result, effect = apply_status_effect(move, defender)
+        result, effect = apply_status_effect_from_move(move, defender)
         print_status_effect(defender.active(), effect, result)
 
 def handle_multiturn(move, attacker):
@@ -304,45 +323,82 @@ def apply_stat_change(move, attacker, defender, old_stats):
 
     return old_stats
 
-def apply_status_effect(move, defender):
+def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, Optional[StatusEffect]]:
+    import copy
+    
+    if move.status_effect is None:
+        return "failed", None
+    
     effect = copy.deepcopy(move.status_effect)
-    if not any(e.name == effect.name for e in defender.active().status_effect):
-        if random.random() < effect.chance_to_apply:
-            defender.active().apply_status_effect(effect)
-            return "afflicted", effect  
+    
+    if random.random() < effect.chance_to_apply:
+        success = defender.active().apply_status_effect(effect)
+        if success:
+            return "afflicted", effect
         else:
-            return "failed", effect 
-    else:
-        return "already", effect     
+            return "already", effect  # blocked because major status already exists
+    return "failed", effect
 
-def process_status_effects(pokemon):
-    effects_to_remove = []
+def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
+    # Process a single status effect. Returns True if the effect should be removed
+    if effect.check_should_end():
+        return True
+
+    match effect.name:
+        case "Poison" | "Curse":
+            if effect.damage is not None:
+                damage = round(pokemon.max_hp * effect.damage)
+                pokemon.hp = max(0, pokemon.hp - damage)
+                game_print(f"{pokemon.name} was hurt by {effect.name.lower()}!")
+                game_print(f"{pokemon.name} took {damage} damage!")
+        case "Burn":
+            if effect.damage is not None:
+                damage = round(pokemon.max_hp * effect.damage)
+                pokemon.hp = max(0, pokemon.hp - damage)
+                game_print(f"{pokemon.name} was hurt by its burn!")
+                game_print(f"{pokemon.name} took {damage} damage!")
+        case "Confusion":
+            if random.random() < 0.33:
+                damage = round(pokemon.max_hp * 0.1)
+                pokemon.hp = max(0, pokemon.hp - damage)
+                game_print(f"{pokemon.name} hurt itself in confusion!")
+            else:
+                game_print(f"{pokemon.name} is confused!")
+
+    return False
+
+def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffect]) -> None:
+    # Remove expired effects and print removal messages
     removal_messages = {
         "Poison":    " was cured of poison!",
         "Paralysis": " was cured of paralysis!",
         "Sleep":     " woke up!",
         "Burn":      " was cured of its burn!",
         "Freeze":    " thawed out!",
+        "Confusion": " snapped out of confusion!",
+        "Curse":     " is no longer cursed!",
     }
-
-    for effect in pokemon.status_effect:
-        if effect.check_should_end():
-            effects_to_remove.append(effect)
-            continue  
-
-        if effect.damage is not None and effect.damage > 0:
-            damage = round(pokemon.max_hp * effect.damage)
-            pokemon.hp = max(0, pokemon.hp - damage)
-            game_print(f"{pokemon.name} was hurt by {effect.name}!")
-            game_print(f"{pokemon.name} took {damage} damage!")
-
     for effect in effects_to_remove:
         pokemon.remove_status_effect(effect)
         message = removal_messages.get(effect.name, " is no longer affected!")
         game_print(f"{pokemon.name}{message}")
+
+def get_all_effects(pokemon: Pokemon) -> list[StatusEffect]:
+    # Get all active status effects for a pokemon
+    return ([pokemon.major_status] if pokemon.major_status else []) + pokemon.minor_status
+
+def process_status_effects(pokemon: Pokemon) -> None:
+    effects_to_remove = []
+
+    for effect in get_all_effects(pokemon):
+        if process_effect(pokemon, effect):
+            effects_to_remove.append(effect)
+
+    remove_expired_effects(pokemon, effects_to_remove)
                               
 def check_can_act(pokemon):
-    for effect in pokemon.status_effect:
+    effects = get_all_effects(pokemon)
+    for effect in effects:
         if not effect.can_act():
             return False, effect.name
     return True, None

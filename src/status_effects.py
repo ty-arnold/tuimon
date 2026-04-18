@@ -4,32 +4,37 @@ poison = StatusEffect(
     name = "Poison",
     chance_to_apply = 1.0,
     chance_to_end = 0.5,
-    damage = (1/16)
+    damage = (1/16),
+    is_major = True
 )
 
 paralysis = StatusEffect(
     name = "Paralysis",
     stat_modifier = {"stat_spd" : 0.75},
     chance_to_act = 0.75,
-    chance_to_apply = 0.30
+    chance_to_apply = 0.30,
+    is_major = True
 )
 
 sleep = StatusEffect(
     name = "Sleep",
     chance_to_end = 0.25,
     chance_to_act = 0.0,
-    chance_to_apply = 0.10
+    chance_to_apply = 0.10,
+    is_major = True
 )
 
 burn = StatusEffect(
     name = "Burn",
     stat_modifier = {"stat_attk" : 0.5},
     chance_to_apply = 0.10,
-    damage = (1/8)
+    damage = (1/8),
+    is_major = True
 )
 
 freeze = StatusEffect(
     name = "Freeze",
     chance_to_act = 0.0,
-    chance_to_apply = 0.10
+    chance_to_apply = 0.10,
+    is_major = True
 )

@@ -12,7 +12,8 @@ def dump_pokemon(pokemon):
     logger.debug(f"  Speed:        {pokemon.stat_spd} (stage: {pokemon.stage_spd})")
     logger.debug(f"  Accuracy:     {pokemon.stat_acc} (stage: {pokemon.stage_acc})")
     logger.debug(f"  Evasion:      {pokemon.stat_eva} (stage: {pokemon.stage_eva})")
-    logger.debug(f"  Status:       {[e.name for e in pokemon.status_effect]}")
+    logger.debug(f"  Major Status: {pokemon.major_status}")
+    logger.debug(f"  Minor Status: {[e.name for e in pokemon.minor_status]}")
     logger.debug(f"  Moveset:      {[m.name for m in pokemon.moveset]}")
 
 def dump_trainer(trainer):

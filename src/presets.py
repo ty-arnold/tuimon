@@ -1,6 +1,6 @@
-# presets.py
+from typing import Optional
 from cache_manager import get_move_cache, dict_to_move, get_pokemon_cache, dict_to_pokemon
-from models import Trainer
+from models import Trainer, Pokemon
 from pokemon_factory import create_pokemon_from_api
 
 move_cache    = get_move_cache()
@@ -13,11 +13,10 @@ def get_move(name):
         return None
     return dict_to_move(move_cache[key])
 
-def get_pokemon(name, lvl=50, move_names=None):
+def get_pokemon(name: str, lvl: int = 50, move_names: Optional[list[str]] = None) -> Optional[Pokemon]:
     key = name.lower()
     if key not in pokemon_cache:
         print(f"Pokemon '{name}' not found in cache!")
-        create_pokemon_from_api(name)
         return None
 
     moveset = []
@@ -31,29 +30,32 @@ def get_pokemon(name, lvl=50, move_names=None):
 
 # --- define preset teams ---
 
-def get_test_player():
+def get_test_player() -> Trainer:
+    party = [
+        get_pokemon("pidgeot", lvl=50, move_names=[
+            "fly",
+            "quick-attack",
+            "aerial-ace",
+            "ancient-power"
+        ]),
+        get_pokemon("nidorino", lvl=50, move_names=[
+            "double-kick",
+            "horn-attack",
+            "thunder-wave",
+            "toxic"
+        ])
+    ]
+    # filter out any None values and assert party is valid
+    valid_party = [p for p in party if p is not None]
+    assert len(valid_party) > 0, "Failed to create player party - no valid pokemon!"
+    
     return Trainer(
-        name        = "Ash",
-        party       = [
-            get_pokemon("pidgeot", lvl=50, move_names=[
-                "fly",
-                "quick-attack",
-                "aerial-ace",
-                "ancient-power"
-            ]),
-            get_pokemon("gengar", lvl=50, move_names=[
-                "shadow-ball",
-                "hypnosis",
-                "lick",
-                "confuse-ray"
-            ])
-        ],
+        name         = "Ash",
+        party        = valid_party
     )
 
-def get_test_npc():
-    return Trainer(
-        name        = "Gary",
-        party       = [
+def get_test_npc() -> Trainer:
+    party = [
             get_pokemon("blastoise", lvl=50, move_names=[
                 "toxic",
                 "ice-beam",
@@ -66,5 +68,11 @@ def get_test_npc():
                 "slash",
                 "fire-spin"
             ])
-        ],
+        ]
+    valid_party = [p for p in party if p is not None]
+    assert len(valid_party) > 0, "Failed to create player party - no valid pokemon!"
+    
+    return Trainer(
+        name         = "Gary",
+        party        = valid_party
     )

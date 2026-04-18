@@ -1,11 +1,19 @@
 from __future__ import annotations
 import random
-from typing import Optional
+from typing import Optional, NamedTuple
 from src.mult_tables import *
 
 ### Global values ###
 iv = 15
 ev = 85
+
+class TurnOrder(NamedTuple):
+    first:          Trainer
+    first_choice:   Move
+    second:         Trainer
+    second_choice:  Move
+    first_can_act:  bool
+    second_can_act: bool
 
 class Pokemon:
     def __init__(
@@ -19,14 +27,14 @@ class Pokemon:
         stat_def:     int,
         stat_sp_attk: int,
         stat_sp_def:  int,
-        stat_spd:     int
+        stat_spd:     int,
     ):
         self.name:         str               = name
         self.lvl:          int               = lvl
         self.type:         list[str]         = type
         self.moveset:      list[Move]        = moveset
 
-        self.hp:           int               = self._calc_hp(stat_hp,      iv, ev, lvl)
+        self.hp:           int               = self._calc_hp(stat_hp,        iv, ev, lvl)
         self.max_hp:       int               = self.hp
         self.stat_attk:    int               = self._calc_stat(stat_attk,    iv, ev, lvl)
         self.stat_def:     int               = self._calc_stat(stat_def,     iv, ev, lvl)
@@ -44,7 +52,8 @@ class Pokemon:
         self.stage_acc:     int              = 0
         self.stage_eva:     int              = 0
 
-        self.status_effect: list[StatusEffect] = []
+        self.major_status: Optional[StatusEffect]  = None    # only one allowed
+        self.minor_status: list[StatusEffect]      = []      # multiple allowed
 
     def _calc_hp(self, base: int, iv: int, ev: int, lvl: int) -> int:
         return round((((base + iv) * 2 + ev) * lvl / 100) + lvl + 10)
@@ -58,7 +67,7 @@ class Pokemon:
     def is_alive(self) -> bool:
         return self.hp > 0
     
-    def get_stat(self, stat: str) -> int:
+    def get_stat(self, stat: str):
         stage_map = {
             "stat_attk":    (self.stat_attk,    self.stage_attk),
             "stat_def":     (self.stat_def,     self.stage_def),
@@ -74,10 +83,12 @@ class Pokemon:
         else:
             calculated = round(base * stat_table[stage])
 
-        for effect in self.status_effect:
+        if self.major_status is not None and stat in self.major_status.stat_modifier:
+            calculated = round(calculated * self.major_status.stat_modifier[stat])
+
+        for effect in self.minor_status:
             if stat in effect.stat_modifier:
                 calculated = round(calculated * effect.stat_modifier[stat])
-        
         return calculated
 
     def apply_stage_change(self, stat: str, change: int) -> int:
@@ -96,17 +107,33 @@ class Pokemon:
         setattr(self, attr, new_stage)
         return new_stage - current_stage
     
-    def apply_status_effect(self, effect: StatusEffect) -> None:
-        for stat, multiplier in effect.stat_modifier.items():
-            original = getattr(self, stat)
-            effect.applied_changes[stat] = original
-            setattr(self, stat, int(original * multiplier))
-        self.status_effect.append(effect)
+    def apply_status_effect(self, effect: StatusEffect) -> bool:
+        import random
+        if effect.is_major:
+            # only one major status allowed at a time
+            if self.major_status is not None:
+                return False  # already has a major status
+            for stat, multiplier in effect.stat_modifier.items():
+                original                     = getattr(self, stat)
+                effect.applied_changes[stat] = original
+                setattr(self, stat, int(original * multiplier))
+            if effect.use_turn_counter:
+                effect.turn_counter = random.randint(1, 3)
+            self.major_status = effect
+        else:
+            # check if this specific minor status is already applied
+            if any(e.name == effect.name for e in self.minor_status):
+                return False
+            self.minor_status.append(effect)
+        return True  # successfully applied
 
     def remove_status_effect(self, effect: StatusEffect) -> None:
         for stat, original_value in effect.applied_changes.items():
             setattr(self, stat, original_value)
-        self.status_effect.remove(effect)
+        if effect.is_major:
+            self.major_status = None
+        else:
+            self.minor_status.remove(effect)
 
     def print_moves(self):
         from game_print import game_print
@@ -174,6 +201,7 @@ class StatusEffect:
         stat_modifier:    Optional[dict]         = None,
         damage:           Optional[float]        = None,
         use_turn_counter: bool                   = False,
+        is_major:         bool                   = False,
     ):
         self.name:             str                = name
         self.chance_to_apply:  float              = chance_to_apply
@@ -187,6 +215,7 @@ class StatusEffect:
         self.use_turn_counter: bool               = use_turn_counter
         self.turn_counter:     Optional[int]      = None
         self.turns_active:     int                = 0
+        self.is_major:         bool               = is_major
 
     def can_act(self) -> bool:
         if self.chance_to_act < 1.0:
