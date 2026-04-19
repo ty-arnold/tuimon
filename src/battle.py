@@ -155,139 +155,159 @@ def get_move(pokemon: Pokemon) -> Move | None:
             game_print("Invalid choice, please select again")
             pokemon.print_moves()
 
-def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> None:
+def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> Optional[bool]:
     logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
+    game_print(f"{attacker.active().name} used {move.name}!")
 
-    old_stats = []
-    damage = 0
-
-    clear_expired_modifiers(attacker.active(), current_turn)
-    clear_expired_modifiers(defender.active(), current_turn)
-
-    can_act, reason = check_can_act(attacker.active())
-    if not can_act:
-        print_cant_act(attacker, reason)
-        return None
-    
-    if move.multi_turn is not None: 
+    # 1. handle charge turn for multi turn moves
+    # must be first - if charging, nothing else happens
+    if move.multi_turn is not None:
         if handle_multiturn(move, attacker):
             return None
-        
-    if defender.invulnerable_state is not None:
-        if handle_invulnerability(move, defender):
-            game_print(f"{attacker.active().name}'s attack missed!") 
-            return None
-        
+
+    # 2. check if defender is protected
+    # protect blocks everything except specific moves
     if is_protected(defender, move):
         game_print(f"{attacker.active().name}'s attack was blocked!")
         attacker.active().accumulator = 0
+        defender.consecutive_protect  = 0
         return None
     else:
-        defender.consecutive_protect = 0  # reset on successful hit
+        defender.consecutive_protect = 0
 
-    if check_immunity(move, attacker, defender):
+    # 3. check invulnerability (fly, dig, etc)
+    # separate from protect since some moves can still hit
+    if defender.invulnerable_state is not None:
+        if handle_invulnerability(move, attacker, defender):
+            return None
+
+    # 4. check accuracy
+    # only checked if target is not invulnerable
+    if not check_accuracy(move, attacker, defender):
+        game_print(f"{attacker.active().name}'s attack missed!")
+        attacker.active().accumulator = 0
         return None
-    
+
+    # 5. check type immunity
+    # after accuracy so misses dont trigger immunity messages
+    if check_immunity(move, attacker, defender):
+        attacker.active().accumulator = 0
+        return None
+
+    # 6. decrement pp
+    # only after all failure checks pass
     move.pp -= 1
-    if move.pp <= 0:
-        game_print(f"{move.name} has no PP left!")
 
-    game_print(f"{attacker.active().name} used {move.name}!")
+    # 7. apply move effect for status moves like protect, light screen
+    if move.move_effect is not None:
+        ended = apply_move_effect(move, attacker, defender, current_turn)
+        if ended and move.category == "status":
+            return None
 
+    # 8. apply modifier if move has one like charge
     if move.modifier is not None:
         apply_modifier(move, attacker.active(), current_turn)
         if move.category == "status":
             return None
 
-    if check_immunity(move, attacker, defender):
-        # reset accumulator if move is blocked
-        if move.multi_turn is not None and move.multi_turn.get("accumulator"):
-            attacker.active().accumulator = 0
-        return None
-
-    if not check_accuracy(move, attacker, defender):
-        game_print(f"{attacker.active().name}'s attack missed!") 
-        return None
-
+    # 9. calculate and apply damage
+    damage = 0
     if move.category != "status":
-        if move.min_hits is not None and move.max_hits is not None:
-            # multi hit move
-            roll         = random.randint(move.min_hits, move.max_hits)
-            damage       = 0
-            hits_landed  = 0
-
-            for i in range(roll):
-                hit_damage = apply_damage(move, attacker, defender, current_turn)
-                damage    += hit_damage
-                hits_landed += 1
-
-                # stop if defender faints mid-combo
-                if not defender.active().is_alive():
-                    break
-
-            game_print(f"Hit {hits_landed} time(s)!")
+        if move.multi_turn is not None and move.multi_turn.accumulator is not None:
+            # check if this is the release turn
+            if attacker.locked_turns == 0 and attacker.locked_move is not None:
+                damage = release_accumulator(move, attacker, defender,
+                                             move.multi_turn.accumulator)
+                attacker.active().accumulator = 0
+                # return check_winner(attacker, defender)
         else:
-            # single hit move
-            damage = apply_damage(move, attacker, defender, current_turn)
+            # handle multi hit moves
+            if move.min_hits is not None and move.max_hits is not None:
+                roll        = random.randint(move.min_hits, move.max_hits)
+                hits_landed = 0
+                for _ in range(roll):
+                    hit_damage = apply_damage(move, attacker, defender, current_turn)
+                    damage    += hit_damage
+                    hits_landed += 1
+                    if not defender.active().is_alive():
+                        break
+                game_print(f"Hit {hits_landed} time(s)!")
+            else:
+                damage = apply_damage(move, attacker, defender, current_turn)
 
-    if move.multi_turn is not None and move.multi_turn.get("charge_turn") == 2:
-        attacker.locked_move  = move
-        attacker.locked_turns = 1
+    # 10. apply recoil
+    if move.recoil > 0 and damage > 0:
+        recoil_damage = round(damage * move.recoil)
+        attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
+        game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
 
+    # 11. apply lifesteal
     if move.lifesteal > 0 and damage > 0:
         apply_lifesteal(move, attacker, damage)
 
+    # 12. apply heal
     if move.heal > 0:
         heal_amount = round(attacker.active().max_hp * move.heal)
-        attacker.active().hp = min(attacker.active().max_hp, attacker.active().hp + heal_amount)
-        logger.info(f"{attacker.active().name} restored {heal_amount} HP!")
+        attacker.active().hp = min(attacker.active().max_hp,
+                                   attacker.active().hp + heal_amount)
+        game_print(f"{attacker.active().name} restored {heal_amount} HP!")
 
-    if move.recoil > 0:
-        apply_recoil(move, attacker, damage)
-
+    # 13. apply stat changes
     if move.stat_change:
-        old_stats = apply_stat_change(move, attacker, defender, old_stats)
+        old_stats = apply_stat_change(move, attacker, defender, [],)
         print_stat_changes(old_stats)
 
+    # 14. apply status effect
     if move.status_effect is not None:
         result, effect = apply_status_effect_from_move(move, defender)
-        print_status_effect(defender.active(), effect, result)
+        if effect is not None:
+            print_status_effect(defender.active(), effect, result)
+
+    # 15. lock recharge moves after attacking
+    if move.multi_turn is not None and move.multi_turn.charge_turn == 2:
+        attacker.locked_move  = move
+        attacker.locked_turns = 1
+
+    # 16. check winner
+    # return check_winner(attacker, defender)
 
 def handle_multiturn(move: Move, attacker: Trainer) -> bool:
-    # handle recharge turn - charge_turn 2 means attack first then recharge
     if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
-        if attacker.locked_move.multi_turn.get("charge_turn") == 2:
-            game_print(f"{attacker.active().name} {attacker.locked_move.multi_turn['charge_message']}")
+        if attacker.locked_move.multi_turn.charge_turn == 2:
+            game_print(f"{attacker.active().name} {attacker.locked_move.multi_turn.charge_message}")
             return True
 
-    # handle normal charge turn - charge_turn 1 means charge first then attack
     if move.multi_turn is not None and attacker.locked_move is None:
         attacker.locked_move        = move
-        attacker.locked_turns       = move.multi_turn["turns"] - 1
-        attacker.invulnerable_state = move.multi_turn.get("invulnerable_state")
+        attacker.locked_turns       = move.multi_turn.turns - 1
+        attacker.invulnerable_state = move.multi_turn.invulnerable_state
 
-        if move.multi_turn.get("charge_turn") == 1:
-            game_print(f"{attacker.active().name} {move.multi_turn['charge_message']}")
+        if move.multi_turn.charge_turn == 1:
+            game_print(f"{attacker.active().name} {move.multi_turn.charge_message}")
             return True
 
     return False
 
-def handle_invulnerability(move: Move, defender: Trainer) -> bool:
-    can_hit = defender.invulnerable_state in (move.hits_invulnerable or [])
-    
+def handle_invulnerability(move: Move, attacker: Trainer, defender: Trainer) -> bool:
+    can_hit = (
+        defender.invulnerable_state is not None and
+        defender.invulnerable_state in (move.hits_invulnerable or [])
+    )
+
     if can_hit:
         if defender.invulnerable_state == "flying":
-            logger.info(f"It hit {defender.active().name} out of the sky!")
+            game_print(f"It hit {defender.active().name} out of the sky!")
         else:
-            logger.info(f"It hit {defender.active().name}!")
+            game_print(f"It hit {defender.active().name}!")
         return False
 
-    # print invulnerable state message but NOT the missed message
     message = "is invulnerable!"
     if defender.locked_move is not None and defender.locked_move.multi_turn is not None:
-        message = defender.locked_move.multi_turn.get("invulnerable_message", "is invulnerable!")
-    logger.info(f"{defender.active().name} {message}")
+        message = defender.locked_move.multi_turn.invulnerable_message or "is invulnerable!"
+
+    game_print(f"{defender.active().name} {message}")
+    game_print(f"{attacker.active().name}'s attack missed!")
     return True
 
 def check_accuracy(move: Move, attacker: Trainer, defender: Trainer) -> bool:
@@ -355,39 +375,52 @@ def apply_damage(
 
     if (defender.locked_move is not None and
         defender.locked_move.multi_turn is not None and
-        defender.locked_move.multi_turn.get("accumulator", {}).get("type") == "damage_taken"):
+        defender.locked_move.multi_turn.accumulator is not None and
+        defender.locked_move.multi_turn.accumulator.type == "damage_taken"):
         defender.active().accumulator += damage
         game_print(f"{defender.active().name} is storing energy!")
 
     return damage 
 
-def calculate_damage(move: Move, attacker: Trainer, defender: Trainer, power_modifier: float) -> tuple:
+def calculate_damage(
+    move:           Move,
+    attacker:       Trainer,
+    defender:       Trainer,
+    effective_power: Optional[int] = None
+) -> tuple[int, float]:
+
     if move.category == "physical":
-        attack_stat = attacker.active().get_stat("stat_attk")
+        attack_stat  = attacker.active().get_stat("stat_attk")
         defense_stat = defender.active().get_stat("stat_def")
     elif move.category == "special":
-        attack_stat = attacker.active().get_stat("stat_sp_attk")
+        attack_stat  = attacker.active().get_stat("stat_sp_attk")
         defense_stat = defender.active().get_stat("stat_sp_def")
     else:
-        return 0, 1
-    
-    logger.debug(f"calculate_damage: attack={attack_stat} defense={defense_stat}")
-        
-    multiplier = get_type_multiplier(move.type[0], defender.active().type)
+        return 0, 1.0
 
+    multiplier  = get_type_multiplier(move.type[0], defender.active().type)
+    
+    # calculate critical hit chance based on move crit rate
     crit_chance = crit_rate_table.get(move.crit_rate, 1/16)
     critical    = 2 if random.random() < crit_chance else 1
     if critical == 2:
-        game_print("Critical hit!")
+        logger.info("Critical hit!")
 
-    stab = 1.5 if attacker.active().type == move.type[0] else 1
+    # use effective_power if provided (from modifiers like charge)
+    # otherwise use the move's base power
+    power = effective_power if effective_power is not None else move.power
 
-    effective_power = round(move.power * power_modifier)
+    logger.debug(f"calculate_damage: attack={attack_stat} defense={defense_stat}")
+    logger.debug(f"calculate_damage: power={power} lvl={attacker.active().lvl}")
+    logger.debug(f"calculate_damage: critical={critical} multiplier={multiplier}")
 
     damage = round(
-        (((2 * attacker.active().lvl * critical / 5) + 2) * effective_power * (attack_stat / defense_stat) / 50 + 2)
-        * multiplier * stab
+        (((2 * attacker.active().lvl * critical / 5) + 2) * power * (attack_stat / defense_stat) / 50 + 2)
+        * multiplier
     )
+
+    logger.debug(f"calculate_damage: final damage={damage}")
+
     return damage, multiplier
 
 def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
@@ -561,18 +594,24 @@ def clear_switch_effects(trainer: Trainer) -> None:
 def clear_expired_modifiers(pokemon: Pokemon, current_turn: int) -> None:
     pokemon.clear_expired_modifiers(current_turn)
 
-def handle_accumulator(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> Optional[int]:
+def handle_accumulator(
+    move:         Move,
+    attacker:     Trainer,
+    defender:     Trainer,
+    current_turn: int
+) -> Optional[int]:
     if move.multi_turn is None:
         return None
-    config = move.multi_turn.get("accumulator")
+
+    config = move.multi_turn.accumulator
     if config is None:
         return None
 
     # accumulate phase - not the release turn yet
     if attacker.locked_turns > 0:
-        if config["type"] == "damage_taken":
+        if config.type == "damage_taken":
             pass  # accumulated in apply_damage hook
-        elif config["type"] == "turn_count":
+        elif config.type == "turn_count":
             attacker.active().accumulator += 1
         return None  # still accumulating
 
@@ -583,29 +622,27 @@ def release_accumulator(
     move:     Move,
     attacker: Trainer,
     defender: Trainer,
-    config:   dict
+    config:   Accumulator
 ) -> int:
     accumulated = attacker.active().accumulator
 
-    if config.get("release_message"):
-        game_print(f"{attacker.active().name} {config['release_message']}!")
+    if config.release_message:
+        game_print(f"{attacker.active().name} {config.release_message}!")
 
-    # immunity already checked in apply_move before this is called
-    # just calculate and apply damage
-    if config["type"] == "damage_taken":
-        if config["release_formula"] == "double":
+    damage = 0
+
+    if config.type == "damage_taken":
+        if config.release_formula == "double":
             damage = accumulated * 2
 
-    elif config["type"] == "turn_count":
-        base_damage, multiplier= calculate_damage(move, attacker, defender, 1.0)
-        if config["release_formula"] == "exponential":
+    elif config.type == "turn_count":
+        base_damage, _ = calculate_damage(move, attacker, defender, 1)
+        if config.release_formula == "exponential":
             damage = round(base_damage * (2 ** accumulated))
-        elif config["release_formula"] == "double":
+        elif config.release_formula == "double":
             damage = round(base_damage * (accumulated + 1))
-        else:
-            damage = base_damage
 
-    if not config.get("ignore_type", False):
+    if not config.ignore_type:
         multiplier = get_type_multiplier(move.type[0], defender.active().type)
         damage     = round(damage * multiplier)
         if multiplier < 1:

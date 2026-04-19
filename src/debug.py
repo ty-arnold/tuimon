@@ -45,8 +45,9 @@ def dump_move(move):
     logger.debug(f"  Status Effect:     {move.status_effect.name if move.status_effect else None}")
 
     if move.multi_turn is not None:
+        from dataclasses import asdict
         logger.debug(f"  Multi Turn:")
-        for key, value in move.multi_turn.items():
+        for key, value in asdict(move.multi_turn).items():
             logger.debug(f"    {key:<22} {value}")
     else:
         logger.debug(f"  Multi Turn:        None")

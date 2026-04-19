@@ -2,11 +2,14 @@
 import sys
 import os
 import requests
+from typing import Optional
+import copy
 
 # add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 # import only what the script actually needs
+from models import MultiTurn
 from cache_manager  import get_move_cache, save_move_cache, status_effect_to_dict
 from status_effects import *
 
@@ -44,90 +47,88 @@ STATUS_EFFECT_MAP = {
 }
 
 MULTI_TURN_OVERRIDES = {
-    "fly": {
-        "invulnerable":       True,
-        "invulnerable_state": "flying",
-        "charge_turn":        1,        
-        "charge_message":     "flew up high!",
-        "invulnerable_message": "is high up in the air!"
-    },
-    "dig": {
-        "invulnerable":       True,
-        "invulnerable_state": "underground",
-        "charge_turn":        1,
-        "charge_message":     "dug a hole!",
-        "invulnerable_message": "is underground!"
-    },
-    "bounce": {
-        "invulnerable":       True,
-        "invulnerable_state": "flying",
-        "charge_turn":        1,
-        "charge_message":     "sprang up!",
-        "invulnerable_message": "is high up in the air!"
-    },
-    "skull-bash": {
-        "invulnerable":       False,
-        "invulnerable_state": None,
-        "charge_turn":        1,
-        "charge_message":     "tucked in its head!",
-    },
-    "solar-beam": {
-        "invulnerable":       False,
-        "invulnerable_state": None,
-        "charge_turn":        1,
-        "charge_message":     "absorbed light!",
-    },
-    "hyper-beam": {
-        "invulnerable":       False,
-        "invulnerable_state": None,
-        "charge_turn":        2,
-        "charge_message":     "must recharge!",
-    },
-    "blast-burn": {
-        "invulnerable":       False,
-        "invulnerable_state": None,
-        "charge_turn":        2,
-        "charge_message":     "must recharge!",
-    },
-    "bide": {
-        "invulnerable":   False,
-        "charge_turn":    1,
-        "turns":          2,
-        "charge_message": "is storing energy!",
-        "accumulator": {
+    "fly": MultiTurn(
+        turns                = 2,
+        charge_turn          = 1,
+        invulnerable         = True,
+        invulnerable_state   = "flying",
+        charge_message       = "flew up high!",
+        invulnerable_message = "is high up in the air!"
+    ),
+    "dig": MultiTurn(
+        turns                = 2,
+        charge_turn          = 1,
+        invulnerable         = True,
+        invulnerable_state   = "underground",
+        charge_message       = "dug a hole!",
+        invulnerable_message = "is underground!"
+    ),
+    "bounce": MultiTurn(
+        turns                = 2,
+        charge_turn          = 1,
+        invulnerable         = True,
+        invulnerable_state   = "flying",
+        charge_message       = "sprang up!",
+        invulnerable_message = "is high up in the air!"
+    ),
+    "dive": MultiTurn(
+        turns                = 2,
+        charge_turn          = 1,
+        invulnerable         = True,
+        invulnerable_state   = "underwater",
+        charge_message       = "hid underwater!",
+        invulnerable_message = "is hiding underwater!"
+    ),
+    "skull-bash": MultiTurn(
+        turns          = 2,
+        charge_turn    = 1,
+        charge_message = "tucked in its head!",
+    ),
+    "solar-beam": MultiTurn(
+        turns          = 2,
+        charge_turn    = 1,
+        charge_message = "absorbed light!",
+    ),
+    "razor-wind": MultiTurn(
+        turns          = 2,
+        charge_turn    = 1,
+        charge_message = "whipped up a whirlwind!",
+    ),
+    "sky-attack": MultiTurn(
+        turns          = 2,
+        charge_turn    = 1,
+        charge_message = "is glowing!",
+    ),
+    "hyper-beam": MultiTurn(
+        turns          = 2,
+        charge_turn    = 2,
+        charge_message = "must recharge!",
+    ),
+    "blast-burn": MultiTurn(
+        turns          = 2,
+        charge_turn    = 2,
+        charge_message = "must recharge!",
+    ),
+    "bide": MultiTurn(
+        turns          = 2,
+        charge_turn    = 1,
+        charge_message = "is storing energy!",
+        accumulator    = {
             "type":            "damage_taken",
             "release_formula": "double",
             "ignore_type":     True,
-            "ghost_immune":    True,
             "release_message": "unleashed energy!"
         }
-    },
-    "rollout": {
-        "invulnerable":   False,
-        "charge_turn":    1,
-        "turns":          5,
-        "charge_message": "began rolling!",
-        "accumulator": {
+    ),
+    "rollout": MultiTurn(
+        turns          = 5,
+        charge_turn    = 1,
+        charge_message = "began rolling!",
+        accumulator    = {
             "type":            "turn_count",
             "release_formula": "exponential",
-            "ignore_type":     False,
-            "ghost_immune":    False,
-            "release_message": ""
         }
-    },
-    "fury-cutter": {
-        "invulnerable":   False,
-        "charge_turn":    1,
-        "turns":          5,
-        "charge_message": "used Fury Cutter!",
-        "accumulator": {
-            "type":            "turn_count",
-            "release_formula": "double",
-            "ignore_type":     False,
-            "ghost_immune":    False,
-            "release_message": ""
-        }
-    }
+    ),
 }
 
 MODIFIER_OVERRIDES = {
@@ -161,15 +162,15 @@ MODIFIER_OVERRIDES = {
 }
 
 HITS_INVULNERABLE = {
-    "thunder":      ["flying"],
-    "hurricane":    ["flying"],
-    "twister":      ["flying"],
-    "gust":         ["flying"],
-    "whirlpool":    ["underwater"],
-    "surf":         ["underwater"],
-    "earthquake":   ["underground"],
-    "magnitude":    ["underground"],
-    "fissure":      ["underground"],
+    "thunder":    {"states": ["flying"],       "damage_modifier": {}},
+    "hurricane":  {"states": ["flying"],       "damage_modifier": {}},
+    "gust":       {"states": ["flying"],       "damage_modifier": {"flying": 2.0}},
+    "twister":    {"states": ["flying"],       "damage_modifier": {"flying": 2.0}},
+    "whirlpool":  {"states": ["underwater"],   "damage_modifier": {"underwater": 2.0}},
+    "surf":       {"states": ["underwater"],   "damage_modifier": {"underwater": 2.0}},
+    "earthquake": {"states": ["underground"],  "damage_modifier": {"underground": 2.0}},
+    "magnitude":  {"states": ["underground"],  "damage_modifier": {"underground": 2.0}},
+    "fissure":    {"states": ["underground"],  "damage_modifier": {}},
 }
 
 IMMUNE_TYPE_OVERRIDES = {
@@ -208,19 +209,35 @@ def fetch_move_data(move_name):
         return None
     return response.json()
 
-def convert_move(move_data):
+def convert_move(move_data: dict) -> Optional[dict]:
+    from dataclasses import asdict, replace
+
     category_map = {
         "physical": "physical",
         "special":  "special",
         "status":   "status"
     }
 
+    # skip moves introduced after gen 3
+    gen_url    = move_data.get("generation", {}).get("url", "")
+    gen_number = int(gen_url.split("/")[-2]) if gen_url else 0
+    if gen_number > 3:
+        return None
+
+    move_name = move_data["name"].lower()
+
     # build stat_change dictionary
     stat_change = {}
     for change in move_data.get("stat_changes", []):
         stat_name = stat_change_map.get(change["stat"]["name"])
         amount    = change["change"]
-        target    = target_map.get(move_data["target"]["name"], "opponent")
+        
+        # positive changes target self, negative changes target opponent
+        if amount > 0:
+            target = "self"
+        else:
+            target = target_map.get(move_data["target"]["name"], "opponent")
+
         if stat_name is not None:
             if target not in stat_change:
                 stat_change[target] = {}
@@ -228,22 +245,20 @@ def convert_move(move_data):
 
     # extract meta data safely
     meta          = move_data.get("meta") or {}
-    accuracy      = move_data["accuracy"]
     min_turns     = meta.get("min_turns")
     max_turns     = meta.get("max_turns")
-    stat_chance   = meta.get("stat_chance", 0)
     drain         = meta.get("drain", 0)
     healing       = meta.get("healing", 0)
     min_hits      = meta.get("min_hits")
     max_hits      = meta.get("max_hits")
     crit_rate     = meta.get("crit_rate", 0)
     flinch_chance = meta.get("flinch_chance", 0) / 100
+    stat_chance   = meta.get("stat_chance", 0)
     recoil        = abs(drain) / 100 if drain < 0 else 0.0
     lifesteal     = drain / 100      if drain > 0 else 0.0
     heal          = healing / 100    if healing > 0 else 0.0
-    move_name     = move_data["name"].lower()
 
-    # extract status effect
+    # extract status effect from ailment
     ailment        = meta.get("ailment", {}) or {}
     ailment_name   = ailment.get("name", "none")
     ailment_chance = meta.get("ailment_chance", 0)
@@ -253,32 +268,28 @@ def convert_move(move_data):
         ailment_chance = ailment_chance / 100
     status_effect = STATUS_EFFECT_MAP.get(ailment_name)
     if status_effect is not None and ailment_chance > 0:
-        import copy
         status_effect = copy.deepcopy(status_effect)
         status_effect.chance_to_apply = ailment_chance
 
-    # build multi turn data if applicable
+    # build multi turn data
     is_manual_multi_turn = move_name in MULTI_TURN_OVERRIDES
     is_api_multi_turn    = min_turns is not None and min_turns > 1 and move_name in MULTI_TURN_OVERRIDES
+
     multi_turn = None
     if is_manual_multi_turn or is_api_multi_turn:
-        multi_turn = {
-            "turns":                2,
-            "invulnerable":         False,
-            "invulnerable_state":   None,
-            "charge_message":       "is preparing!",
-            "invulnerable_message": "is invulnerable!"
-        }
-        multi_turn.update(MULTI_TURN_OVERRIDES[move_name])
-        if min_turns is not None and min_turns > 1:
-            multi_turn["turns"] = max_turns or min_turns
+        if move_name in MULTI_TURN_OVERRIDES:
+            multi_turn = MULTI_TURN_OVERRIDES[move_name]
+            if min_turns is not None and min_turns > 1:
+                multi_turn = replace(multi_turn, turns=max_turns or min_turns)
+        else:
+            multi_turn = MultiTurn(
+                turns          = max_turns or min_turns or 2,
+                charge_turn    = 1,
+                charge_message = "is preparing!",
+            )
 
-    modifier = None
-    if move_name in MODIFIER_OVERRIDES:
-        modifier = MODIFIER_OVERRIDES[move_name]
-
-    # start with required attributes
-    result = {
+    # build required fields
+    result: dict = {
         "name":     move_data["name"].replace("-", " ").title(),
         "type":     [move_data["type"]["name"].capitalize()],
         "category": category_map.get(move_data["damage_class"]["name"], "status"),
@@ -287,37 +298,37 @@ def convert_move(move_data):
         "pp":       move_data["pp"],
     }
 
-    # only add optional attributes if they have non default values
+    # only add optional fields if non default
     if stat_change:
-        result["stat_change"]       = stat_change
+        result["stat_change"]        = stat_change
+    if recoil > 0.0:
+        result["recoil"]             = recoil
+    if lifesteal > 0.0:
+        result["lifesteal"]          = lifesteal
+    if heal > 0.0:
+        result["heal"]               = heal
+    if min_hits is not None:
+        result["min_hits"]           = min_hits
+    if max_hits is not None:
+        result["max_hits"]           = max_hits
+    if crit_rate > 0:
+        result["crit_rate"]          = crit_rate
+    if flinch_chance > 0.0:
+        result["flinch_chance"]      = flinch_chance
+    if move_data.get("priority", 0) != 0:
+        result["priority"]           = move_data["priority"]
     if stat_chance > 0:
         result["stat_change_chance"] = stat_chance / 100
-    if recoil > 0.0:
-        result["recoil"]            = recoil
-    if lifesteal > 0.0:
-        result["lifesteal"]         = lifesteal
-    if heal > 0.0:
-        result["heal"]              = heal
-    if min_hits is not None:
-        result["min_hits"]          = min_hits
-    if max_hits is not None:
-        result["max_hits"]          = max_hits
-    if crit_rate > 0:
-        result["crit_rate"]         = crit_rate
-    if flinch_chance > 0.0:
-        result["flinch_chance"]     = flinch_chance
-    if move_data.get("priority", 0) != 0:
-        result["priority"]          = move_data["priority"]
     if multi_turn is not None:
-        result["multi_turn"]        = multi_turn
+        result["multi_turn"]         = asdict(multi_turn)
     if HITS_INVULNERABLE.get(move_name):
-        result["hits_invulnerable"] = HITS_INVULNERABLE[move_name]
-    if status_effect is not None:
-        result["status_effect"]     = status_effect_to_dict(status_effect)
-    if modifier is not None:
-        result["modifier"] = modifier
+        result["hits_invulnerable"]  = HITS_INVULNERABLE[move_name]["states"]
+    if HITS_INVULNERABLE.get(move_name, {}).get("damage_modifier"):
+        result["damage_modifier"]    = HITS_INVULNERABLE[move_name]["damage_modifier"]
     if IMMUNE_TYPE_OVERRIDES.get(move_name):
-        result["immune_types"] = IMMUNE_TYPE_OVERRIDES[move_name]
+        result["immune_types"]       = IMMUNE_TYPE_OVERRIDES[move_name]
+    if status_effect is not None:
+        result["status_effect"]      = status_effect_to_dict(status_effect)
 
     return result
 

@@ -46,7 +46,8 @@ class TestBattle(unittest.TestCase):
         attacker = make_trainer(pokemon=[make_pokemon(stat_attk=999)])
         defender = make_trainer(pokemon=[make_pokemon(stat_def=1)])
         move     = make_move(category="physical", power=250, acc=1.0)
-        apply_move(move, attacker, defender)
+        current_turn = 1
+        apply_move(move, attacker, defender, current_turn)
         self.assertGreaterEqual(defender.active().hp, 0)
 
     def test_speed_tie_still_resolves(self):
@@ -54,9 +55,10 @@ class TestBattle(unittest.TestCase):
         player = make_trainer(pokemon=[make_pokemon(stat_spd=100)])
         npc    = make_trainer(pokemon=[make_pokemon(stat_spd=100)])
         move   = make_move(category="physical", power=50, acc=1.0)
+        current_turn = 1
         # should not raise any exceptions
         try:
-            resolve_turn(player, move, npc, move)
+            resolve_turn(player, move, npc, move, current_turn)
         except Exception as e:
             self.fail(f"resolve_turn raised an exception: {e}")
 
@@ -66,7 +68,8 @@ class TestBattle(unittest.TestCase):
         npc_mon.hp = 1
         npc     = make_trainer(pokemon=[npc_mon])
         move    = make_move(category="physical", power=250, acc=1.0)
-        resolve_turn(player, move, npc, move)
+        current_turn = 1
+        resolve_turn(player, move, npc, move, current_turn)
         self.assertIsNotNone(check_winner(player, npc))
 
     def test_switching_pokemon_updates_selected_mon(self):

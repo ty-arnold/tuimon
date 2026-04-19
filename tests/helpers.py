@@ -4,7 +4,7 @@ import os
 from typing import Optional
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.models import Pokemon, Move, Trainer, StatusEffect
+from src.models import Pokemon, Move, Trainer, StatusEffect, MultiTurn, Modifier, MoveEffect
 from src.status_effects import poison, paralysis, sleep, burn, freeze
 import copy
 
@@ -38,11 +38,14 @@ def make_move(
     min_hits:           Optional[int]           = None,
     max_hits:           Optional[int]           = None,
     status_effect:      Optional[StatusEffect]  = None,
-    multi_turn:         Optional[dict]          = None,
+    multi_turn:         Optional[MultiTurn]     = None,
     hits_invulnerable:  Optional[list[str]]     = None,
-    # damage_modifier:    Optional[dict]          = None,
+    # modifier:           Optional[StatusEffect]  = None,
     stat_change_chance: float                   = 1.0,
     priority:           int                     = 0,  # add this
+    # immune_types:       list[str]               = [],
+    # immune_moves:       list[str]               = [],
+    # move_effect:        Optional[MoveEffect]    = None
 ) -> Move:
     return Move(
         name               = name,
@@ -60,7 +63,7 @@ def make_move(
         status_effect      = status_effect,
         multi_turn         = multi_turn,
         hits_invulnerable  = hits_invulnerable or [],
-        # damage_modifier    = damage_modifier or {},
+        # modifier           = modifier,
         stat_change_chance = stat_change_chance,
         priority           = priority,  # add this
     )

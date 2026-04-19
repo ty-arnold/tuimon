@@ -9,22 +9,30 @@ iv = 15
 ev = 85
 
 @dataclass
+class MultiTurn:
+    turns:                int
+    charge_turn:          int
+    charge_message:       str
+    invulnerable:         bool                  = False
+    invulnerable_state:   Optional[str]         = None
+    invulnerable_message: Optional[str]         = None
+    accumulator:          Optional[Accumulator] = None
+
+@dataclass
 class MoveEffect:
     effect_type:      str            # "protect", "screen", "field", etc
     target:           str            = "self"
     turns:            int            = 1
     properties:       dict           = field(default_factory=dict)
     bypass_moves:     list[str]      = field(default_factory=list)  # moves that ignore this
-    message:          str            = ""
-    fail_message:     str            = ""
+    message:          Optional[str]  = None
+    fail_message:     Optional[str]  = None
 
 @dataclass
-class AccumulatorConfig:
+class Accumulator:
     type:            str
     release_formula: str
     ignore_type:     bool       = False
-    immune_types:    list[str]  = field(default_factory=list)  # blocked by these types
-    immune_moves:    list[str]  = field(default_factory=list)  # blocked by these moves
     release_message: str        = ""
 
 @dataclass
@@ -226,7 +234,7 @@ class Move:
         crit_rate:          int                    = 0,
         flinch_chance:      float                  = 0.0,
         priority:           int                    = 0,
-        multi_turn:         Optional[dict]         = None,
+        multi_turn:         Optional[MultiTurn]    = None,
         hits_invulnerable:  Optional[list[str]]    = None,
         modifier:           Optional[Modifier]     = None,
         status_effect:      Optional[StatusEffect] = None,
@@ -251,7 +259,7 @@ class Move:
         self.crit_rate:          int                      = crit_rate # Mapped to a table - 0 is default, goes to 4
         self.flinch_chance:      float                    = flinch_chance # Makes target miss next turn
         self.priority:           int                      = priority # ranges from -8 to +8. Overrides speed calc
-        self.multi_turn:         Optional[dict]           = multi_turn # if a move takes place over multi turns
+        self.multi_turn:         Optional[MultiTurn]      = multi_turn # if a move takes place over multi turns
         self.hits_invulnerable:  list[str]                = hits_invulnerable or [] # If this move can hit a target thats flying, underwater, or underground
         self.modifier:           Optional[Modifier]       = modifier # Modifiers to self, target, or both. Can affect acc, power, and damage
         self.status_effect:      Optional[StatusEffect]   = status_effect # can be a major (poison, burn) or minor (confusion, curse) status effect

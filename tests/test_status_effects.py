@@ -411,10 +411,11 @@ class TestConfusion(unittest.TestCase):
         # force confusion self damage
         with unittest.mock.patch("battle.random.random", return_value=0.0):
             can_act, _ = check_can_act(attacker.active())
+            current_turn = 1
             if not can_act:
                 pass  # skip apply_move
             else:
-                apply_move(move, attacker, defender)
+                apply_move(move, attacker, defender, current_turn)
 
         # defender should be untouched since attacker hurt itself
         self.assertEqual(defender.active().hp, hp_before)

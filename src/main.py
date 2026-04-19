@@ -40,7 +40,7 @@ try:
 
     game_print("Battle Start!")
     while True:
-        dump_battle_state(player, npc, turn=current_turn)
+        dump_battle_state(player, npc, current_turn)
 
         player_move = get_turn(player)
         npc_move = get_turn(npc)
@@ -53,10 +53,11 @@ try:
         if npc_move:
             dump_move(npc_move)
 
-        winner = resolve_turn(player, player_move, npc, npc_move, current_turn)
-        if winner:
-            game_print(winner)
-            break  
+        if player_move is not None and npc_move is not None:
+            winner = resolve_turn(player, player_move, npc, npc_move, current_turn)
+            if winner:
+                game_print(winner)
+                break  
         current_turn += 1
 
 except KeyboardInterrupt:

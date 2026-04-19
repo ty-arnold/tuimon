@@ -1,5 +1,6 @@
 import json
 import os
+from models import Move
 
 CACHE_DIR     = "cache"
 POKEMON_CACHE = os.path.join(CACHE_DIR, "pokemon_cache.json")
@@ -36,32 +37,52 @@ def get_pokemon_cache():
 def save_pokemon_cache(data):
     save_cache(POKEMON_CACHE, data)
 
-def move_to_dict(move):
-    return {
-        "name":              move.name,
-        "type":              move.type,
-        "category":          move.category,
-        "power":             move.power,
-        "acc":               move.acc,
-        "pp":                move.pp,
-        "stat_change":       move.stat_change,
-        "recoil":            move.recoil,
-        "lifesteal":         move.lifesteal,
-        "heal":              move.heal,
-        "min_hits":          move.min_hits,
-        "max_hits":          move.max_hits,
-        "crit_rate":         move.crit_rate,
-        "flinch_chance":     move.flinch_chance,
-        "priority":          move.priority,
-        "hits_invulnerable": move.hits_invulnerable or [],
-        "multi_turn":        move.multi_turn,
-        "status_effect":     move.status_effect
+def move_to_dict(move: Move) -> dict:
+    result = {
+        "name":     move.name,
+        "type":     move.type,
+        "category": move.category,
+        "power":    move.power,
+        "acc":      move.acc,
+        "pp":       move.pp,
     }
 
-def dict_to_move(data):
-    from models import Move
+    if move.multi_turn is not None:
+        mt: dict = {
+            "turns":        move.multi_turn.turns,
+            "charge_turn":  move.multi_turn.charge_turn,
+            "charge_message": move.multi_turn.charge_message,
+        }
+        if move.multi_turn.invulnerable:
+            mt["invulnerable"]         = move.multi_turn.invulnerable
+        if move.multi_turn.invulnerable_state:
+            mt["invulnerable_state"]   = move.multi_turn.invulnerable_state
+        if move.multi_turn.invulnerable_message:
+            mt["invulnerable_message"] = move.multi_turn.invulnerable_message
+        if move.multi_turn.accumulator:
+            mt["accumulator"]          = move.multi_turn.accumulator
+        result["multi_turn"] = mt
+
+    return result
+
+
+def dict_to_move(data: dict) -> Move:
+    from models import Move, MultiTurn
     from status_effects import poison, paralysis, sleep, burn, freeze
     import copy
+
+    multi_turn = None
+    if data.get("multi_turn") is not None:
+        mt = data["multi_turn"]
+        multi_turn = MultiTurn(
+            turns                = mt["turns"],
+            charge_turn          = mt["charge_turn"],
+            charge_message       = mt["charge_message"],
+            invulnerable         = mt.get("invulnerable", False),
+            invulnerable_state   = mt.get("invulnerable_state"),
+            invulnerable_message = mt.get("invulnerable_message", ""),
+            accumulator          = mt.get("accumulator")
+        )
 
     status_effect_map = {
         "Poison":    poison,
@@ -96,7 +117,7 @@ def dict_to_move(data):
         crit_rate          = data.get("crit_rate",         0),
         flinch_chance      = data.get("flinch_chance",     0.0),
         priority           = data.get("priority",          0),
-        multi_turn         = data.get("multi_turn",        None),
+        multi_turn         = multi_turn,
         hits_invulnerable  = data.get("hits_invulnerable", []),
         status_effect      = status_effect,
         immune_types       = data.get("immune_types", []),
