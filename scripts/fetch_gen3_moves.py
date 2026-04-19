@@ -9,9 +9,10 @@ import copy
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 # import only what the script actually needs
-from models import MultiTurn
+from models import MultiTurn, Accumulator
 from cache_manager  import get_move_cache, save_move_cache, status_effect_to_dict
 from status_effects import *
+from overrides.move_overrides import *
 
 BASE_URL  = "https://pokeapi.co/api/v2"
 CACHE_DIR = "cache"
@@ -46,121 +47,6 @@ STATUS_EFFECT_MAP = {
     "curse":     curse
 }
 
-MULTI_TURN_OVERRIDES = {
-    "fly": MultiTurn(
-        turns                = 2,
-        charge_turn          = 1,
-        invulnerable         = True,
-        invulnerable_state   = "flying",
-        charge_message       = "flew up high!",
-        invulnerable_message = "is high up in the air!"
-    ),
-    "dig": MultiTurn(
-        turns                = 2,
-        charge_turn          = 1,
-        invulnerable         = True,
-        invulnerable_state   = "underground",
-        charge_message       = "dug a hole!",
-        invulnerable_message = "is underground!"
-    ),
-    "bounce": MultiTurn(
-        turns                = 2,
-        charge_turn          = 1,
-        invulnerable         = True,
-        invulnerable_state   = "flying",
-        charge_message       = "sprang up!",
-        invulnerable_message = "is high up in the air!"
-    ),
-    "dive": MultiTurn(
-        turns                = 2,
-        charge_turn          = 1,
-        invulnerable         = True,
-        invulnerable_state   = "underwater",
-        charge_message       = "hid underwater!",
-        invulnerable_message = "is hiding underwater!"
-    ),
-    "skull-bash": MultiTurn(
-        turns          = 2,
-        charge_turn    = 1,
-        charge_message = "tucked in its head!",
-    ),
-    "solar-beam": MultiTurn(
-        turns          = 2,
-        charge_turn    = 1,
-        charge_message = "absorbed light!",
-    ),
-    "razor-wind": MultiTurn(
-        turns          = 2,
-        charge_turn    = 1,
-        charge_message = "whipped up a whirlwind!",
-    ),
-    "sky-attack": MultiTurn(
-        turns          = 2,
-        charge_turn    = 1,
-        charge_message = "is glowing!",
-    ),
-    "hyper-beam": MultiTurn(
-        turns          = 2,
-        charge_turn    = 2,
-        charge_message = "must recharge!",
-    ),
-    "blast-burn": MultiTurn(
-        turns          = 2,
-        charge_turn    = 2,
-        charge_message = "must recharge!",
-    ),
-    "bide": MultiTurn(
-        turns          = 2,
-        charge_turn    = 1,
-        charge_message = "is storing energy!",
-        accumulator    = {
-            "type":            "damage_taken",
-            "release_formula": "double",
-            "ignore_type":     True,
-            "release_message": "unleashed energy!"
-        }
-    ),
-    "rollout": MultiTurn(
-        turns          = 5,
-        charge_turn    = 1,
-        charge_message = "began rolling!",
-        accumulator    = {
-            "type":            "turn_count",
-            "release_formula": "exponential",
-        }
-    ),
-}
-
-MODIFIER_OVERRIDES = {
-    "charge": {
-        "name":            "Charge",
-        "expires_turn":    0,          # set dynamically when applied
-        "turns":           1,
-        "power_modifier":  2.0,
-        "type_condition":  "Electric",
-        "clears_on_switch": True,
-        "consume_message": "The charge wore off!"
-    },
-    "focus-energy": {
-        "name":            "Focus Energy",
-        "expires_turn":    -1,         # permanent until switched out
-        "turns":           -1,
-        "power_modifier":  1.0,
-        "damage_modifier": 1.0,        # actually raises crit rate in games
-        "clears_on_switch": True,
-        "consume_message": ""
-    },
-    "defense-curl": {
-        "name":            "Defense Curl",
-        "expires_turn":    -1,
-        "turns":           -1,
-        "power_modifier":  2.0,
-        "type_condition":  "Normal",   # doubles rollout/ice ball power
-        "clears_on_switch": True,
-        "consume_message": ""
-    },
-}
-
 HITS_INVULNERABLE = {
     "thunder":    {"states": ["flying"],       "damage_modifier": {}},
     "hurricane":  {"states": ["flying"],       "damage_modifier": {}},
@@ -171,13 +57,6 @@ HITS_INVULNERABLE = {
     "earthquake": {"states": ["underground"],  "damage_modifier": {"underground": 2.0}},
     "magnitude":  {"states": ["underground"],  "damage_modifier": {"underground": 2.0}},
     "fissure":    {"states": ["underground"],  "damage_modifier": {}},
-}
-
-IMMUNE_TYPE_OVERRIDES = {
-    "bide":          ["Ghost"],
-    "swift":         [],          # hits all types including ghost
-    "foresight":     [],
-    "odor-sleuth":   [],
 }
 
 def fetch_move_names_for_generation(gen):
@@ -288,6 +167,11 @@ def convert_move(move_data: dict) -> Optional[dict]:
                 charge_message = "is preparing!",
             )
 
+    move_effect = None
+    if move_name in MOVE_EFFECT_OVERRIDES:
+        from dataclasses import asdict
+        move_effect = asdict(MOVE_EFFECT_OVERRIDES[move_name])
+
     # build required fields
     result: dict = {
         "name":     move_data["name"].replace("-", " ").title(),
@@ -329,6 +213,8 @@ def convert_move(move_data: dict) -> Optional[dict]:
         result["immune_types"]       = IMMUNE_TYPE_OVERRIDES[move_name]
     if status_effect is not None:
         result["status_effect"]      = status_effect_to_dict(status_effect)
+    if move_effect is not None:
+        result["move_effect"] = move_effect
 
     return result
 

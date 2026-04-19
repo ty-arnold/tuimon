@@ -273,7 +273,14 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
     # return check_winner(attacker, defender)
 
 def handle_multiturn(move: Move, attacker: Trainer) -> bool:
+    logger.debug(f"DEBUG handle_charge_turn:")
+    logger.debug(f"  move.name:          {move.name}")
+    logger.debug(f"  locked_move:        {attacker.locked_move}")
+    logger.debug(f"  locked_turns:       {attacker.locked_turns}")
+    logger.debug(f"  move.multi_turn:    {move.multi_turn}")
+
     if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
+        logger.debug(f"  charge_turn:        {attacker.locked_move.multi_turn.charge_turn}")
         if attacker.locked_move.multi_turn.charge_turn == 2:
             game_print(f"{attacker.active().name} {attacker.locked_move.multi_turn.charge_message}")
             return True
@@ -379,6 +386,8 @@ def apply_damage(
         defender.locked_move.multi_turn.accumulator.type == "damage_taken"):
         defender.active().accumulator += damage
         game_print(f"{defender.active().name} is storing energy!")
+        
+    game_print(f"{target.name} took {damage} damage!")
 
     return damage 
 
@@ -541,9 +550,9 @@ def process_status_effects(pokemon: Pokemon) -> None:
 
 def apply_modifier(move: Move, pokemon: Pokemon, current_turn: int) -> None:
     if move.modifier is None:
-        return
+            return
     modifier              = copy.deepcopy(move.modifier)
-    modifier.expires_turn = current_turn + 1 if move.modifier.expires_turn == 0 else move.modifier.expires_turn
+    modifier.expires_turn = current_turn + modifier.turns if modifier.turns > 0 else -1
     pokemon.add_modifier(modifier)
     game_print(f"{pokemon.name} is affected by {modifier.name}!")
 

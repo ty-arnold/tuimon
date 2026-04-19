@@ -37,15 +37,17 @@ class Accumulator:
 
 @dataclass
 class Modifier:
-    name:              str
-    expires_turn:      int
-    power_modifier:    float          = 1.0
-    accuracy_modifier: float          = 1.0
-    damage_modifier:   float          = 1.0
-    type_condition:    Optional[str]  = None
-    category_condition: Optional[str] = None
-    consume_message:   str            = ""
-    clears_on_switch:  bool           = True
+    name:               str
+    turns:              int            = 1        # -1 = permanent
+    target:             str            = "self"
+    power_modifier:     float          = 1.0
+    accuracy_modifier:  float          = 1.0
+    damage_modifier:    float          = 1.0
+    type_condition:     Optional[str]  = None
+    category_condition: Optional[str]  = None
+    consume_message:    str            = ""
+    clears_on_switch:   bool           = True
+    expires_turn:       int            = -1       # set dynamically, not in constructor
 
     def is_active(self, current_turn: int) -> bool:
         return self.expires_turn == -1 or current_turn <= self.expires_turn

@@ -67,7 +67,7 @@ def move_to_dict(move: Move) -> dict:
 
 
 def dict_to_move(data: dict) -> Move:
-    from models import Move, MultiTurn
+    from models import Move, MultiTurn, MoveEffect
     from status_effects import poison, paralysis, sleep, burn, freeze
     import copy
 
@@ -82,6 +82,19 @@ def dict_to_move(data: dict) -> Move:
             invulnerable_state   = mt.get("invulnerable_state"),
             invulnerable_message = mt.get("invulnerable_message", ""),
             accumulator          = mt.get("accumulator")
+        )
+
+    move_effect = None
+    if data.get("move_effect") is not None:
+        me = data["move_effect"]
+        move_effect = MoveEffect(
+            effect_type  = me["effect_type"],
+            target       = me.get("target", "self"),
+            turns        = me.get("turns", 1),
+            properties   = me.get("properties", {}),
+            bypass_moves = me.get("bypass_moves", []),
+            message      = me.get("message", ""),
+            fail_message = me.get("fail_message", "")
         )
 
     status_effect_map = {
@@ -122,6 +135,7 @@ def dict_to_move(data: dict) -> Move:
         status_effect      = status_effect,
         immune_types       = data.get("immune_types", []),
         immune_moves       = data.get("immune_moves", []),
+        move_effect        = move_effect,
     )
 
 def status_effect_to_dict(effect):
