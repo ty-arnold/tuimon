@@ -2,12 +2,58 @@ from __future__ import annotations
 import random
 from typing import Optional, NamedTuple
 from src.mult_tables import *
+from dataclasses import dataclass, field
 
 ### Global values ###
 iv = 15
 ev = 85
 
-class TurnOrder(NamedTuple):
+@dataclass
+class MoveEffect:
+    effect_type:      str            # "protect", "screen", "field", etc
+    target:           str            = "self"
+    turns:            int            = 1
+    properties:       dict           = field(default_factory=dict)
+    bypass_moves:     list[str]      = field(default_factory=list)  # moves that ignore this
+    message:          str            = ""
+    fail_message:     str            = ""
+
+@dataclass
+class AccumulatorConfig:
+    type:            str
+    release_formula: str
+    ignore_type:     bool       = False
+    immune_types:    list[str]  = field(default_factory=list)  # blocked by these types
+    immune_moves:    list[str]  = field(default_factory=list)  # blocked by these moves
+    release_message: str        = ""
+
+@dataclass
+class Modifier:
+    name:              str
+    expires_turn:      int
+    power_modifier:    float          = 1.0
+    accuracy_modifier: float          = 1.0
+    damage_modifier:   float          = 1.0
+    type_condition:    Optional[str]  = None
+    category_condition: Optional[str] = None
+    consume_message:   str            = ""
+    clears_on_switch:  bool           = True
+
+    def is_active(self, current_turn: int) -> bool:
+        return self.expires_turn == -1 or current_turn <= self.expires_turn
+
+    def applies_to(self, move: Move) -> bool:
+        if self.type_condition is not None and move.type[0] != self.type_condition:
+            return False
+        if self.category_condition is not None and move.category != self.category_condition:
+            return False
+        return True
+
+    def is_expired(self, current_turn: int) -> bool:
+        return self.expires_turn != -1 and current_turn > self.expires_turn
+
+@dataclass
+class TurnOrder:
     first:          Trainer
     first_choice:   Move
     second:         Trainer
@@ -54,6 +100,8 @@ class Pokemon:
 
         self.major_status: Optional[StatusEffect]  = None    # only one allowed
         self.minor_status: list[StatusEffect]      = []      # multiple allowed
+        self.modifiers:    list[Modifier]          = []
+        self.accumulator:  int                     = 0
 
     def _calc_hp(self, base: int, iv: int, ev: int, lvl: int) -> int:
         return round((((base + iv) * 2 + ev) * lvl / 100) + lvl + 10)
@@ -134,6 +182,25 @@ class Pokemon:
             self.major_status = None
         else:
             self.minor_status.remove(effect)
+    
+    def add_modifier(self, modifier: Modifier) -> None:
+        self.modifiers.append(modifier)
+
+    def remove_modifier(self, modifier: Modifier) -> None:
+        self.modifiers.remove(modifier)
+
+    def get_active_modifiers(self, current_turn: int) -> list[Modifier]:
+        return [m for m in self.modifiers if m.is_active(current_turn)]
+
+    def clear_expired_modifiers(self, current_turn: int) -> None:
+        self.modifiers = [m for m in self.modifiers if not m.is_expired(current_turn)]
+
+    def clear_all_modifiers(self, force: bool = False) -> None:
+        if force:
+            self.modifiers = []  # clear everything regardless
+        else:
+            # only clear modifiers that should clear on switch
+            self.modifiers = [m for m in self.modifiers if not m.clears_on_switch]
 
     def print_moves(self) -> None:
         from game_print import game_print
@@ -161,30 +228,36 @@ class Move:
         priority:           int                    = 0,
         multi_turn:         Optional[dict]         = None,
         hits_invulnerable:  Optional[list[str]]    = None,
-        # damage_modifier:    Optional[dict]       = None,
+        modifier:           Optional[Modifier]     = None,
         status_effect:      Optional[StatusEffect] = None,
         stat_change_chance: float                  = 1.0,
+        immune_types:       list[str]              = [],
+        immune_moves:       list[str]              = [],
+        move_effect:        Optional[MoveEffect]   = None
     ):
         self.name:               str                      = name
-        self.type:               list[str]                = type
-        self.category:           str                      = category
-        self.power:              int                      = power
-        self.acc:                Optional[float]          = acc
-        self.pp:                 int                      = pp
-        self.stat_change:        dict                     = stat_change or {}
-        self.recoil:             float                    = recoil
+        self.type:               list[str]                = type # Grass, Water, Etc. 
+        self.category:           str                      = category # Either physical, special, or status
+        self.power:              int                      = power # Base damage number for move
+        self.acc:                Optional[float]          = acc # Accuracy, 1.0 being the default
+        self.pp:                 int                      = pp # Power points, amount of move uses left
+        self.stat_change:        dict                     = stat_change or {} # Changes to the stat stage. Can be self or opponent, -6 to +6. Ex. "opponent": {"stat_attk": -1}
+        self.stat_change_chance: float                    = stat_change_chance # Default 1.0, chance for stat change to apply
+        self.recoil:             float                    = recoil # Self damage if move hits
         self.lifesteal:          float                    = lifesteal
         self.heal:               float                    = heal
-        self.min_hits:           Optional[int]            = min_hits
+        self.min_hits:           Optional[int]            = min_hits 
         self.max_hits:           Optional[int]            = max_hits
-        self.crit_rate:          int                      = crit_rate
-        self.flinch_chance:      float                    = flinch_chance
-        self.priority:           int                      = priority
-        self.multi_turn:         Optional[dict]           = multi_turn
-        self.hits_invulnerable:  list[str]                = hits_invulnerable or []
-        # self.damage_modifier:    dict                   = damage_modifier or {}
-        self.status_effect:      Optional[StatusEffect]   = status_effect
-        self.stat_change_chance: float                    = stat_change_chance
+        self.crit_rate:          int                      = crit_rate # Mapped to a table - 0 is default, goes to 4
+        self.flinch_chance:      float                    = flinch_chance # Makes target miss next turn
+        self.priority:           int                      = priority # ranges from -8 to +8. Overrides speed calc
+        self.multi_turn:         Optional[dict]           = multi_turn # if a move takes place over multi turns
+        self.hits_invulnerable:  list[str]                = hits_invulnerable or [] # If this move can hit a target thats flying, underwater, or underground
+        self.modifier:           Optional[Modifier]       = modifier # Modifiers to self, target, or both. Can affect acc, power, and damage
+        self.status_effect:      Optional[StatusEffect]   = status_effect # can be a major (poison, burn) or minor (confusion, curse) status effect
+        self.immune_types:       list[str]                = immune_types  # types this move cannot hit
+        self.immune_moves:       list[str]                = immune_moves  # moves that block this move
+        self.move_effect:        Optional[MoveEffect]     = move_effect
     
     def __repr__(self) -> str:
         return self.name
@@ -248,12 +321,14 @@ class Trainer:
         name:         str,
         party:        list[Pokemon]
     ):
-        self.name:               str                  = name
-        self.party:              list[Pokemon]        = party
-        self.selected_mon:       int                  = 0
-        self.locked_move:        Optional[Move]       = None
-        self.locked_turns:       int                  = 0
-        self.invulnerable_state: Optional[str]        = None
+        self.name:                str                  = name
+        self.party:               list[Pokemon]        = party
+        self.selected_mon:        int                  = 0
+        self.locked_move:         Optional[Move]       = None
+        self.locked_turns:        int                  = 0
+        self.invulnerable_state:  Optional[str]        = None
+        self.active_effects:      list[MoveEffect]     = []  # tracks active field effects
+        self.consecutive_protect: int                  = 0   # tracks consecutive protect uses
 
     def print_party(self) -> None:
         from game_print import game_print

@@ -36,11 +36,11 @@ try:
         assert len(npc_party) > 0, "Failed to create NPC party!"
         npc = Trainer(name="Gary", party=npc_party)
 
-    turn = 1
+    current_turn = 1
 
     game_print("Battle Start!")
     while True:
-        dump_battle_state(player, npc, turn=turn)
+        dump_battle_state(player, npc, turn=current_turn)
 
         player_move = get_turn(player)
         npc_move = get_turn(npc)
@@ -53,11 +53,11 @@ try:
         if npc_move:
             dump_move(npc_move)
 
-        winner = resolve_turn(player, player_move, npc, npc_move)
+        winner = resolve_turn(player, player_move, npc, npc_move, current_turn)
         if winner:
             game_print(winner)
             break  
-        turn += 1
+        current_turn += 1
 
 except KeyboardInterrupt:
     game_print("\nThanks for playing!")

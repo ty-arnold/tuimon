@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 
 # import only what the script actually needs
 from cache_manager  import get_move_cache, save_move_cache, status_effect_to_dict
-from status_effects import poison, paralysis, sleep, burn, freeze
+from status_effects import *
 
 BASE_URL  = "https://pokeapi.co/api/v2"
 CACHE_DIR = "cache"
@@ -39,6 +39,8 @@ STATUS_EFFECT_MAP = {
     "sleep":     sleep,
     "burn":      burn,
     "freeze":    freeze,
+    "confusion": confusion,
+    "curse":     curse
 }
 
 MULTI_TURN_OVERRIDES = {
@@ -87,6 +89,75 @@ MULTI_TURN_OVERRIDES = {
         "charge_turn":        2,
         "charge_message":     "must recharge!",
     },
+    "bide": {
+        "invulnerable":   False,
+        "charge_turn":    1,
+        "turns":          2,
+        "charge_message": "is storing energy!",
+        "accumulator": {
+            "type":            "damage_taken",
+            "release_formula": "double",
+            "ignore_type":     True,
+            "ghost_immune":    True,
+            "release_message": "unleashed energy!"
+        }
+    },
+    "rollout": {
+        "invulnerable":   False,
+        "charge_turn":    1,
+        "turns":          5,
+        "charge_message": "began rolling!",
+        "accumulator": {
+            "type":            "turn_count",
+            "release_formula": "exponential",
+            "ignore_type":     False,
+            "ghost_immune":    False,
+            "release_message": ""
+        }
+    },
+    "fury-cutter": {
+        "invulnerable":   False,
+        "charge_turn":    1,
+        "turns":          5,
+        "charge_message": "used Fury Cutter!",
+        "accumulator": {
+            "type":            "turn_count",
+            "release_formula": "double",
+            "ignore_type":     False,
+            "ghost_immune":    False,
+            "release_message": ""
+        }
+    }
+}
+
+MODIFIER_OVERRIDES = {
+    "charge": {
+        "name":            "Charge",
+        "expires_turn":    0,          # set dynamically when applied
+        "turns":           1,
+        "power_modifier":  2.0,
+        "type_condition":  "Electric",
+        "clears_on_switch": True,
+        "consume_message": "The charge wore off!"
+    },
+    "focus-energy": {
+        "name":            "Focus Energy",
+        "expires_turn":    -1,         # permanent until switched out
+        "turns":           -1,
+        "power_modifier":  1.0,
+        "damage_modifier": 1.0,        # actually raises crit rate in games
+        "clears_on_switch": True,
+        "consume_message": ""
+    },
+    "defense-curl": {
+        "name":            "Defense Curl",
+        "expires_turn":    -1,
+        "turns":           -1,
+        "power_modifier":  2.0,
+        "type_condition":  "Normal",   # doubles rollout/ice ball power
+        "clears_on_switch": True,
+        "consume_message": ""
+    },
 }
 
 HITS_INVULNERABLE = {
@@ -99,6 +170,13 @@ HITS_INVULNERABLE = {
     "earthquake":   ["underground"],
     "magnitude":    ["underground"],
     "fissure":      ["underground"],
+}
+
+IMMUNE_TYPE_OVERRIDES = {
+    "bide":          ["Ghost"],
+    "swift":         [],          # hits all types including ghost
+    "foresight":     [],
+    "odor-sleuth":   [],
 }
 
 def fetch_move_names_for_generation(gen):
@@ -195,6 +273,10 @@ def convert_move(move_data):
         if min_turns is not None and min_turns > 1:
             multi_turn["turns"] = max_turns or min_turns
 
+    modifier = None
+    if move_name in MODIFIER_OVERRIDES:
+        modifier = MODIFIER_OVERRIDES[move_name]
+
     # start with required attributes
     result = {
         "name":     move_data["name"].replace("-", " ").title(),
@@ -232,6 +314,10 @@ def convert_move(move_data):
         result["hits_invulnerable"] = HITS_INVULNERABLE[move_name]
     if status_effect is not None:
         result["status_effect"]     = status_effect_to_dict(status_effect)
+    if modifier is not None:
+        result["modifier"] = modifier
+    if IMMUNE_TYPE_OVERRIDES.get(move_name):
+        result["immune_types"] = IMMUNE_TYPE_OVERRIDES[move_name]
 
     return result
 

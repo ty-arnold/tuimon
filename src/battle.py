@@ -58,7 +58,7 @@ def get_party(trainer: Trainer) -> Pokemon | None:
         except (ValueError, IndexError):
             game_print("Invalid choice, please select again")
 
-def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move) -> bool | None:
+def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move, current_turn: int) -> bool | None:
     player_can_act, player_cant_act_reason = check_can_act(player.active())
     npc_can_act,    npc_cant_act_reason    = check_can_act(npc.active())
 
@@ -67,7 +67,7 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
     second_mon_before = order.second.selected_mon
 
     if order.first_can_act:
-        apply_move(order.first_choice, order.first, order.second)
+        apply_move(order.first_choice, order.first, order.second, current_turn)
         clear_move_lock(order.first)
         winner = check_winner(player, npc)
         if winner:
@@ -79,7 +79,7 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
         return None
         
     if order.second_can_act:
-        apply_move(order.second_choice, order.second, order.first)
+        apply_move(order.second_choice, order.second, order.first, current_turn)
         clear_move_lock(order.second)
         winner = check_winner(player, npc)
         if winner:
@@ -155,16 +155,38 @@ def get_move(pokemon: Pokemon) -> Move | None:
             game_print("Invalid choice, please select again")
             pokemon.print_moves()
 
-def apply_move(move: Move, attacker: Trainer, defender: Trainer) -> None:
+def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> None:
     logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
 
     old_stats = []
     damage = 0
 
+    clear_expired_modifiers(attacker.active(), current_turn)
+    clear_expired_modifiers(defender.active(), current_turn)
+
     can_act, reason = check_can_act(attacker.active())
     if not can_act:
         print_cant_act(attacker, reason)
+        return None
+    
+    if move.multi_turn is not None: 
+        if handle_multiturn(move, attacker):
+            return None
+        
+    if defender.invulnerable_state is not None:
+        if handle_invulnerability(move, defender):
+            game_print(f"{attacker.active().name}'s attack missed!") 
+            return None
+        
+    if is_protected(defender, move):
+        game_print(f"{attacker.active().name}'s attack was blocked!")
+        attacker.active().accumulator = 0
+        return None
+    else:
+        defender.consecutive_protect = 0  # reset on successful hit
+
+    if check_immunity(move, attacker, defender):
         return None
     
     move.pp -= 1
@@ -173,14 +195,16 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer) -> None:
 
     game_print(f"{attacker.active().name} used {move.name}!")
 
-    if move.multi_turn is not None: 
-        if handle_multiturn(move, attacker):
+    if move.modifier is not None:
+        apply_modifier(move, attacker.active(), current_turn)
+        if move.category == "status":
             return None
 
-    if defender.invulnerable_state is not None:
-        if handle_invulnerability(move, defender):
-            game_print(f"{attacker.active().name}'s attack missed!") 
-            return None
+    if check_immunity(move, attacker, defender):
+        # reset accumulator if move is blocked
+        if move.multi_turn is not None and move.multi_turn.get("accumulator"):
+            attacker.active().accumulator = 0
+        return None
 
     if not check_accuracy(move, attacker, defender):
         game_print(f"{attacker.active().name}'s attack missed!") 
@@ -194,7 +218,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer) -> None:
             hits_landed  = 0
 
             for i in range(roll):
-                hit_damage = apply_damage(move, attacker, defender)
+                hit_damage = apply_damage(move, attacker, defender, current_turn)
                 damage    += hit_damage
                 hits_landed += 1
 
@@ -205,7 +229,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer) -> None:
             game_print(f"Hit {hits_landed} time(s)!")
         else:
             # single hit move
-            damage = apply_damage(move, attacker, defender)
+            damage = apply_damage(move, attacker, defender, current_turn)
 
     if move.multi_turn is not None and move.multi_turn.get("charge_turn") == 2:
         attacker.locked_move  = move
@@ -278,24 +302,66 @@ def check_accuracy(move: Move, attacker: Trainer, defender: Trainer) -> bool:
         return False
     return True
 
-def apply_damage(move: Move, attacker: Trainer, defender: Trainer) -> int:
-    damage, multiplier = calculate_damage(move, attacker, defender)
-    logger.debug(f"Damage calculated: {damage} (multiplier: {multiplier})")
-    target = defender.active()
+def check_immunity(move: Move, attacker: Trainer, defender: Trainer) -> bool:
+    """Returns True if the move is blocked, False if it can hit."""
 
+    # check type immunities on the move itself
+    for immune_type in move.immune_types:
+        if immune_type in defender.active().type:
+            game_print(f"It doesn't affect {defender.active().name}!")
+            return True
+
+    # check if defender is using a blocking move
+    for immune_move in move.immune_moves:
+        if (defender.locked_move is not None and
+                defender.locked_move.name.lower() == immune_move):
+            game_print(f"{defender.active().name} protected itself!")
+            return True
+
+    # check type chart immunity (0x effectiveness)
+    multiplier = get_type_multiplier(move.type[0], defender.active().type)
+    if multiplier == 0:
+        game_print("It had no effect!")
+        return True
+
+    return False
+
+def apply_damage(
+    move:         Move,
+    attacker:     Trainer,
+    defender:     Trainer,
+    current_turn: int
+) -> int:
+    power_modifier  = get_modifier_value("power_modifier",  move, attacker.active(), current_turn)
+    damage_modifier = get_modifier_value("damage_modifier", move, attacker.active(), current_turn)
+    acc_modifier    = get_modifier_value("accuracy_modifier", move, attacker.active(), current_turn)
+
+    screen_modifier = get_screen_modifier(move, defender, current_turn)
+    damage_modifier *= screen_modifier
+    
+    effective_power    = round(move.power * power_modifier)
+    damage, multiplier = calculate_damage(move, attacker, defender, effective_power)
+    damage             = round(damage * damage_modifier)
+
+    target    = defender.active()
     target.hp = max(0, target.hp - damage)
 
     if multiplier == 0:
-        game_print("But it had no effect...")
+        game_print("It had no effect!")
     elif multiplier < 1:
-        game_print("But it's not very effective...")
+        game_print("It's not very effective...")
     elif multiplier > 1:
         game_print("It's super effective!")
-    
-    game_print(f"{target.name} took {damage} damage!")  
-    return damage  
 
-def calculate_damage(move: Move, attacker: Trainer, defender: Trainer) -> tuple:
+    if (defender.locked_move is not None and
+        defender.locked_move.multi_turn is not None and
+        defender.locked_move.multi_turn.get("accumulator", {}).get("type") == "damage_taken"):
+        defender.active().accumulator += damage
+        game_print(f"{defender.active().name} is storing energy!")
+
+    return damage 
+
+def calculate_damage(move: Move, attacker: Trainer, defender: Trainer, power_modifier: float) -> tuple:
     if move.category == "physical":
         attack_stat = attacker.active().get_stat("stat_attk")
         defense_stat = defender.active().get_stat("stat_def")
@@ -316,8 +382,10 @@ def calculate_damage(move: Move, attacker: Trainer, defender: Trainer) -> tuple:
 
     stab = 1.5 if attacker.active().type == move.type[0] else 1
 
+    effective_power = round(move.power * power_modifier)
+
     damage = round(
-        (((2 * attacker.active().lvl * critical / 5) + 2) * move.power * (attack_stat / defense_stat) / 50 + 2)
+        (((2 * attacker.active().lvl * critical / 5) + 2) * effective_power * (attack_stat / defense_stat) / 50 + 2)
         * multiplier * stab
     )
     return damage, multiplier
@@ -437,6 +505,248 @@ def process_status_effects(pokemon: Pokemon) -> None:
             effects_to_remove.append(effect)
 
     remove_expired_effects(pokemon, effects_to_remove)
+
+def apply_modifier(move: Move, pokemon: Pokemon, current_turn: int) -> None:
+    if move.modifier is None:
+        return
+    modifier              = copy.deepcopy(move.modifier)
+    modifier.expires_turn = current_turn + 1 if move.modifier.expires_turn == 0 else move.modifier.expires_turn
+    pokemon.add_modifier(modifier)
+    game_print(f"{pokemon.name} is affected by {modifier.name}!")
+
+def get_modifier_value(
+    attr:         str,
+    move:         Move,
+    pokemon:      Pokemon,
+    current_turn: int
+) -> float:
+    total = 1.0
+    expired = []
+
+    for modifier in pokemon.get_active_modifiers(current_turn):
+        if not modifier.applies_to(move):
+            continue
+        value = getattr(modifier, attr, 1.0)
+        total *= value
+
+        # consume single turn modifiers after use
+        if modifier.expires_turn != -1 and current_turn >= modifier.expires_turn:
+            expired.append(modifier)
+            if modifier.consume_message:
+                game_print(modifier.consume_message)
+
+    for modifier in expired:
+        pokemon.remove_modifier(modifier)
+
+    return total
+
+def clear_expired_effects(trainer: Trainer, current_turn: int) -> None:
+    expired = [e for e in trainer.active_effects
+               if e.effect_type != "protect" and e.turns <= current_turn]
+    for effect in expired:
+        trainer.active_effects.remove(effect)
+        game_print(f"The effect wore off!")
+
+    # always clear protect at end of turn
+    trainer.active_effects = [e for e in trainer.active_effects
+                              if e.effect_type != "protect"]
+
+def clear_switch_effects(trainer: Trainer) -> None:
+    """Clear effects that should end on switch."""
+    trainer.active_effects = [
+        e for e in trainer.active_effects
+        if not e.properties.get("clears_on_switch", True)
+    ]
+
+def clear_expired_modifiers(pokemon: Pokemon, current_turn: int) -> None:
+    pokemon.clear_expired_modifiers(current_turn)
+
+def handle_accumulator(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> Optional[int]:
+    if move.multi_turn is None:
+        return None
+    config = move.multi_turn.get("accumulator")
+    if config is None:
+        return None
+
+    # accumulate phase - not the release turn yet
+    if attacker.locked_turns > 0:
+        if config["type"] == "damage_taken":
+            pass  # accumulated in apply_damage hook
+        elif config["type"] == "turn_count":
+            attacker.active().accumulator += 1
+        return None  # still accumulating
+
+    # release turn
+    return release_accumulator(move, attacker, defender, config)
+
+def release_accumulator(
+    move:     Move,
+    attacker: Trainer,
+    defender: Trainer,
+    config:   dict
+) -> int:
+    accumulated = attacker.active().accumulator
+
+    if config.get("release_message"):
+        game_print(f"{attacker.active().name} {config['release_message']}!")
+
+    # immunity already checked in apply_move before this is called
+    # just calculate and apply damage
+    if config["type"] == "damage_taken":
+        if config["release_formula"] == "double":
+            damage = accumulated * 2
+
+    elif config["type"] == "turn_count":
+        base_damage, multiplier= calculate_damage(move, attacker, defender, 1.0)
+        if config["release_formula"] == "exponential":
+            damage = round(base_damage * (2 ** accumulated))
+        elif config["release_formula"] == "double":
+            damage = round(base_damage * (accumulated + 1))
+        else:
+            damage = base_damage
+
+    if not config.get("ignore_type", False):
+        multiplier = get_type_multiplier(move.type[0], defender.active().type)
+        damage     = round(damage * multiplier)
+        if multiplier < 1:
+            game_print("It's not very effective...")
+        elif multiplier > 1:
+            game_print("It's super effective!")
+
+    defender.active().hp = max(0, defender.active().hp - damage)
+    game_print(f"{defender.active().name} took {damage} damage!")
+    attacker.active().accumulator = 0
+    return damage
+
+def apply_move_effect(
+    move:         Move,
+    attacker:     Trainer,
+    defender:     Trainer,
+    current_turn: int
+) -> bool:
+    """
+    Applies the move's effect to the correct target.
+    Returns True if the move should end after this (status moves).
+    """
+    if move.move_effect is None:
+        return False
+
+    effect  = move.move_effect
+    target  = attacker if effect.target == "self" else defender
+
+    match effect.effect_type:
+        case "protect":
+            return handle_protect_effect(effect, attacker, current_turn)
+        case "screen":
+            return handle_screen_effect(effect, target, current_turn)
+        case "mist":
+            return handle_mist_effect(effect, target, current_turn)
+        case _:
+            logger.debug(f"Unknown effect type: {effect.effect_type}")
+            return False
+
+def handle_protect_effect(
+    effect:       MoveEffect,
+    trainer:      Trainer,
+    current_turn: int
+) -> bool:
+    # check consecutive use reduction
+    if effect.properties.get("consecutive_reduction"):
+        if trainer.consecutive_protect > 0:
+            chance = 1 / (2 ** trainer.consecutive_protect)
+            if random.random() > chance:
+                game_print(f"{trainer.active().name} {effect.fail_message}")
+                trainer.consecutive_protect = 0
+                return True
+
+    trainer.active_effects.append(
+        MoveEffect(
+            effect_type  = "protect",
+            target       = "self",
+            turns        = 1,
+            bypass_moves = effect.bypass_moves,
+            message      = effect.message,
+            properties   = effect.properties
+        )
+    )
+    trainer.consecutive_protect += 1
+    game_print(f"{trainer.active().name} {effect.message}")
+    return True
+
+def handle_screen_effect(
+    effect:       MoveEffect,
+    trainer:      Trainer,
+    current_turn: int
+) -> bool:
+    # check if screen already active
+    if any(e.effect_type == "screen" and
+           e.properties.get("category_condition") == effect.properties.get("category_condition")
+           for e in trainer.active_effects):
+        game_print("But it failed!")
+        return True
+
+    screen        = copy.deepcopy(effect)
+    screen.turns  = current_turn + effect.turns  # store expiry turn
+    trainer.active_effects.append(screen)
+    game_print(f"{trainer.active().name} {effect.message}")
+    return True
+
+def handle_mist_effect(
+    effect:       MoveEffect,
+    trainer:      Trainer,
+    current_turn: int
+) -> bool:
+    if any(e.effect_type == "mist" for e in trainer.active_effects):
+        game_print("But it failed!")
+        return True
+
+    mist       = copy.deepcopy(effect)
+    mist.turns = current_turn + effect.turns
+    trainer.active_effects.append(mist)
+    game_print(f"{trainer.active().name} {effect.message}")
+    return True
+
+def is_protected(trainer: Trainer, move: Move) -> bool:
+    """Check if trainer is protected against this move."""
+    for effect in trainer.active_effects:
+        if effect.effect_type != "protect":
+            continue
+        if move.name.lower().replace(" ", "-") in effect.bypass_moves:
+            return False
+        return True
+    return False
+
+def get_screen_modifier(
+    move:         Move,
+    defender:     Trainer,
+    current_turn: int
+) -> float:
+    """Get damage modifier from active screens."""
+    modifier = 1.0
+    expired  = []
+
+    for effect in defender.active_effects:
+        if effect.effect_type != "screen":
+            continue
+        category = effect.properties.get("category_condition")
+        if category is not None and move.category != category:
+            continue
+        modifier *= effect.properties.get("damage_modifier", 1.0)
+        if effect.turns <= current_turn:
+            expired.append(effect)
+            game_print(f"The screen wore off!")
+
+    for effect in expired:
+        defender.active_effects.remove(effect)
+
+    return modifier
+
+def blocks_stat_changes(trainer: Trainer) -> bool:
+    """Check if mist is preventing stat changes."""
+    return any(
+        e.effect_type == "mist" and e.properties.get("blocks_stat_changes")
+        for e in trainer.active_effects
+    )
                               
 def check_can_act(pokemon: Pokemon) -> tuple[bool, Optional[str]]:
     all_effects = get_all_effects(pokemon)
@@ -456,20 +766,21 @@ def check_can_act(pokemon: Pokemon) -> tuple[bool, Optional[str]]:
 
 def clear_move_lock(trainer: Trainer) -> None:
     if trainer.locked_move is not None and trainer.locked_turns == 0:
-        trainer.locked_move        = None
-        trainer.invulnerable_state = None
+        trainer.active().accumulator = 0
+        trainer.locked_move          = None
+        trainer.invulnerable_state   = None
 
 def next_mon(player: Trainer, npc: Trainer) -> None:
-    if not player.party[player.selected_mon].is_alive():
-        game_print(f"{player.party[player.selected_mon].name} fainted!")
-        player.print_party()
+    if not player.active().is_alive():
+        game_print(f"{player.active().name} fainted!")
+        player.active().clear_all_modifiers()  # default clears switchable ones
         new_mon = get_party(player)
         if new_mon is not None:
             player.selected_mon = player.party.index(new_mon)
 
-    if not npc.party[npc.selected_mon].is_alive():
-        game_print(f"{npc.party[npc.selected_mon].name} fainted!")
-        player.print_party()
+    if not npc.active().is_alive():
+        game_print(f"{npc.active().name} fainted!")
+        npc.active().clear_all_modifiers()
         new_mon = get_party(npc)
         if new_mon is not None:
             npc.selected_mon = npc.party.index(new_mon)

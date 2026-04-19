@@ -98,7 +98,9 @@ def dict_to_move(data):
         priority           = data.get("priority",          0),
         multi_turn         = data.get("multi_turn",        None),
         hits_invulnerable  = data.get("hits_invulnerable", []),
-        status_effect      = status_effect
+        status_effect      = status_effect,
+        immune_types       = data.get("immune_types", []),
+        immune_moves       = data.get("immune_moves", []),
     )
 
 def status_effect_to_dict(effect):
