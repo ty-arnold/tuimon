@@ -10,8 +10,9 @@ if ENABLE_LOGS:
 logger = logging.getLogger("tuimon")
 
 from models       import Trainer
-from battle       import resolve_turn, get_turn
+from battle       import resolve_turn
 from ui           import build_party, dump_battle_state, dump_move
+from ui.input     import get_turn
 from core         import game_print
 from core.presets import get_test_player, get_test_npc
 from pokemon      import create_pokemon_from_api
