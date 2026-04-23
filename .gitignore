@@ -1,16 +1,20 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-main.spec
+# Local Env
 .vscode/
 .DS_Store
-cache/
-logs/*
-!logs/.gitkeep
 
-# Virtual environments
-.venv
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.coverage
+build/
+dist/
+*.egg-info
+main.spec
+
+# Project specific
+!logs/.gitkeep
+logs/
+cache/pokemon_cache.json
+cache/move_cache.json

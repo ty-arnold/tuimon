@@ -1,4 +1,4 @@
-from battle.battle         import resolve_turn, next_mon, get_turn, check_winner
+from battle.battle         import resolve_turn, next_mon, check_winner
 from battle.turn_order     import get_turn_order, check_can_act
 from battle.move_handler   import apply_move, clear_move_lock, handle_multiturn, check_accuracy, apply_stat_change
 from battle.damage         import calculate_damage, apply_damage, get_type_multiplier, apply_lifesteal
