@@ -4,7 +4,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.battle import calculate_damage
+from battle import calculate_damage
 from helpers import make_pokemon, make_move, make_trainer
 
 class TestDamageCalculation(unittest.TestCase):

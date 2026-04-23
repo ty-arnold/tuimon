@@ -4,8 +4,8 @@ import os
 from typing import Optional
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.models import Pokemon, Move, Trainer, StatusEffect, MultiTurn, Modifier, MoveEffect
-from src.status_effects import poison, paralysis, sleep, burn, freeze
+from models import Pokemon, Move, Trainer, StatusEffect, MultiTurn, Modifier, MoveEffect
+from data import poison, paralysis, sleep, burn, freeze
 import copy
 
 def make_pokemon(name="Testmon", lvl=50, type=["Normal"],

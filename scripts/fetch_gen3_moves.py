@@ -2,16 +2,16 @@
 import sys
 import os
 import requests
-from typing import Optional
 import copy
+from typing import Optional
 
 # add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 # import only what the script actually needs
 from models import MultiTurn, Accumulator
-from cache_manager  import get_move_cache, save_move_cache, status_effect_to_dict
-from status_effects import *
+from pokemon import get_move_cache, save_move_cache, status_effect_to_dict
+from data import *
 from overrides.move_overrides import *
 
 BASE_URL  = "https://pokeapi.co/api/v2"

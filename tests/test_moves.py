@@ -6,7 +6,7 @@ import unittest.mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.battle import apply_move, handle_multiturn, check_accuracy, apply_stat_change, apply_damage, apply_lifesteal
+from battle import apply_move, handle_multiturn, check_accuracy, apply_stat_change, apply_damage, apply_lifesteal
 from helpers import make_pokemon, make_move, make_trainer
 from models import MultiTurn
 
@@ -247,7 +247,7 @@ class TestMultiHitMoves(unittest.TestCase):
         hp_before = defender.active().hp
 
         # force exactly 3 hits
-        with unittest.mock.patch("battle.random.randint", return_value=3):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=3):
             damage = 0
             roll   = 3
             current_turn = 1
@@ -269,7 +269,7 @@ class TestMultiHitMoves(unittest.TestCase):
         single_move = make_move(category="physical", power=18, acc=1.0)
 
         # force 2 hits
-        with unittest.mock.patch("battle.random.randint", return_value=2):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=2):
             multi_damage = 0
             current_turn = 1
             for _ in range(2):
@@ -296,7 +296,7 @@ class TestMultiHitMoves(unittest.TestCase):
         )
 
         hits_landed = 0
-        with unittest.mock.patch("battle.random.randint", return_value=5):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=5):
             current_turn = 1
             for i in range(5):
                 apply_damage(move, attacker, defender, current_turn)
@@ -319,7 +319,7 @@ class TestMultiHitMoves(unittest.TestCase):
             max_hits = 5
         )
 
-        with unittest.mock.patch("battle.random.randint", return_value=move.min_hits):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=move.min_hits):
             self.assertEqual(
                 random.randint(move.min_hits, move.max_hits),
                 move.min_hits
@@ -336,7 +336,7 @@ class TestMultiHitMoves(unittest.TestCase):
             max_hits = 5
         )
 
-        with unittest.mock.patch("battle.random.randint", return_value=move.max_hits):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=move.max_hits):
             self.assertEqual(
                 random.randint(move.min_hits, move.max_hits),
                 move.max_hits
@@ -353,7 +353,7 @@ class TestMultiHitMoves(unittest.TestCase):
         hp_before = defender.active().hp
 
         # mock random to prevent critical hits affecting consistency
-        with unittest.mock.patch("battle.random.random", return_value=1.0):
+        with unittest.mock.patch("battle.move_handler.random.random", return_value=1.0):
             damage = apply_damage(move, attacker, defender, current_turn=1)
 
             # reset hp and apply again
@@ -385,7 +385,7 @@ class TestMultiHitMoves(unittest.TestCase):
         hp_before = defender.active().hp
 
         total_damage = 0
-        with unittest.mock.patch("battle.random.randint", return_value=3):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=3):
             for _ in range(3):
                 hit_damage    = apply_damage(move, attacker, defender, current_turn=1)
                 total_damage += hit_damage
@@ -413,7 +413,7 @@ class TestMultiHitMoves(unittest.TestCase):
         total_damage = 0
         current_turn = 1
 
-        with unittest.mock.patch("battle.random.randint", return_value=2):
+        with unittest.mock.patch("battle.move_handler.random.randint", return_value=2):
             for _ in range(2):
                 total_damage += apply_damage(move, attacker, defender, current_turn)
 

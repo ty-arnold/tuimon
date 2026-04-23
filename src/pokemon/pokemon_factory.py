@@ -1,7 +1,7 @@
-from models import Pokemon, Move
-from cache_manager import *
-from game_print import game_print
 import requests
+from models import Pokemon, Move
+from pokemon import *
+from core import game_print
 
 BASE_URL = "https://pokeapi.co/api/v2"
 

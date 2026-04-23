@@ -1,4 +1,4 @@
-from logger import logger
+from core.logger import logger
 
 def dump_pokemon(pokemon):
     logger.debug(f"--- {pokemon.name} ---")

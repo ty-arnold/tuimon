@@ -68,7 +68,7 @@ def move_to_dict(move: Move) -> dict:
 
 def dict_to_move(data: dict) -> Move:
     from models import Move, MultiTurn, MoveEffect
-    from status_effects import poison, paralysis, sleep, burn, freeze
+    from data.status_effects import poison, paralysis, sleep, burn, freeze
     import copy
 
     multi_turn = None

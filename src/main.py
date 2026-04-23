@@ -1,22 +1,20 @@
 import sys
 import logging
 
-DEBUG       = True
-ENABLE_LOGS = True
+from core.config import DEBUG, ENABLE_LOGS
 
-from logger import setup_logger
+from core.logger import setup_logger
 if ENABLE_LOGS:
     setup_logger(debug=DEBUG)
 
 logger = logging.getLogger("tuimon")
 
-from battle          import resolve_turn, get_turn
-from print           import build_party, print_actions
-from presets         import get_test_player, get_test_npc
-from debug           import dump_battle_state, dump_move
-from models          import Trainer
-from game_print      import game_print
-from pokemon_factory import create_pokemon_from_api
+from models       import Trainer
+from battle       import resolve_turn, get_turn
+from ui           import build_party, dump_battle_state, dump_move
+from core         import game_print
+from core.presets import get_test_player, get_test_npc
+from pokemon      import create_pokemon_from_api
 
 try:
     if DEBUG:
@@ -58,6 +56,8 @@ try:
             if winner:
                 game_print(winner)
                 break  
+        game_print(f"{player.name}'s {player.active().name}: HP - {player.active().hp}/{player.active().max_hp}")
+        game_print(f"{npc.name}'s {npc.active().name}: HP - {npc.active().hp}/{npc.active().max_hp}")
         current_turn += 1
 
 except KeyboardInterrupt:

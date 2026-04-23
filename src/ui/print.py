@@ -1,7 +1,7 @@
 from typing import Optional
-from pokemon_factory import create_pokemon_from_api
-from logger import logger
-from game_print import game_print
+from pokemon.pokemon_factory import create_pokemon_from_api
+from core.logger import logger
+from core.game_print import game_print
 from models import Pokemon, StatusEffect
 
 def print_actions(trainer):

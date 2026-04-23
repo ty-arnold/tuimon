@@ -1,4 +1,4 @@
-from models import MultiTurn, Accumulator, Modifier, MoveEffect
+from models.models import MultiTurn, Accumulator, Modifier, MoveEffect
 
 MULTI_TURN_OVERRIDES = {
 

@@ -4,12 +4,12 @@ import sys
 import os
 import random
 import unittest.mock
+import copy
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from src.battle import process_status_effects, get_all_effects, check_can_act, apply_move
-from src.status_effects import *
+from battle import process_status_effects, get_all_effects, check_can_act, apply_move
+from data import *
 from helpers import make_pokemon, make_trainer, make_move
-import copy
 
 class TestStatusEffects(unittest.TestCase):
 
@@ -318,7 +318,7 @@ class TestConfusion(unittest.TestCase):
         hp_before   = pokemon.hp
 
         # force confusion to trigger by mocking random
-        with unittest.mock.patch("battle.random.random", return_value=0.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=0.0):
             can_act, reason = check_can_act(pokemon)
 
         self.assertFalse(can_act)
@@ -331,7 +331,7 @@ class TestConfusion(unittest.TestCase):
         pokemon.apply_status_effect(conf_effect)
         hp_before   = pokemon.hp
 
-        with unittest.mock.patch("battle.random.random", return_value=0.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=0.0):
             check_can_act(pokemon)
 
         expected_damage = round(pokemon.max_hp * 0.1)
@@ -344,7 +344,7 @@ class TestConfusion(unittest.TestCase):
         hp_before   = pokemon.hp
 
         # force confusion not to trigger
-        with unittest.mock.patch("battle.random.random", return_value=1.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=1.0):
             can_act, reason = check_can_act(pokemon)
 
         self.assertTrue(can_act)
@@ -357,7 +357,7 @@ class TestConfusion(unittest.TestCase):
         conf_effect = copy.deepcopy(confusion)
         pokemon.apply_status_effect(conf_effect)
 
-        with unittest.mock.patch("battle.random.random", return_value=0.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=0.0):
             check_can_act(pokemon)
 
         self.assertGreaterEqual(pokemon.hp, 0)
@@ -368,7 +368,7 @@ class TestConfusion(unittest.TestCase):
         conf_effect.turns_active = 2  # skip first turn immunity
         pokemon.apply_status_effect(conf_effect)
 
-        with unittest.mock.patch("battle.random.random", return_value=0.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=0.0):
             process_status_effects(pokemon)
 
         self.assertEqual(len(pokemon.minor_status), 0)
@@ -379,7 +379,7 @@ class TestConfusion(unittest.TestCase):
         conf_effect.turns_active = 2
         pokemon.apply_status_effect(conf_effect)
 
-        with unittest.mock.patch("battle.random.random", return_value=1.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=1.0):
             process_status_effects(pokemon)
 
         self.assertEqual(len(pokemon.minor_status), 1)
@@ -409,7 +409,7 @@ class TestConfusion(unittest.TestCase):
         hp_before   = defender.active().hp
 
         # force confusion self damage
-        with unittest.mock.patch("battle.random.random", return_value=0.0):
+        with unittest.mock.patch("battle.status_effects.random.random", return_value=0.0):
             can_act, _ = check_can_act(attacker.active())
             current_turn = 1
             if not can_act:

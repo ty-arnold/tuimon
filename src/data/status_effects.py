@@ -1,4 +1,4 @@
-from src.models import StatusEffect
+from models import StatusEffect
 
 poison = StatusEffect(
     name = "Poison",

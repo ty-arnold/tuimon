@@ -1,4 +1,4 @@
-from logger import logger
+from core.logger import logger
 
 def game_print(message):
     print(message)
