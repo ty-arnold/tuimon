@@ -1,0 +1,70 @@
+Screen {
+    background: #0d0d1a;
+}
+
+#main {
+    height: 1fr;
+}
+
+#left {
+    width: 1fr;
+    border: solid #cc2255;
+    padding: 1;
+}
+
+#right {
+    width: 2fr;
+    border: solid #cc2255;
+    padding: 1;
+}
+
+#left-panel {
+    height: 1fr;
+    border: solid #333355;
+    color: #ffffff;
+    padding: 1;
+}
+
+#battle-log {
+    height: 24;
+    border: solid #333355;
+    color: #aaaacc;
+    padding: 1;
+}
+
+#pokemon-top, #pokemon-bottom {
+    height: 6;
+    border: solid #333355;
+    color: #ffffff;
+    padding: 1;
+}
+
+#hp-top, #hp-bottom {
+    height: 3;
+    border: solid #cc0000;
+    background: #1a0000;
+    padding: 1;
+}
+
+#action-log {
+    height: 1fr;
+    border: solid #333355;
+    color: #aaaacc;
+    padding: 1;
+}
+
+#input-bar {
+    height: 3;
+    border: solid #00aacc;
+    background: #001a22;
+    padding: 1;
+}
+
+#command-bar {
+    height: 3;
+    background: #111122;
+    color: #888899;
+    border-top: solid #333355;
+    text-align: center;
+    padding: 1;
+}
