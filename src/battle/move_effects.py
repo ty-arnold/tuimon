@@ -1,7 +1,7 @@
 import random, copy
 from models import Move, Trainer, MoveEffect
 from core.logger import logger
-from core import game_print
+from core import game_print, msg
 
 
 def apply_move_effect(
@@ -36,7 +36,7 @@ def clear_expired_effects(trainer: Trainer, current_turn: int) -> None:
                if e.effect_type != "protect" and e.turns <= current_turn]
     for effect in expired:
         trainer.active_effects.remove(effect)
-        game_print(f"The effect wore off!")
+        game_print(msg("effect_wore_off"))
 
     # always clear protect at end of turn
     trainer.active_effects = [e for e in trainer.active_effects
@@ -59,7 +59,7 @@ def handle_protect_effect(
         if trainer.consecutive_protect > 0:
             chance = 1 / (2 ** trainer.consecutive_protect)
             if random.random() > chance:
-                game_print(f"{trainer.active().name} {effect.fail_message}")
+                game_print(msg("target_effect", pokemon=trainer.active().name, message=effect.fail_message))
                 trainer.consecutive_protect = 0
                 return True
 
@@ -74,7 +74,7 @@ def handle_protect_effect(
         )
     )
     trainer.consecutive_protect += 1
-    game_print(f"{trainer.active().name} {effect.message}")
+    game_print(msg("target_effect", target=trainer.active().name, message=effect.message))
     return True
 
 def handle_screen_effect(
@@ -86,13 +86,13 @@ def handle_screen_effect(
     if any(e.effect_type == "screen" and
            e.properties.get("category_condition") == effect.properties.get("category_condition")
            for e in trainer.active_effects):
-        game_print("But it failed!")
+        game_print(msg("but_it_failed"))
         return True
 
     screen        = copy.deepcopy(effect)
     screen.turns  = current_turn + effect.turns  # store expiry turn
     trainer.active_effects.append(screen)
-    game_print(f"{trainer.active().name} {effect.message}")
+    game_print(msg("target_effect", target=trainer.active().name, message=effect.message))
     return True
 
 def handle_mist_effect(
@@ -101,13 +101,13 @@ def handle_mist_effect(
     current_turn: int
 ) -> bool:
     if any(e.effect_type == "mist" for e in trainer.active_effects):
-        game_print("But it failed!")
+        game_print(msg("but_it_failed"))
         return True
 
     mist       = copy.deepcopy(effect)
     mist.turns = current_turn + effect.turns
     trainer.active_effects.append(mist)
-    game_print(f"{trainer.active().name} {effect.message}")
+    game_print(msg("target_effect", target=trainer.active().name, message=effect.message))
     return True
 
 def is_protected(trainer: Trainer, move: Move) -> bool:
@@ -138,7 +138,7 @@ def get_screen_modifier(
         modifier *= effect.properties.get("damage_modifier", 1.0)
         if effect.turns <= current_turn:
             expired.append(effect)
-            game_print(f"The screen wore off!")
+            game_print(msg("screen_wore_off"))
 
     for effect in expired:
         defender.active_effects.remove(effect)

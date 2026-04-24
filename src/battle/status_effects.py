@@ -1,7 +1,7 @@
 import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, StatusEffect
-from core import game_print
+from core import game_print, msg
 
 def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, Optional[StatusEffect]]:
     import copy
@@ -30,16 +30,16 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
             if effect.damage is not None:
                 damage = round(pokemon.max_hp * effect.damage)
                 pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(f"{pokemon.name} was hurt by {effect.name.lower()}!")
-                game_print(f"{pokemon.name} took {damage} damage!")
+                game_print(msg("generic_effect", pokemon=pokemon.name, effect=effect.name.lower()))
+                game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
         case "Burn":
             if effect.damage is not None:
                 damage = round(pokemon.max_hp * effect.damage)
                 pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(f"{pokemon.name} was hurt by its burn!")
-                game_print(f"{pokemon.name} took {damage} damage!")
+                game_print(msg("burn_damage", pokemon=pokemon.name))
+                game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
             else:
-                game_print(f"{pokemon.name} is confused!")
+                game_print(msg("is_confused", pokemon=pokemon.name))
 
     return False
 
@@ -57,7 +57,7 @@ def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffec
     for effect in effects_to_remove:
         pokemon.remove_status_effect(effect)
         message = removal_messages.get(effect.name, " is no longer affected!")
-        game_print(f"{pokemon.name}{message}")
+        game_print(msg("target_effect", target=pokemon.name, message=message))
 
 def get_all_effects(pokemon: Pokemon) -> list[StatusEffect]:
     # Get all active status effects for a pokemon

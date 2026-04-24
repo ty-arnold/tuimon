@@ -1,11 +1,11 @@
 import random
 from typing import Optional
-from models import Move, Trainer
+from models import Move, Trainer, Pokemon
 from data import type_chart, crit_rate_table
 from battle.modifiers import get_modifier_value
 from battle.move_effects import get_screen_modifier
 from core.logger import logger
-from core import game_print
+from core import game_print, msg
 
 def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
     multiplier = 1
@@ -35,20 +35,20 @@ def apply_damage(
     target.hp = max(0, target.hp - damage)
 
     if multiplier == 0:
-        game_print("It had no effect!")
+        game_print(msg("no_effect"))
     elif multiplier < 1:
-        game_print("It's not very effective...")
+        game_print(msg("not_effective"))
     elif multiplier > 1:
-        game_print("It's super effective!")
+        game_print(msg("super_effective"))
 
     if (defender.locked_move is not None and
         defender.locked_move.multi_turn is not None and
         defender.locked_move.multi_turn.accumulator is not None and
         defender.locked_move.multi_turn.accumulator.type == "damage_taken"):
         defender.active().accumulator += damage
-        game_print(f"{defender.active().name} is storing energy!")
+        game_print(msg("storing_energy",   pokemon=defender.active().name))
         
-    game_print(f"{target.name} took {damage} damage!")
+    game_print(msg("took_damage", pokemon=target.name, damage=damage))
 
     return damage 
 
@@ -74,7 +74,7 @@ def calculate_damage(
     crit_chance = crit_rate_table.get(move.crit_rate, 1/16)
     critical    = 2 if random.random() < crit_chance else 1
     if critical == 2:
-        logger.info("Critical hit!")
+        game_print(msg("critical_hit"))
 
     # use effective_power if provided (from modifiers like charge)
     # otherwise use the move's base power
@@ -93,15 +93,15 @@ def calculate_damage(
 
     return damage, multiplier
 
-def apply_lifesteal(move, attacker, damage) -> None:
+def apply_lifesteal(move: Move, attacker: Pokemon, damage: int) -> None:
     heal_amount = round(damage * move.lifesteal)
     attacker.active().hp = min(
         attacker.active().max_hp,
         attacker.active().hp + heal_amount
     )
-    game_print(f"{attacker.active().name} drained {heal_amount} HP!")
+    game_print(msg("drain", pokemon=attacker.active().name, hp=heal_amount))
 
-def apply_recoil(move: Move, attacker: Trainer, damage: int) -> None:
+def apply_recoil(move: Move, attacker: Pokemon, damage: int) -> None:
     recoil_damage = round(damage * move.recoil)
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-    game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
+    game_print(msg("recoil", pokemon=attacker.active().name, hp=recoil_damage))

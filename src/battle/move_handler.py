@@ -2,7 +2,7 @@ import random
 from typing import Optional
 from models import Move, Trainer
 from core.logger import logger
-from core import game_print
+from core import game_print, msg
 from ui import print_stat_changes, print_status_effect
 from battle.damage import apply_damage, apply_lifesteal, get_type_multiplier
 from battle.move_effects import is_protected, apply_move_effect
@@ -14,7 +14,7 @@ from data import acc_table
 def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> Optional[bool]:
     logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
-    game_print(f"{attacker.active().name} used {move.name}!")
+    game_print(msg("move_used", pokemon=attacker.active().name, move=move.name))
 
     # 1. handle charge turn for multi turn moves
     # must be first - if charging, nothing else happens
@@ -25,7 +25,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
     # 2. check if defender is protected
     # protect blocks everything except specific moves
     if is_protected(defender, move):
-        game_print(f"{attacker.active().name}'s attack was blocked!")
+        game_print(msg("blocked", pokemon=attacker.active().name))
         attacker.active().accumulator = 0
         defender.consecutive_protect  = 0
         return None
@@ -41,7 +41,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
     # 4. check accuracy
     # only checked if target is not invulnerable
     if not check_accuracy(move, attacker, defender):
-        game_print(f"{attacker.active().name}'s attack missed!")
+        game_print(msg("missed", pokemon=attacker.active().name))
         attacker.active().accumulator = 0
         return None
 
@@ -88,7 +88,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
                     hits_landed += 1
                     if not defender.active().is_alive():
                         break
-                game_print(f"Hit {hits_landed} time(s)!")
+                game_print(msg("hit_x_times", times=hits_landed))
             else:
                 damage = apply_damage(move, attacker, defender, current_turn)
 
@@ -96,7 +96,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
     if move.recoil > 0 and damage > 0:
         recoil_damage = round(damage * move.recoil)
         attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-        game_print(f"{attacker.active().name} took {recoil_damage} recoil damage!")
+        game_print(msg("recoil", pokemon=attacker.active().name, hp=recoil_damage))
 
     # 11. apply lifesteal
     if move.lifesteal > 0 and damage > 0:
@@ -107,7 +107,7 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
         heal_amount = round(attacker.active().max_hp * move.heal)
         attacker.active().hp = min(attacker.active().max_hp,
                                    attacker.active().hp + heal_amount)
-        game_print(f"{attacker.active().name} restored {heal_amount} HP!")
+        game_print(msg("heal", pokemon=attacker.active().name, hp=heal_amount))
 
     # 13. apply stat changes
     if move.stat_change:
@@ -138,7 +138,7 @@ def handle_multiturn(move: Move, attacker: Trainer) -> bool:
     if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
         logger.debug(f"  charge_turn:        {attacker.locked_move.multi_turn.charge_turn}")
         if attacker.locked_move.multi_turn.charge_turn == 2:
-            game_print(f"{attacker.active().name} {attacker.locked_move.multi_turn.charge_message}")
+            game_print(msg("target_effect", target=attacker.active().name, message=attacker.locked_move.multi_turn.charge_message))
             return True
 
     if move.multi_turn is not None and attacker.locked_move is None:
@@ -147,7 +147,7 @@ def handle_multiturn(move: Move, attacker: Trainer) -> bool:
         attacker.invulnerable_state = move.multi_turn.invulnerable_state
 
         if move.multi_turn.charge_turn == 1:
-            game_print(f"{attacker.active().name} {move.multi_turn.charge_message}")
+            game_print(msg("target_effect", target=attacker.active().name, message=move.multi_turn.charge_message))
             return True
 
     return False
@@ -172,17 +172,17 @@ def handle_invulnerability(move: Move, attacker: Trainer, defender: Trainer) -> 
 
     if can_hit:
         if defender.invulnerable_state == "flying":
-            game_print(f"It hit {defender.active().name} out of the sky!")
+            game_print(msg("flying_hit", pokemon=defender.active().name))
         else:
-            game_print(f"It hit {defender.active().name}!")
+            game_print(msg("invuln_hit", pokemon=defender.active().name))
         return False
 
     message = "is invulnerable!"
     if defender.locked_move is not None and defender.locked_move.multi_turn is not None:
         message = defender.locked_move.multi_turn.invulnerable_message or "is invulnerable!"
 
-    game_print(f"{defender.active().name} {message}")
-    game_print(f"{attacker.active().name}'s attack missed!")
+    game_print(msg("target_effect", target=defender.active().name, message=message))
+    game_print(msg("missed", pokemon=attacker.active().name))
     return True
 
 def check_immunity(move: Move, attacker: Trainer, defender: Trainer) -> bool:
@@ -191,20 +191,20 @@ def check_immunity(move: Move, attacker: Trainer, defender: Trainer) -> bool:
     # check type immunities on the move itself
     for immune_type in move.immune_types:
         if immune_type in defender.active().type:
-            game_print(f"It doesn't affect {defender.active().name}!")
+            game_print(msg("doesnt_effect", pokemon=defender.active().name))
             return True
 
     # check if defender is using a blocking move
     for immune_move in move.immune_moves:
         if (defender.locked_move is not None and
                 defender.locked_move.name.lower() == immune_move):
-            game_print(f"{defender.active().name} protected itself!")
+            game_print(msg("self_protect", pokemon=defender.active().name))
             return True
 
     # check type chart immunity (0x effectiveness)
     multiplier = get_type_multiplier(move.type[0], defender.active().type)
     if multiplier == 0:
-        game_print("It had no effect!")
+        game_print(msg("no_effect"))
         return True
 
     return False

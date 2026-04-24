@@ -1,6 +1,6 @@
 from typing import Optional
 from models import Move, Trainer, Accumulator
-from core import game_print
+from core import game_print, msg
 from battle.damage import calculate_damage, get_type_multiplier
 
 def handle_accumulator(
@@ -36,7 +36,7 @@ def release_accumulator(
     accumulated = attacker.active().accumulator
 
     if config.release_message:
-        game_print(f"{attacker.active().name} {config.release_message}!")
+        game_print(msg("accumulator_release", pokemon=attacker.active().name, message=config.release_message))
 
     damage = 0
 
@@ -55,11 +55,11 @@ def release_accumulator(
         multiplier = get_type_multiplier(move.type[0], defender.active().type)
         damage     = round(damage * multiplier)
         if multiplier < 1:
-            game_print("It's not very effective...")
+            game_print(msg("not_effective"))
         elif multiplier > 1:
-            game_print("It's super effective!")
+            game_print(msg("super_effective"))
 
     defender.active().hp = max(0, defender.active().hp - damage)
-    game_print(f"{defender.active().name} took {damage} damage!")
+    game_print(msg("took_damage", pokemon=defender.active().name, damage=damage))
     attacker.active().accumulator = 0
     return damage

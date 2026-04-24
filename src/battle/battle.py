@@ -1,4 +1,5 @@
 from core.game_print import game_print
+from core import msg
 from models import Move, Trainer
 from battle.turn_order     import check_can_act, get_turn_order
 from battle.move_handler   import apply_move, clear_move_lock
@@ -42,14 +43,14 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
 
 def next_mon(player: Trainer, npc: Trainer) -> None:
     if not player.active().is_alive():
-        game_print(f"{player.active().name} fainted!")
+        game_print(msg("fainted", pokemon=player.active().name))
         player.active().clear_all_modifiers()  # default clears switchable ones
         new_mon = get_party(player)
         if new_mon is not None:
             player.selected_mon = player.party.index(new_mon)
 
     if not npc.active().is_alive():
-        game_print(f"{npc.active().name} fainted!")
+        game_print(msg("fainted", pokemon=npc.active().name))
         npc.active().clear_all_modifiers()
         new_mon = get_party(npc)
         if new_mon is not None:
@@ -57,9 +58,9 @@ def next_mon(player: Trainer, npc: Trainer) -> None:
                 
 def check_winner(player: Trainer, npc: Trainer) -> Trainer | None:
     if not any(pokemon.is_alive() for pokemon in player.party):
-        game_print(f"{npc.name} Wins!")
+        game_print(msg("wins", trainer=npc.name))
         return npc      # return trainer object instead of True
     if not any(pokemon.is_alive() for pokemon in npc.party):
-        game_print(f"{player.name} Wins!")
+        game_print(msg("wins", trainer=player.name))
         return player   # return trainer object instead of True
     return None

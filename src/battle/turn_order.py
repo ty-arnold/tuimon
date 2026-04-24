@@ -1,7 +1,7 @@
 import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, TurnOrder
-from core import game_print
+from core import game_print, msg
 from battle.status_effects import get_all_effects
 
 def get_turn_order(
@@ -56,11 +56,11 @@ def check_can_act(pokemon: Pokemon) -> tuple[bool, Optional[str]]:
             if random.random() < 0.5:  # 50% chance to hurt itself
                 damage = round(pokemon.max_hp * 0.1)
                 pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(f"{pokemon.name} hurt itself in confusion!")
-                game_print(f"{pokemon.name} took {damage} damage!")
+                game_print(msg("confusion_self_hit", pokemon=pokemon.name))
+                game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
                 return False, "Confusion"  # skip attack this turn
             else:
-                game_print(f"{pokemon.name} is confused!")
+                game_print(msg("is_confused", pokemon=pokemon.name))
         elif not effect.can_act():
             return False, effect.name
     return True, None

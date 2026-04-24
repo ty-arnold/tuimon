@@ -13,7 +13,7 @@ from models       import Trainer
 from battle       import resolve_turn
 from ui           import build_party, dump_battle_state, dump_move
 from ui.input     import get_turn
-from core         import game_print
+from core         import game_print, msg
 from core.presets import get_test_player, get_test_npc
 from pokemon      import create_pokemon_from_api
 
@@ -37,7 +37,7 @@ try:
 
     current_turn = 1
 
-    game_print("Battle Start!")
+    game_print(msg("battle_start"))
     while True:
         dump_battle_state(player, npc, current_turn)
 
