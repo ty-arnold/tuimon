@@ -5,7 +5,8 @@ from data import type_chart, crit_rate_table
 from battle.modifiers import get_modifier_value
 from battle.move_effects import get_screen_modifier
 from core.logger import logger
-from core import game_print, msg
+from core import msg
+from core.game_print import record_hp_change, game_print
 
 def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
     multiplier = 1
@@ -32,7 +33,14 @@ def apply_damage(
     damage             = round(damage * damage_modifier)
 
     target    = defender.active()
+    hp_before = target.hp
     target.hp = max(0, target.hp - damage)
+
+    record_hp_change(
+        pokemon_name = target.name,
+        start_pct    = int((hp_before  / target.max_hp) * 100),
+        end_pct      = int((target.hp  / target.max_hp) * 100)
+    )
 
     if multiplier == 0:
         game_print(msg("no_effect"))

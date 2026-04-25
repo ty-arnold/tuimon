@@ -1,3 +1,4 @@
+import random
 from core.game_print import game_print
 from core import msg
 from models import Move, Trainer
@@ -5,8 +6,10 @@ from battle.turn_order     import check_can_act, get_turn_order
 from battle.move_handler   import apply_move, clear_move_lock
 from battle.status_effects import process_status_effects
 from ui.input import get_party
+from core.logger import logger
 
 def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move, current_turn: int) -> bool | None:
+    from core.config import TUI_MODE
     player_can_act, player_cant_act_reason = check_can_act(player.active())
     npc_can_act,    npc_cant_act_reason    = check_can_act(npc.active())
 
@@ -20,8 +23,9 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
         winner = check_winner(player, npc)
         if winner:
             return True
-        next_mon(player, npc)
-
+        if not TUI_MODE:
+            next_mon(player, npc)
+            
     # checks if the second pokemon fainted - if so, skip its move turn
     if order.second.selected_mon != second_mon_before:
         return None
@@ -32,7 +36,8 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
         winner = check_winner(player, npc)
         if winner:
             return True
-        next_mon(player, npc)
+        if not TUI_MODE:
+            next_mon(player, npc)
 
     process_status_effects(order.first.active())
     process_status_effects(order.second.active())
@@ -40,6 +45,22 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
     if winner:
         return True
     return None
+
+def get_npc_move(trainer: Trainer) -> Move:
+    if trainer.locked_move is not None:
+        move = trainer.locked_move
+        trainer.locked_turns -= 1
+        return move
+
+    available = [m for m in trainer.active().moveset if m.pp > 0]
+    logger.debug(f"get_npc_move: moveset pp values={[(m.name, m.pp) for m in trainer.active().moveset]}")
+    logger.debug(f"get_npc_move: available={available}")
+
+    if not available:
+        logger.debug("get_npc_move: no moves available - all pp = 0!")
+        return None
+
+    return random.choice(available)
 
 def next_mon(player: Trainer, npc: Trainer) -> None:
     if not player.active().is_alive():

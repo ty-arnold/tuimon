@@ -1,7 +1,7 @@
 import sys
 import logging
 
-from core.config import DEBUG, ENABLE_LOGS
+from core.config import DEBUG, ENABLE_LOGS, TUI_MODE
 
 from core.logger import setup_logger
 if ENABLE_LOGS:
@@ -17,50 +17,72 @@ from core         import game_print, msg
 from core.presets import get_test_player, get_test_npc
 from pokemon      import create_pokemon_from_api
 
-try:
-    if DEBUG:
-        player = get_test_player()
-        npc    = get_test_npc()
-    else:
-        player_party_raw = build_party("Ash", party_size=2)
-        player_party     = [p for p in player_party_raw if p is not None]
-        assert len(player_party) > 0, "Failed to create player party!"
-        player = Trainer(name="Ash", party=player_party)
+if DEBUG:
+    from core.presets import get_test_player, get_test_npc
+    player = get_test_player()
+    npc    = get_test_npc()
+else:
+    from print import build_party
+    from pokemon.pokemon_factory import create_pokemon_from_api
+    from models import Trainer
+    player_party = build_party("Ash", party_size=2)
+    player       = Trainer(name="Ash", party=player_party)
+    npc_party    = [
+        create_pokemon_from_api("gengar",   lvl=55),
+        create_pokemon_from_api("alakazam", lvl=55)
+    ]
+    npc_party = [p for p in npc_party if p is not None]
+    npc       = Trainer(name="Gary", party=npc_party)
 
-        npc_party_raw = [
-            create_pokemon_from_api("gengar",   lvl=55),
-            create_pokemon_from_api("alakazam", lvl=55)
-        ]
-        npc_party = [p for p in npc_party_raw if p is not None]
-        assert len(npc_party) > 0, "Failed to create NPC party!"
-        npc = Trainer(name="Gary", party=npc_party)
+if TUI_MODE:
+    from ui.app import TuimonApp
+    app = TuimonApp(player=player, npc=npc)
+    app.run()
+else:
+    try:
+        if DEBUG:
+            player = get_test_player()
+            npc    = get_test_npc()
+        else:
+            player_party_raw = build_party("Ash", party_size=2)
+            player_party     = [p for p in player_party_raw if p is not None]
+            assert len(player_party) > 0, "Failed to create player party!"
+            player = Trainer(name="Ash", party=player_party)
 
-    current_turn = 1
+            npc_party_raw = [
+                create_pokemon_from_api("gengar",   lvl=55),
+                create_pokemon_from_api("alakazam", lvl=55)
+            ]
+            npc_party = [p for p in npc_party_raw if p is not None]
+            assert len(npc_party) > 0, "Failed to create NPC party!"
+            npc = Trainer(name="Gary", party=npc_party)
 
-    game_print(msg("battle_start"))
-    while True:
-        dump_battle_state(player, npc, current_turn)
+        current_turn = 1
 
-        player_move = get_turn(player)
-        npc_move = get_turn(npc)
+        game_print(msg("battle_start"))
+        while True:
+            dump_battle_state(player, npc, current_turn)
 
-        logger.debug(f"Player chose: {player_move.name if player_move else 'charge/recharge turn'}")
-        logger.debug(f"NPC chose: {npc_move.name if npc_move else 'charge/recharge turn'}")
+            player_move = get_turn(player)
+            npc_move = get_turn(npc)
 
-        if player_move:
-            dump_move(player_move)
-        if npc_move:
-            dump_move(npc_move)
+            logger.debug(f"Player chose: {player_move.name if player_move else 'charge/recharge turn'}")
+            logger.debug(f"NPC chose: {npc_move.name if npc_move else 'charge/recharge turn'}")
 
-        if player_move is not None and npc_move is not None:
-            winner = resolve_turn(player, player_move, npc, npc_move, current_turn)
-            if winner:
-                game_print(winner)
-                break  
-        game_print(f"{player.name}'s {player.active().name}: HP - {player.active().hp}/{player.active().max_hp}")
-        game_print(f"{npc.name}'s {npc.active().name}: HP - {npc.active().hp}/{npc.active().max_hp}")
-        current_turn += 1
+            if player_move:
+                dump_move(player_move)
+            if npc_move:
+                dump_move(npc_move)
 
-except KeyboardInterrupt:
-    game_print("\nThanks for playing!")
-    sys.exit(0)
+            if player_move is not None and npc_move is not None:
+                winner = resolve_turn(player, player_move, npc, npc_move, current_turn)
+                if winner:
+                    game_print(winner)
+                    break  
+            game_print(f"{player.name}'s {player.active().name}: HP - {player.active().hp}/{player.active().max_hp}")
+            game_print(f"{npc.name}'s {npc.active().name}: HP - {npc.active().hp}/{npc.active().max_hp}")
+            current_turn += 1
+
+    except KeyboardInterrupt:
+        game_print("\nThanks for playing!")
+        sys.exit(0)

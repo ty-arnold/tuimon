@@ -1,70 +1,188 @@
 Screen {
     background: #0d0d1a;
+    color: #e0e0ff;
 }
 
 #main {
     height: 1fr;
+    padding: 1;
 }
 
-#left {
+/* ── Left Column ──────────────────────── */
+
+#left-col {
     width: 1fr;
-    border: solid #cc2255;
-    padding: 1;
+    margin-right: 1;
 }
 
-#right {
-    width: 2fr;
-    border: solid #cc2255;
-    padding: 1;
-}
-
-#left-panel {
+#action-pane {
     height: 1fr;
-    border: solid #333355;
-    color: #ffffff;
-    padding: 1;
+    border: round #4444aa;
+    border-title-color: #8888ff;
+    border-title-align: left;
+    padding: 1 2;
+    margin-bottom: 1;
 }
 
-#battle-log {
-    height: 24;
-    border: solid #333355;
+#combat-log-panel {
+    height: 14;
+    border: round #2a2a66;
+    border-title-color: #555588;
+    border-title-align: left;
+    background: #0a0a18;
+    padding: 0 1;
+}
+
+#combat-log {
+    background: transparent;
     color: #aaaacc;
-    padding: 1;
+    scrollbar-size: 0 0;
 }
 
-#pokemon-top, #pokemon-bottom {
-    height: 6;
-    border: solid #333355;
-    color: #ffffff;
-    padding: 1;
+/* ── Right Column ─────────────────────── */
+
+#right-col {
+    width: 1.6fr;
 }
 
-#hp-top, #hp-bottom {
-    height: 3;
-    border: solid #cc0000;
-    background: #1a0000;
-    padding: 1;
-}
-
-#action-log {
+#npc-panel {
     height: 1fr;
-    border: solid #333355;
-    color: #aaaacc;
-    padding: 1;
+    border: round #553366;
+    border-title-color: #aa66bb;
+    border-title-align: left;
+    padding: 1 2;
+    margin-bottom: 1;
 }
 
-#input-bar {
-    height: 3;
-    border: solid #00aacc;
-    background: #001a22;
-    padding: 1;
+#sprite-panel {
+    height: 10;
+    border: round #2a2a44;
+    background: #080810;
+    padding: 0 2;
+    margin-bottom: 1;
+    align: center middle;
 }
 
-#command-bar {
-    height: 3;
-    background: #111122;
-    color: #888899;
-    border-top: solid #333355;
+#sprite-npc-wrap {
+    width: 1fr;
+    align: left middle;
+}
+
+#sprite-player-wrap {
+    width: 1fr;
+    align: right middle;
+}
+
+#sprite-vs {
+    width: 4;
+    color: #333355;
     text-align: center;
+    content-align: center middle;
+}
+
+#sprite-npc, #sprite-player {
+    color: #555577;
+}
+
+#player-panel {
+    height: 1fr;
+    border: round #224422;
+    border-title-color: #44aa44;
+    border-title-align: left;
+    padding: 1 2;
+}
+
+/* hide submenus by default */
+#menu-moves, #menu-party, #menu-items {
+    display: none;
+}
+
+#detail-pane {
+    display: none;
+    background: #111122;
+    color: #ccccee;
     padding: 1;
+    margin-top: 1;
+    border: round #333355;
+}
+
+ListView {
+    background: transparent;
+    border: none;
+    height: auto;
+}
+
+ListItem {
+    background: transparent;
+    padding: 0 1;
+    color: #aaaacc;
+}
+
+ListItem:hover {
+    background: #1a1a33;
+    color: #ffffff;
+}
+
+ListItem.--highlight {
+    background: #222244;
+    color: #ffffff;
+}
+
+ProgressBar {
+    width: 1fr;
+}
+
+ProgressBar > .bar--bar {
+    color: #44cc44;
+}
+
+Footer {
+    background: #111122;
+}
+
+Footer > .footer--key {
+    background: #4444aa;
+    color: #ffffff;
+}
+
+# --- End Screen ----------
+
+/* add to battle.tcss */
+
+#end-container {
+    width: 40;
+    height: auto;
+    border: round #4444aa;
+    padding: 2 4;
+    background: #0d0d1a;
+    align: center middle;
+}
+
+#end-title-win {
+    color: #44cc44;
+    text-style: bold;
+    text-align: center;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+#end-title-lose {
+    color: #cc4444;
+    text-style: bold;
+    text-align: center;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+#end-turns {
+    color: #888899;
+    text-align: center;
+    width: 1fr;
+    margin-bottom: 2;
+}
+
+#end-options {
+    color: #4444aa;
+    text-align: center;
+    width: 1fr;
 }

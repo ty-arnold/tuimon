@@ -1,16 +1,21 @@
-.PHONY: run test typecheck fetch clean
+# Makefile
+TEXTUAL = .venv/bin/textual
+PYTHON  = .venv/bin/python3
 
 run:
-	python src/main.py
+	$(PYTHON) src/main.py
+
+dev:
+	$(TEXTUAL) run --dev src/ui/app.py 2>debug.log
 
 test:
-	python -m pytest tests/ -v
-
-typecheck:
-	pyright src/
+	$(PYTHON) -m unittest discover tests -v
 
 fetch:
-	python scripts/fetch_gen3_moves.py
+	$(PYTHON) scripts/fetch_gen3_moves.py
+
+typecheck:
+	$(PYTHON) -m pyright src/
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
