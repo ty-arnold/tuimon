@@ -1,0 +1,100 @@
+/* ui/styles/title.tcss */
+
+TitleScreen {
+    background: $background;
+    align: center middle;
+}
+
+#title-container {
+    width: auto;
+    height: auto;
+    align: center middle;
+    padding-top: 4;
+}
+
+#ascii-art {
+    color: $primary;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 1;
+    margin-top: 4;
+}
+
+#subtitle {
+    color: $text-disabled;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 3;
+}
+
+#title-menu {
+    width: 56;
+    background: transparent;
+    margin-bottom: 2;
+}
+
+.menu-item {
+    width: 56;
+    height: 3;
+    background: transparent;
+    padding: 0 2;
+    layout: horizontal;
+}
+
+.menu-item:hover {
+    background: $panel;
+}
+
+.menu-item.selected {
+    background: $panel;
+}
+
+.menu-label {
+    width: 1fr;
+    color: $text-muted;
+    content-align: left middle;
+    height: 100%;
+}
+
+.menu-key {
+    width: auto;
+    color: $secondary;
+    content-align: right middle;
+    height: 100%;
+}
+
+.menu-icon {
+    width: 4;
+    color: $secondary;
+    content-align: left middle;
+    height: 100%;
+}
+
+.menu-item.selected .menu-label {
+    color: $text;
+}
+
+.menu-item.selected .menu-key {
+    color: $primary;
+}
+
+.menu-item.selected .menu-icon {
+    color: $primary;
+}
+
+#version {
+    color: $text-disabled;
+    text-align: center;
+    width: 100%;
+    margin-top: 1;
+}
+
+Footer {
+    background: $surface;
+    color: $text-muted;
+}
+
+Footer > .footer--key {
+    background: $secondary;
+    color: $primary;
+}

@@ -1,3 +1,4 @@
+import os
 from textual.app        import ComposeResult
 from textual.screen     import Screen
 from textual.widgets    import Static, Footer, Label
@@ -6,6 +7,12 @@ from textual.binding    import Binding
 
 class EndScreen(Screen):
     """Displayed when the battle ends."""
+
+    CSS_PATH = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "styles",
+        "end_screen.tcss"
+    )
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),

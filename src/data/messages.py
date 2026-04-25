@@ -40,3 +40,19 @@ MESSAGES = {
     "doesnt_effect":      "It doesnt effect {pokemon}!",
     "protect_self":       "{pokemon} protected itself!"
 }
+
+MESSAGE_COLORS = {
+    "battle_start":    "info",
+    "move_used":       "move",
+    "took_damage":     "damage",
+    "super_effective": "super",
+    "not_effective":   "weak",
+    "critical_hit":    "crit",
+    "missed":          "miss",
+    "heal":            "healing",
+    "stat_rose":       "status",
+    "stat_fell":       "status",
+    "fainted":         "fainted",
+    "won":             "win",
+    "lost":            "lose",
+}

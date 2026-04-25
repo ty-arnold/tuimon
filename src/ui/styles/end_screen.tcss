@@ -1,0 +1,41 @@
+# --- End Screen ----------
+
+/* add to battle.tcss */
+
+#end-container {
+    width: 40;
+    height: auto;
+    border: round #4444aa;
+    padding: 2 4;
+    background: #0d0d1a;
+    align: center middle;
+}
+
+#end-title-win {
+    color: #44cc44;
+    text-style: bold;
+    text-align: center;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+#end-title-lose {
+    color: #cc4444;
+    text-style: bold;
+    text-align: center;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+#end-turns {
+    color: #888899;
+    text-align: center;
+    width: 1fr;
+    margin-bottom: 2;
+}
+
+#end-options {
+    color: #4444aa;
+    text-align: center;
+    width: 1fr;
+}
