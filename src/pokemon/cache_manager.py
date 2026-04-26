@@ -136,6 +136,7 @@ def dict_to_move(data: dict) -> Move:
         immune_types       = data.get("immune_types", []),
         immune_moves       = data.get("immune_moves", []),
         move_effect        = move_effect,
+        description        = data.get("description", ""),
     )
 
 def status_effect_to_dict(effect):

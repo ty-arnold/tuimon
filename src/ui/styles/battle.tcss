@@ -1,5 +1,12 @@
 /* ui/styles/battle.tcss */
 
+#npc-name, #npc-type, #npc-status, #npc-stages, #npc-stats,
+#player-name, #player-type, #player-status, #player-stages,
+#player-stats, #player-pp, #sprite-npc-label, #sprite-player-label,
+#detail-name {
+    color: $text;
+}
+
 Screen {
     background: $background;
     color: $text;
@@ -25,17 +32,16 @@ Screen {
 }
 
 #combat-log-panel {
-    height: 14;
+    height: 17;
     border: round $secondary;
     border-title-color: $text-muted;
     border-title-align: left;
-    background: $surface;
+    background: $background;    /* match screen bg instead of darker color */
     padding: 0 1;
 }
 
 #combat-log {
     background: transparent;
-    color: $text-muted;
     scrollbar-size: 0 0;
 }
 
@@ -55,7 +61,7 @@ Screen {
 #sprite-panel {
     height: 10;
     border: round $secondary;
-    background: $surface;
+    background: $background;    /* match screen bg */
     padding: 0 2;
     margin-bottom: 1;
     align: center middle;
@@ -98,13 +104,73 @@ Screen {
     display: none;
 }
 
+#menu-moves ListItem {
+    layout: horizontal;
+    height: 1;
+    padding: 0 1;
+}
+
+.move-name {
+    width: 1fr;
+    color: $text;
+}
+
+.move-tags {
+    width: auto;
+    text-align: right;
+    color: $text-muted;
+}
+
 #detail-pane {
     display: none;
     background: $surface;
-    color: $text;
-    padding: 1;
-    margin-top: 1;
+    padding: 1 2;
+    margin-top: 0;
     border: round $secondary;
+    height: auto;
+}
+
+#detail-name {
+    margin-bottom: 1;
+}
+
+#detail-grid {
+    grid-size: 2;
+    grid-columns: auto 1fr;
+    height: auto;
+    width: 100%;
+}
+
+.detail-label {
+    height: 1;
+    color: $text-muted;
+    width: auto;
+    padding-right: 2;
+}
+
+#detail-grid .detail-value {
+    height: 1;
+    text-align: right;
+    width: 100%;
+    content-align: right middle;
+}
+
+.detail-label {
+    color: $text-muted;
+    width: auto;
+    padding-right: 2;
+}
+
+.detail-value {
+    text-align: right;
+    width: 100%;
+    content-align: right middle;
+    /* remove color: $text — let Rich markup control it */
+}
+
+#detail-description {
+    margin-top: 1;
+    width: 100%;
 }
 
 ListView {
@@ -137,8 +203,9 @@ ProgressBar > .bar--bar {
     color: $success;
 }
 
-Label {
-    color: $text;
+
+ProgressBar {
+    width: 1fr;
 }
 
 Footer {

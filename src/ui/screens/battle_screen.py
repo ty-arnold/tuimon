@@ -3,7 +3,7 @@ import asyncio
 from textual.screen     import Screen
 from textual.app        import ComposeResult
 from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label, ProgressBar
-from textual.containers import Horizontal, Vertical, Container
+from textual.containers import Horizontal, Vertical, Container, Grid
 from models.trainer     import Trainer
 from battle.controller  import BattleController
 from core.game_print    import set_async_queue, game_print
@@ -51,7 +51,10 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                     yield ListView(id="menu-moves")
                     yield ListView(id="menu-party")
                     yield ListView(id="menu-items")
-                    yield Static("", id="detail-pane")
+                    with Container(id="detail-pane"):
+                        yield Label("", id="detail-name")
+                        yield Grid(id="detail-grid")
+                        yield Label("",  id="detail-description", markup=True)
                 with Container(id="combat-log-panel"):
                     yield RichLog(id="combat-log", markup=True)
             with Vertical(id="right-col"):
@@ -76,6 +79,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                     yield ProgressBar(id="player-hp-bar", total=100, show_eta=False)
                     yield Label("", id="player-status")
                     yield Label("", id="player-stages")
+                    yield Label("", id="player-stats")
                     yield Label("", id="player-pp")
         yield Footer()
 
@@ -91,6 +95,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#menu-moves").display = False
         self.query_one("#menu-party").display = False
         self.query_one("#menu-items").display = False
+        self.query_one("#detail-pane").display = False
 
         self.update_display()
 

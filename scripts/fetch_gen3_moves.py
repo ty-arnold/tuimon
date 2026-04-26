@@ -172,6 +172,19 @@ def convert_move(move_data: dict) -> Optional[dict]:
         from dataclasses import asdict
         move_effect = asdict(MOVE_EFFECT_OVERRIDES[move_name])
 
+    description = ""
+    for entry in move_data.get("effect_entries", []):
+        if entry.get("language", {}).get("name") == "en":
+            description = entry.get("short_effect", "")
+            # replace $effect_chance with actual value if present
+            effect_chance = move_data.get("effect_chance")
+            if effect_chance and "$effect_chance" in description:
+                description = description.replace(
+                    "$effect_chance",
+                    str(effect_chance)
+                )
+            break
+
     # build required fields
     result: dict = {
         "name":     move_data["name"].replace("-", " ").title(),
@@ -215,6 +228,8 @@ def convert_move(move_data: dict) -> Optional[dict]:
         result["status_effect"]      = status_effect_to_dict(status_effect)
     if move_effect is not None:
         result["move_effect"] = move_effect
+    if description:
+        result["description"] = description
 
     return result
 

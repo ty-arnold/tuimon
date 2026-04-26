@@ -45,7 +45,8 @@ class Move:
         stat_change_chance: float                  = 1.0,
         immune_types:       list[str]              = [],
         immune_moves:       list[str]              = [],
-        move_effect:        Optional[MoveEffect]   = None
+        move_effect:        Optional[MoveEffect]   = None,
+        description:        str                    = ""
     ):
         self.name:               str                      = name
         self.type:               list[str]                = type # Grass, Water, Etc. 
@@ -70,6 +71,7 @@ class Move:
         self.immune_types:       list[str]                = immune_types  # types this move cannot hit
         self.immune_moves:       list[str]                = immune_moves  # moves that block this move
         self.move_effect:        Optional[MoveEffect]     = move_effect # Moves like protect, screen, field, etc.
+        self.description:        str                      = description 
     
     def __repr__(self) -> str:
         return self.name

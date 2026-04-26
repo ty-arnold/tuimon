@@ -5,7 +5,7 @@ and display formatting. Update these to change colors app-wide.
 
 # combat log message colors
 LOG = {
-    "move":       "#8888aa",    # "{pokemon} used {move}!"
+    "move":       "#cdd6f4",    # "{pokemon} used {move}!"
     "damage":     "#f38ba8",    # "{pokemon} took {damage} damage!"
     "healing":    "#a6e3a1",    # "{pokemon} restored {amount} HP!"
     "status":     "#f9e2af",    # status effect messages

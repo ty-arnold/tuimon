@@ -1,5 +1,53 @@
-from textual.widgets import ListView, ListItem, Label
+from textual.widgets    import ListView, ListItem, Label, Static
+from textual.containers import Horizontal
 from core.logger     import logger
+from data.type_chart import TYPE_CHART
+from core.colors     import markup
+
+_TYPE_BASE = {
+    "Normal":   "#888888",
+    "Fire":     "#dd4400",
+    "Water":    "#2288cc",
+    "Electric": "#ccaa00",
+    "Grass":    "#228833",
+    "Ice":      "#44aacc",
+    "Fighting": "#882200",
+    "Poison":   "#882288",
+    "Ground":   "#aa8833",
+    "Flying":   "#6688cc",
+    "Psychic":  "#cc2266",
+    "Bug":      "#668822",
+    "Rock":     "#888844",
+    "Ghost":    "#554488",
+    "Dragon":   "#4422cc",
+    "Dark":     "#443322",
+    "Steel":    "#888899",
+}
+
+def _make_type_colors(base: dict) -> dict:
+    """
+    Derive bg, fg, and text from a base color per type.
+    bg  = base color (for badge background)
+    fg  = white or black depending on brightness
+    text = lighter version of base (for colored text)
+    """
+    from textual.color import Color
+    result = {}
+    for type_name, hex_color in base.items():
+        color      = Color.parse(hex_color)
+        # lighten for text by blending with white
+        lightened  = color.blend(Color.parse("#ffffff"), 0.4)
+        # fg is white for dark colors, black for light ones
+        brightness = (color.r * 299 + color.g * 587 + color.b * 114) / 1000
+        fg         = "#111111" if brightness > 128 else "#ffffff"
+        result[type_name] = {
+            "bg":   hex_color,
+            "fg":   fg,
+            "text": lightened.hex,
+        }
+    return result
+
+TYPE_COLORS = _make_type_colors(_TYPE_BASE)
 
 class MenuUIMixin:
     """Handles action pane menu state switching."""
@@ -9,17 +57,99 @@ class MenuUIMixin:
         self.query_one("#menu-moves").display = False
         self.query_one("#menu-party").display = False
         self.query_one("#menu-items").display = False
+        self.query_one("#detail-pane").display = False
         self.query_one("#action-pane").border_title = "actions"
 
     def show_move_menu(self) -> None:
         move_list = self.query_one("#menu-moves", ListView)
         move_list.clear()
+
+        defender_types = self.npc.active().type
+
         for move in self.player.active().moveset:
-            move_list.append(ListItem(Label(f"{move.name}  PP: {move.pp}")))
+            effectiveness = self._get_effectiveness(move, defender_types)
+            eff_markup    = self._effectiveness_markup(effectiveness)
+            cat_markup    = self._category_markup(move.category)
+
+            item = ListItem(
+                Label(move.name, classes="move-name"),
+                Label(f"{cat_markup}  {eff_markup}", classes="move-tags", markup=True),
+            )
+            move_list.append(item)
+
         move_list.append(ListItem(Label("Cancel")))
         self.query_one("#menu-main").display  = False
         self.query_one("#menu-moves").display = True
         self.query_one("#action-pane").border_title = "moves"
+
+    def _type_markup(self, move_type: str) -> str:
+
+        short_names = {
+            "Normal":   "Norm",
+            "Fire":     "Fire",
+            "Water":    "Water",
+            "Electric": "Elctr",
+            "Grass":    "Grass",
+            "Ice":      "Ice",
+            "Fighting": "Fight",
+            "Poison":   "Psn",
+            "Ground":   "Grnd",
+            "Flying":   "Fly",
+            "Psychic":  "Psyc",
+            "Bug":      "Bug",
+            "Rock":     "Rock",
+            "Ghost":    "Ghost",
+            "Dragon":   "Drag",
+            "Dark":     "Dark",
+            "Steel":    "Steel",
+        }
+
+        colors = TYPE_COLORS.get(move_type, {"bg": "#555577", "fg": "#ffffff"})
+        bg     = colors["bg"]
+        fg     = colors["fg"]
+        short  = short_names.get(move_type, move_type[:5])
+        padded = f" {short:<6}"
+        return f"[on {bg}][{fg}]{padded}[/{fg}][/on {bg}]"
+
+    def _pp_markup(self, move) -> str:
+        if move.pp == 0:
+            return f"[#cc4444]PP:{move.pp}[/#cc4444]"
+        else:
+            return f"[#555577]PP:{move.pp}[/#555577]"
+
+    def _get_effectiveness(self, move, defender_types: list[str]) -> float:
+        from data.type_chart import TYPE_CHART 
+        if move.category == "status":
+            return 1.0
+        multiplier = 1.0
+        for dtype in defender_types:
+            multiplier *= TYPE_CHART.get(move.type[0], {}).get(dtype, 1.0)
+        return multiplier
+
+    def _effectiveness_markup(self, effectiveness: float) -> str:
+        if effectiveness == 0:
+            return f"[#444455]▐[/#444455][on #444455][#888899] 0× [/#888899][/on #444455][#444455]▌[/#444455]"
+        elif effectiveness < 1:
+            return f"[#6e3030]▐[/#6e3030][on #6e3030][#f38ba8] 1/2× [/#f38ba8][/on #6e3030][#6e3030]▌[/#6e3030]"
+        elif effectiveness > 1:
+            return f"[#304e30]▐[/#304e30][on #304e30][#a6e3a1] 2× [/#a6e3a1][/on #304e30][#304e30]▌[/#304e30]"
+        else:
+            return f"[#444455]▐[/#444455][on #444455][#888899] 1× [/#888899][/on #444455][#444455]▌[/#444455]"
+
+    def _category_markup(self, category: str) -> str:
+        labels = {
+            "physical": "Phys",
+            "special":  "Spec",
+            "status":   "Stat",
+        }
+        colors = {
+            "physical": "#f38ba8",
+            "special":  "#89b4fa",
+            "status":   "#a6e3a1",
+        }
+        lbl   = labels.get(category, category[:4])
+        color = colors.get(category, "#888899")
+        return f"[{color}]{lbl}[/{color}]"
 
     def show_party_menu(self) -> None:
         party_list = self.query_one("#menu-party", ListView)
@@ -80,3 +210,58 @@ class MenuUIMixin:
                     self.log_message(f"Go, {pokemon.name}!")
                     self.update_display()
                     self.show_main_menu()
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        """Update detail pane when highlighted item changes."""
+        if event.list_view.id != "menu-moves":
+            return
+        if event.item is None:
+            return
+
+        idx     = event.list_view.index
+        moveset = self.player.active().moveset
+        if idx is None or idx >= len(moveset):
+            return
+
+        move = moveset[idx]
+        self._show_move_detail(move)
+
+    def _show_move_detail(self, move) -> None:
+        type_key   = move.type[0].strip().capitalize()
+        type_color = TYPE_COLORS.get(type_key, {}).get("text", "#aaaacc")
+        acc        = "—" if move.acc is None else f"{int(move.acc * 100)}%"
+
+        rows = [
+            ("Type",     move.type[0],                          type_color),
+            ("Power",    str(move.power) if move.power else "—", "#ccccee"),
+            ("Accuracy", acc,                                    "#ccccee"),
+            ("PP",       str(move.pp),                          "#ccccee"),
+        ]
+        if move.priority != 0:
+            rows.append(("Priority", str(move.priority),        "#ccccee"))
+        if move.recoil > 0:
+            rows.append(("Recoil",   f"{int(move.recoil * 100)}%", "#f38ba8"))
+        if move.status_effect:
+            rows.append(("Effect",   move.status_effect.name,   "#f9e2af"))
+        if move.multi_turn:
+            rows.append(("Effect",   "Charge → invulnerable",   "#f9e2af"))
+        if move.flinch_chance > 0:
+            rows.append(("Flinch",   f"{int(move.flinch_chance * 100)}%", "#fab387"))
+
+        self.query_one("#detail-name", Label).update(f"[bold]{move.name}[/bold]")
+
+        grid = self.query_one("#detail-grid")
+        grid.remove_children()
+        for label, value, color in rows:
+            grid.mount(Label(label, classes="detail-label"))
+            grid.mount(Label(f"[{color}]{value}[/{color}]", classes="detail-value", markup=True))
+
+        # update description label separately
+        desc_label = self.query_one("#detail-description", Label)
+        if move.description:
+            desc_label.update(f"[#aaaacc]{move.description}[/#aaaacc]")
+            desc_label.display = True
+        else:
+            desc_label.display = False
+
+        self.query_one("#detail-pane").display = True

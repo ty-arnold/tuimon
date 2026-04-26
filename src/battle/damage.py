@@ -1,7 +1,7 @@
 import random
 from typing import Optional
 from models import Move, Trainer, Pokemon
-from data import type_chart, crit_rate_table
+from data import TYPE_CHART, crit_rate_table
 from battle.modifiers import get_modifier_value
 from battle.move_effects import get_screen_modifier
 from core.logger import logger
@@ -12,7 +12,7 @@ def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
     multiplier = 1
 
     for defender_type in defender_types:
-        multiplier *= type_chart.get(move_type, {}).get(defender_type, 1)
+        multiplier *= TYPE_CHART.get(move_type, {}).get(defender_type, 1)
     return multiplier
 
 def apply_damage(

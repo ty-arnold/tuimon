@@ -43,6 +43,7 @@ MESSAGES = {
 
 MESSAGE_COLORS = {
     "battle_start":    "info",
+    "target_effect":   "move",
     "move_used":       "move",
     "took_damage":     "damage",
     "super_effective": "super",
@@ -55,4 +56,6 @@ MESSAGE_COLORS = {
     "fainted":         "fainted",
     "won":             "win",
     "lost":            "lose",
+    "flying_hit":      "move",
+    "invuln_hit":      "move",
 }

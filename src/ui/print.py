@@ -3,6 +3,7 @@ from pokemon.pokemon_factory import create_pokemon_from_api
 from core.logger import logger
 from core.game_print import game_print
 from models import Pokemon, StatusEffect
+from core.colors import log_color
 
 def print_actions(trainer):
     while True:
@@ -58,17 +59,17 @@ def print_stat_changes(old_stats):
     }
 
     for stat, old_value, target, actual_change in old_stats:
-        if stat in stat_messages:
-            if actual_change == 0:
-                display_name = stat_name.get(stat, stat)
-                game_print(f"{target.name}'s {display_name} won't go any further!")
-            else:
-                up_message, down_message = stat_messages[stat]
-                amount = stage_amount.get(abs(actual_change), " drastically")
-                if actual_change > 0:
-                    game_print(f"{target.name}{up_message}{amount}!")
-                elif actual_change < 0:
-                    game_print(f"{target.name}{down_message}{amount}!")
+            if stat in stat_messages:
+                if actual_change == 0:
+                    display_name = stat_name.get(stat, stat)
+                    game_print(log_color("status", f"{target.name}'s {display_name} won't go any further!"))
+                else:
+                    up_message, down_message = stat_messages[stat]
+                    amount = stage_amount.get(abs(actual_change), " drastically")
+                    if actual_change > 0:
+                        game_print(log_color("status", f"{target.name}{up_message}{amount}!"))
+                    elif actual_change < 0:
+                        game_print(log_color("status", f"{target.name}{down_message}{amount}!"))
  
 def print_status_effect(target: Pokemon, effect: Optional[StatusEffect], result: str) -> None:
 

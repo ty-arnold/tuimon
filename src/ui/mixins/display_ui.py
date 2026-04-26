@@ -8,42 +8,51 @@ class DisplayUIMixin:
         npc    = self.npc.active()
         player = self.player.active()
 
+        # NPC panel
+        self.query_one("#npc-name",   Label).update(f"[bold]{npc.name}[/bold]  [dim]Lv.{npc.lvl}[/dim]")
+        self.query_one("#npc-type",   Label).update(" / ".join(npc.type))
+        self.query_one("#npc-status", Label).update(self._format_status(npc))
+        self.query_one("#npc-stages", Label).update(self._format_stages(npc))
+        self.query_one("#npc-stats",  Label).update(self._format_stats(npc))
+
+        npc_pct = int((npc.hp / npc.max_hp) * 100)
+        self.query_one("#npc-hp-bar", ProgressBar).update(progress=npc_pct)
+        self._update_hp_bar_color("#npc-hp-bar", npc_pct)
+
         self.query_one("#npc-panel").border_title    = npc.name
         self.query_one("#npc-panel").border_subtitle = f"HP: {npc.hp}/{npc.max_hp}"
-        self.query_one("#npc-name",  Label).update(f"[bold]{npc.name}[/bold]")
-        self.query_one("#npc-type",  Label).update(" / ".join(npc.type))
-        npc_status = npc.major_status.name if npc.major_status else ""
-        self.query_one("#npc-status",  Label).update(npc_status)
-        self.query_one("#npc-stages",  Label).update(self._format_stages(npc))
-        self.query_one("#npc-stats",   Label).update(self._format_stats(npc))
+
+        # Player panel
+        player_spd = player.get_stat("stat_spd")
+        npc_spd    = npc.get_stat("stat_spd")
+
+        if player_spd > npc_spd:
+            speed_str = f"[#a6e3a1]▶ goes first[/#a6e3a1]  SPD {player_spd} vs {npc_spd}"
+        elif player_spd < npc_spd:
+            speed_str = f"[#f38ba8]▶ goes second[/#f38ba8]  SPD {player_spd} vs {npc_spd}"
+        else:
+            speed_str = f"[#f9e2af]▶ speed tie[/#f9e2af]  SPD {player_spd}"
+
+        self.query_one("#player-name",   Label).update(f"[bold]{player.name}[/bold]  [dim]Lv.{player.lvl}[/dim]")
+        self.query_one("#player-type",   Label).update(" / ".join(player.type))
+        self.query_one("#player-status", Label).update(self._format_status(player))
+        self.query_one("#player-stages", Label).update(self._format_stages(player))
+        self.query_one("#player-pp",     Label).update(self._format_pp(player))
+        self.query_one("#player-stats",  Label).update(speed_str)
+
+        player_pct = int((player.hp / player.max_hp) * 100)
+        self.query_one("#player-hp-bar", ProgressBar).update(progress=player_pct)
+        self._update_hp_bar_color("#player-hp-bar", player_pct)
 
         self.query_one("#player-panel").border_title    = player.name
         self.query_one("#player-panel").border_subtitle = f"HP: {player.hp}/{player.max_hp}"
-        self.query_one("#player-name", Label).update(f"[bold]{player.name}[/bold]")
-        self.query_one("#player-type", Label).update(" / ".join(player.type))
-        player_status = player.major_status.name if player.major_status else ""
-        self.query_one("#player-status", Label).update(player_status)
-        self.query_one("#player-stages", Label).update(self._format_stages(player))
-        self.query_one("#player-pp",     Label).update(self._format_pp(player))
 
         self.query_one("#sprite-npc-label",    Static).update(npc.name)
         self.query_one("#sprite-player-label", Static).update(player.name)
-
-        self.query_one("#combat-log-panel").border_subtitle = (
-            f"turn {self.controller.turn}"
-        )
-        npc_pct    = int((npc.hp    / npc.max_hp)    * 100)
-        player_pct = int((player.hp / player.max_hp) * 100)
-
-        self.query_one("#npc-hp-bar",    ProgressBar).update(progress=npc_pct)
-        self.query_one("#player-hp-bar", ProgressBar).update(progress=player_pct)
-        self.query_one("#npc-status",    Label).update(self._format_status(npc))
-        self.query_one("#player-status", Label).update(self._format_status(player))
-
-        self._update_hp_bar_color("#npc-hp-bar",    npc_pct)
-        self._update_hp_bar_color("#player-hp-bar", player_pct)
+        self.query_one("#combat-log-panel").border_subtitle = f"turn {self.controller.turn}"
 
     def _format_stages(self, pokemon) -> str:
+        from core.colors import stage_markup
         stages = {
             "ATK": pokemon.stage_attk,
             "DEF": pokemon.stage_def,

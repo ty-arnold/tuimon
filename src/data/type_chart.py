@@ -1,4 +1,4 @@
-type_chart = {
+TYPE_CHART = {
     "Normal": {
         "Rock": 0.5,
         "Ghost": 0,

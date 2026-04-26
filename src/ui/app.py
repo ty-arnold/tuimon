@@ -23,6 +23,6 @@ class TuimonApp(App):
     def on_mount(self) -> None:
         self.register_theme(TUIMON_DARK)
         self.register_theme(CATPPUCCIN_MOCHA)
-        self.theme = "catppuccin-mocha"
+        self.theme = "tuimon-dark"
         from ui.screens.title_screen import TitleScreen
         self.push_screen(TitleScreen())

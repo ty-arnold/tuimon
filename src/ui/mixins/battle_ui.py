@@ -2,6 +2,7 @@ import asyncio
 from textual.widgets import RichLog, ProgressBar
 from core.game_print import start_buffering, stop_buffering, HpSnapshot
 from core.logger     import logger
+from textual.color import Gradient
 
 MESSAGE_DELAY = 0.30
 HP_ANIM_SPEED = 1.0
@@ -41,8 +42,9 @@ class BattleUIMixin:
         widget_id: str,
         start_pct: int,
         end_pct:   int,
-        duration:  float = HP_ANIM_SPEED
+        duration:  float = 0.5
     ) -> None:
+        from textual.color import Gradient
         bar   = self.query_one(widget_id, ProgressBar)
         steps = abs(start_pct - end_pct)
         if steps == 0:
@@ -50,10 +52,19 @@ class BattleUIMixin:
         delay     = duration / steps
         direction = -1 if end_pct < start_pct else 1
         current   = start_pct
+
         for _ in range(steps):
             current += direction
             bar.update(progress=current)
-            self._update_hp_bar_color(widget_id, current)
+
+            if current > 50:
+                color = "#44cc44"
+            elif current > 25:
+                color = "#ccaa22"
+            else:
+                color = "#cc4444"
+            bar.gradient = Gradient.from_colors(color, color)
+
             await asyncio.sleep(delay)
 
     def _get_hp_widget_id(self, pokemon_name: str) -> str | None:
@@ -62,6 +73,20 @@ class BattleUIMixin:
         elif pokemon_name == self.player.active().name:
             return "#player-hp-bar"
         return None
+
+    def _update_hp_bar_color(self, widget_id: str, pct: int) -> None:
+        bar = self.query_one(widget_id, ProgressBar)
+
+        if pct > 50:
+            color = "#44cc44"
+        elif pct > 25:
+            color = "#ccaa22"
+        else:
+            color = "#cc4444"
+
+        # gradient with same color start and end = solid color
+        bar.styles.color = color
+        bar.gradient = Gradient.from_colors(color, color)
 
     def _set_input_enabled(self, enabled: bool) -> None:
         self._input_enabled = enabled
