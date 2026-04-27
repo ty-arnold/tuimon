@@ -128,13 +128,13 @@ class MenuUIMixin:
 
     def _effectiveness_markup(self, effectiveness: float) -> str:
         if effectiveness == 0:
-            return f"[#444455]▐[/#444455][on #444455][#888899] 0× [/#888899][/on #444455][#444455]▌[/#444455]"
+            return "[#555577]0×[/#555577]"
         elif effectiveness < 1:
-            return f"[#6e3030]▐[/#6e3030][on #6e3030][#f38ba8] 1/2× [/#f38ba8][/on #6e3030][#6e3030]▌[/#6e3030]"
+            return "[#f38ba8]½×[/#f38ba8]"
         elif effectiveness > 1:
-            return f"[#304e30]▐[/#304e30][on #304e30][#a6e3a1] 2× [/#a6e3a1][/on #304e30][#304e30]▌[/#304e30]"
+            return "[bold][#a6e3a1]2×[/#a6e3a1][/bold]"
         else:
-            return f"[#444455]▐[/#444455][on #444455][#888899] 1× [/#888899][/on #444455][#444455]▌[/#444455]"
+            return "[#555577]1×[/#555577]"
 
     def _category_markup(self, category: str) -> str:
         labels = {
@@ -177,7 +177,7 @@ class MenuUIMixin:
                         self.controller.select_player_move(move)
                         self.controller.select_npc_move()
                         self.show_main_menu()
-                        self.run_worker(self.resolve_and_display())
+                        self.run_worker(self.resolve_and_display(), thread=False)
                     else:
                         self.show_move_menu()
                 case 1: self.show_party_menu()
@@ -190,10 +190,12 @@ class MenuUIMixin:
                 self.show_main_menu()
             else:
                 move = moveset[idx]
+                # these MUST happen before run_worker
                 self.controller.select_player_move(move)
                 self.controller.select_npc_move()
                 self.show_main_menu()
-                self.run_worker(self.resolve_and_display())
+                # worker starts AFTER moves are selected
+                self.run_worker(self.resolve_and_display(), thread=False)
 
         elif event.list_view.id == "menu-party":
             party = self.player.party
@@ -235,7 +237,7 @@ class MenuUIMixin:
             ("Type",     move.type[0],                          type_color),
             ("Power",    str(move.power) if move.power else "—", "#ccccee"),
             ("Accuracy", acc,                                    "#ccccee"),
-            ("PP",       str(move.pp),                          "#ccccee"),
+            ("PP",       f"{move.pp}/{move.max_pp}",             "#ccccee"),
         ]
         if move.priority != 0:
             rows.append(("Priority", str(move.priority),        "#ccccee"))

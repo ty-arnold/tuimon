@@ -18,13 +18,15 @@ class HpSnapshot:
     pokemon_name: str
     start_pct:    int
     end_pct:      int
+    max_hp:       int
 
-def record_hp_change(pokemon_name: str, start_pct: int, end_pct: int) -> None:
+def record_hp_change(pokemon_name: str, start_pct: int, end_pct: int, max_hp: int) -> None:
     if _buffering:
         _message_buffer.append(HpSnapshot(
             pokemon_name = pokemon_name,
             start_pct    = start_pct,
-            end_pct      = end_pct
+            end_pct      = end_pct,
+            max_hp       = max_hp,
         ))
 
 def set_output_handler(handler: Callable[[str], None]) -> None:

@@ -1,5 +1,6 @@
 # ui/app.py
 from textual.app    import App
+from textual.screen import Screen
 from models.trainer import Trainer
 from ui.theme       import TUIMON_DARK, CATPPUCCIN_MOCHA
 

@@ -119,6 +119,7 @@ def dict_to_move(data: dict) -> Move:
         category           = data["category"],
         power              = data["power"],
         pp                 = data["pp"],
+        max_pp             = data.get("pp", 20),
         acc                = data.get("acc", None),
         stat_change        = data.get("stat_change",       {}),
         stat_change_chance = data.get("stat_change_chance", 1.0),

@@ -1,5 +1,6 @@
 # ui/screens/title_screen.py
 import os
+from textual.app        import App
 from textual.screen     import Screen
 from textual.app        import ComposeResult
 from textual.widgets    import Static, Footer, ListView, ListItem, Label

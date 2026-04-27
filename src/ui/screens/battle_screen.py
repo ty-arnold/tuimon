@@ -1,15 +1,16 @@
 import os
 import asyncio
-from textual.screen     import Screen
 from textual.app        import ComposeResult
-from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label, ProgressBar
+from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label
 from textual.containers import Horizontal, Vertical, Container, Grid
+from textual.screen     import Screen
 from models.trainer     import Trainer
 from battle.controller  import BattleController
-from core.game_print    import set_async_queue, game_print
-from core.messages      import msg
+from core.game_print    import game_print, set_async_queue
 from core.logger        import logger
+from core.messages      import msg
 from core.battle_state  import BattlePhase
+from ui.widgets.hp_bar  import HpBar
 
 from ui.mixins.battle_ui     import BattleUIMixin
 from ui.mixins.menu_ui       import MenuUIMixin
@@ -54,17 +55,19 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                     with Container(id="detail-pane"):
                         yield Label("", id="detail-name")
                         yield Grid(id="detail-grid")
-                        yield Label("",  id="detail-description", markup=True)
+                        yield Label("", id="detail-description", markup=True)
                 with Container(id="combat-log-panel"):
                     yield RichLog(id="combat-log", markup=True)
             with Vertical(id="right-col"):
                 with Container(id="npc-panel"):
-                    yield Label("", id="npc-name")
+                    with Horizontal():
+                        yield Label("", id="npc-name")
+                        yield Label("", id="npc-level")
                     yield Label("", id="npc-type")
-                    yield ProgressBar(id="npc-hp-bar", total=100, show_eta=False)
+                    yield HpBar(id="npc-hp-bar")
                     yield Label("", id="npc-status")
-                    yield Label("", id="npc-stages")
-                    yield Label("", id="npc-stats")
+                    yield Static("", id="npc-stats")
+                    yield Label("", id="npc-effects")
                 with Horizontal(id="sprite-panel"):
                     with Vertical(id="sprite-npc-wrap"):
                         yield Static("", id="sprite-npc")
@@ -74,13 +77,14 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                         yield Static("", id="sprite-player")
                         yield Static("", id="sprite-player-label")
                 with Container(id="player-panel"):
-                    yield Label("", id="player-name")
+                    with Horizontal():
+                        yield Label("", id="player-name")
+                        yield Label("", id="player-level")
                     yield Label("", id="player-type")
-                    yield ProgressBar(id="player-hp-bar", total=100, show_eta=False)
+                    yield HpBar(id="player-hp-bar")
                     yield Label("", id="player-status")
-                    yield Label("", id="player-stages")
-                    yield Label("", id="player-stats")
-                    yield Label("", id="player-pp")
+                    yield Static("", id="player-stats")
+                    yield Label("", id="player-effects")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -97,14 +101,27 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#menu-items").display = False
         self.query_one("#detail-pane").display = False
 
+        self.query_one("#npc-type").styles.margin      = (0, 0, 1, 0)
+        self.query_one("#player-type").styles.margin   = (0, 0, 1, 0)
+        self.query_one("#npc-panel").styles.padding    = (1, 1, 0, 1)
+        self.query_one("#player-panel").styles.padding = (1, 1, 0, 1)
+        self.query_one("#npc-effects").styles.margin    = (1, 0, 0, 0)
+        self.query_one("#player-effects").styles.margin = (1, 0, 0, 0)
+
         self.update_display()
 
-    def on_ready(self) -> None:
         self.set_timer(0.2, self._start_battle)
+
+    def _debug_hp_bar(self) -> None:
+        bar = self.query_one("#npc-hp-bar")
+        logger.debug(f"HpBar type: {type(bar)}")
+        logger.debug(f"HpBar region: {bar.region}")
+        logger.debug(f"HpBar children: {list(bar.query('*'))}")
+        for child in bar.query("*"):
+            logger.debug(f"  child: {child.__class__.__name__} region={child.region}")
 
     def _start_battle(self) -> None:
         game_print(msg("battle_start"))
-        self.run_worker(self.drain_queue())
 
     def action_fight(self) -> None:
         if not self._input_enabled:
@@ -112,14 +129,13 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         if self.controller.phase != BattlePhase.PLAYER_ACTION:
             return
 
-        # if locked into a multi turn move, skip menu and use locked move
-        if self.player.locked_move is not None:
-            move = self.player.locked_move
-            self.player.locked_turns -= 1
-            self.controller.select_player_move(move)
+        locked = self.controller.get_player_move()
+        if locked is not None:
+            # select moves BEFORE starting worker
+            self.controller.select_player_move(locked)
             self.controller.select_npc_move()
             self.show_main_menu()
-            self.run_worker(self.resolve_and_display())
+            self.run_worker(self.resolve_and_display(), thread=False)
         else:
             self.show_move_menu()
 

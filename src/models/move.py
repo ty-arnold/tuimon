@@ -29,6 +29,7 @@ class Move:
         power:              int,
         acc:                Optional[float]        = None,
         pp:                 int                    = 20,
+        max_pp:             int                    = 20,
         stat_change:        Optional[dict]         = None,
         recoil:             float                  = 0.0,
         lifesteal:          float                  = 0.0,
@@ -54,6 +55,7 @@ class Move:
         self.power:              int                      = power # Base damage number for move
         self.acc:                Optional[float]          = acc # Accuracy, 1.0 being the default
         self.pp:                 int                      = pp # Power points, amount of move uses left
+        self.max_pp:             int                      = max_pp
         self.stat_change:        dict                     = stat_change or {} # Changes to the stat stage. Can be self or opponent, -6 to +6. Ex. "opponent": {"stat_attk": -1}
         self.stat_change_chance: float                    = stat_change_chance # Default 1.0, chance for stat change to apply
         self.recoil:             float                    = recoil # Self damage if move hits

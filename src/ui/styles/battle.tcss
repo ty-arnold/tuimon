@@ -1,12 +1,5 @@
 /* ui/styles/battle.tcss */
 
-#npc-name, #npc-type, #npc-status, #npc-stages, #npc-stats,
-#player-name, #player-type, #player-status, #player-stages,
-#player-stats, #player-pp, #sprite-npc-label, #sprite-player-label,
-#detail-name {
-    color: $text;
-}
-
 Screen {
     background: $background;
     color: $text;
@@ -17,13 +10,15 @@ Screen {
     padding: 1;
 }
 
+/* ── Left Column ──────────────────────────── */
+
 #left-col {
     width: 1fr;
     margin-right: 1;
 }
 
 #action-pane {
-    height: 1fr;
+    height: 5fr;
     border: round $primary;
     border-title-color: $primary;
     border-title-align: left;
@@ -32,11 +27,11 @@ Screen {
 }
 
 #combat-log-panel {
-    height: 17;
+    height: 3fr;
     border: round $secondary;
     border-title-color: $text-muted;
     border-title-align: left;
-    background: $background;    /* match screen bg instead of darker color */
+    background: $background;
     padding: 0 1;
 }
 
@@ -44,6 +39,8 @@ Screen {
     background: transparent;
     scrollbar-size: 0 0;
 }
+
+/* ── Right Column ─────────────────────────── */
 
 #right-col {
     width: 1.6fr;
@@ -54,17 +51,25 @@ Screen {
     border: round #773388;
     border-title-color: #cc88dd;
     border-title-align: left;
-    padding: 1 2;
+    padding: 0 1;
     margin-bottom: 1;
 }
 
 #sprite-panel {
     height: 10;
     border: round $secondary;
-    background: $background;    /* match screen bg */
+    background: $background;
     padding: 0 2;
     margin-bottom: 1;
     align: center middle;
+}
+
+#player-panel {
+    height: 1fr;
+    border: round #336633;
+    border-title-color: #66cc66;
+    border-title-align: left;
+    padding: 0 1;
 }
 
 #sprite-npc-wrap {
@@ -84,48 +89,69 @@ Screen {
     content-align: center middle;
 }
 
-#sprite-npc {
-    color: #884499;
+#sprite-npc   { color: #884499; }
+#sprite-player { color: #336633; }
+
+/* ── Panel content ────────────────────────── */
+
+#npc-panel Label,
+#player-panel Label {
+    margin: 0;
+    padding: 0;
 }
 
-#sprite-player {
-    color: #336633;
+#npc-panel Static,
+#player-panel Static {
+    margin: 0;
+    padding: 0;
 }
 
-#player-panel {
-    height: 1fr;
-    border: round #336633;
-    border-title-color: #66cc66;
-    border-title-align: left;
-    padding: 1 2;
+#npc-panel Horizontal,
+#player-panel Horizontal {
+    height: 1;
+    margin: 0;
+    padding: 0;
 }
+
+#npc-name, #player-name {
+    width: 1fr;
+}
+
+#npc-level, #player-level {
+    width: auto;
+    color: $text-muted;
+}
+
+#npc-status, #player-status {
+    height: 1;
+    margin: 0;
+    padding: 0;
+}
+
+#npc-panel #npc-stats,
+#player-panel #player-stats {
+    width: 100%;
+    height: 2;
+    margin-top: 1;
+}
+
+#npc-effects, #player-effects {
+    margin-top: 1;
+    height: 1;
+    margin: 0;
+    padding: 0;
+}
+
+/* ── Action pane menus ────────────────────── */
 
 #menu-moves, #menu-party, #menu-items {
     display: none;
-}
-
-#menu-moves ListItem {
-    layout: horizontal;
-    height: 1;
-    padding: 0 1;
-}
-
-.move-name {
-    width: 1fr;
-    color: $text;
-}
-
-.move-tags {
-    width: auto;
-    text-align: right;
-    color: $text-muted;
 }
 
 #detail-pane {
     display: none;
     background: $surface;
     padding: 1 2;
-    margin-top: 0;
     border: round $secondary;
     height: auto;
 }
@@ -155,23 +181,18 @@ Screen {
     content-align: right middle;
 }
 
-.detail-label {
-    color: $text-muted;
-    width: auto;
-    padding-right: 2;
-}
-
-.detail-value {
-    text-align: right;
-    width: 100%;
-    content-align: right middle;
-    /* remove color: $text — let Rich markup control it */
-}
-
 #detail-description {
     margin-top: 1;
     width: 100%;
 }
+
+#npc-name, #npc-level, #npc-type, #npc-status,
+#player-name, #player-level, #player-type, #player-status,
+#sprite-npc-label, #sprite-player-label, #detail-name {
+    color: $text;
+}
+
+/* ── Menus ────────────────────────────────── */
 
 ListView {
     background: transparent;
@@ -195,18 +216,30 @@ ListItem.--highlight {
     color: $text;
 }
 
-ProgressBar {
+.move-name {
+    width: 1fr;
+    color: $text;
+}
+
+.move-tags {
+    width: auto;
+    text-align: right;
+    color: $text-muted;
+}
+
+#menu-moves ListItem {
+    layout: horizontal;
+    height: 1;
+    padding: 0 1;
+}
+
+/* ── HP bars ──────────────────────────────── */
+
+#npc-hp-bar, #player-hp-bar {
     width: 1fr;
 }
 
-ProgressBar > .bar--bar {
-    color: $success;
-}
-
-
-ProgressBar {
-    width: 1fr;
-}
+/* ── Footer ───────────────────────────────── */
 
 Footer {
     background: $surface;

@@ -39,7 +39,8 @@ def apply_damage(
     record_hp_change(
         pokemon_name = target.name,
         start_pct    = int((hp_before  / target.max_hp) * 100),
-        end_pct      = int((target.hp  / target.max_hp) * 100)
+        end_pct      = int((target.hp  / target.max_hp) * 100),
+        max_hp       = target.max_hp,
     )
 
     if multiplier == 0:
