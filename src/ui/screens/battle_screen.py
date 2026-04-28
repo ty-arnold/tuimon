@@ -1,7 +1,7 @@
 import os
 import asyncio
 from textual.app        import ComposeResult
-from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label, Rule
+from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label, Rule, Tabs, Tab
 from textual.containers import Horizontal, Vertical, Container, Grid
 from textual.screen     import Screen
 from models.trainer     import Trainer
@@ -26,12 +26,15 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
     )
 
     BINDINGS = [
-        ("f",      "fight",  "Fight"),
-        ("p",      "party",  "Party"),
-        ("b",      "bag",    "Bag"),
-        ("r",      "run",    "Run"),
-        ("escape", "cancel", "Cancel"),
-        ("q",      "quit",   "Quit"),
+        ("left",   "prev_tab", ""),
+        ("right",  "next_tab", ""),
+        ("enter",  "confirm",  ""),
+        ("f",      "fight",    "Fight"),
+        ("p",      "party",    "Party"),
+        ("b",      "bag",      "Bag"),
+        ("r",      "run",      "Run"),
+        ("escape", "cancel",   "Cancel"),
+        ("q",      "quit",     "Quit"),
     ]
 
     def __init__(self, player: Trainer, npc: Trainer) -> None:
@@ -39,16 +42,20 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.player         = player
         self.npc            = npc
         self._input_enabled = True
+        self._battle_ready  = False
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main"):
             with Vertical(id="left-col"):
                 with Container(id="action-pane"):
-                    with ListView(id="menu-main"):
-                        yield ListItem(Label("Moves"), id="action-moves")
-                        yield ListItem(Label("Party"), id="action-party")
-                        yield ListItem(Label("Items"), id="action-items")
-                        yield ListItem(Label("Run"),   id="action-run")
+                    yield Tabs(
+                        Tab("Moves", id="tab-moves"),
+                        Tab("Party", id="tab-party"),
+                        Tab("Items", id="tab-items"),
+                        Tab("Run",   id="tab-run"),
+                        Tab("Menu",  id="tab-menu"),
+                        id="menu-tabs",
+                    )
                     yield ListView(id="menu-moves")
                     yield Rule(id="menu-moves-rule")
                     yield ListView(id="menu-party")
@@ -100,11 +107,11 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#combat-log-panel").border_title = "log"
         self.query_one("#sprite-panel").border_title     = "vs"
 
-        self.query_one("#menu-moves").display = False
+        self.query_one("#menu-moves").display      = False
         self.query_one("#menu-moves-rule").display = False
-        self.query_one("#menu-party").display = False
-        self.query_one("#menu-items").display = False
-        self.query_one("#detail-pane").display = False
+        self.query_one("#menu-party").display      = False
+        self.query_one("#menu-items").display      = False
+        self.query_one("#detail-pane").display     = False
 
         self.query_one("#npc-type").styles.margin      = (0, 0, 1, 0)
         self.query_one("#player-type").styles.margin   = (0, 0, 1, 0)
@@ -115,6 +122,8 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#action-pane").styles.padding   = (1, 2, 0, 2)
 
         self.update_display()
+        self._battle_ready = True
+        self.show_move_menu()
 
         self._bob_phase = False
         self.set_interval(0.5, self._bob_sprites)
@@ -144,22 +153,20 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
             return
         if self.controller.phase != BattlePhase.PLAYER_ACTION:
             return
-
-        locked = self.controller.get_player_move()
-        if locked is not None:
-            # select moves BEFORE starting worker
-            self.controller.select_player_move(locked)
+        if self.player.locked_move is not None:
+            move = self.player.locked_move
+            self.player.locked_turns -= 1
+            self.controller.select_player_move(move)
             self.controller.select_npc_move()
-            self.show_main_menu()
             self.run_worker(self.resolve_and_display(), thread=False)
         else:
-            self.show_move_menu()
+            self.query_one("#menu-tabs", Tabs).active = "tab-moves"
 
     def action_party(self) -> None:
         if not self._input_enabled:
             return
         if self.controller.phase == BattlePhase.PLAYER_ACTION:
-            self.show_party_menu()
+            self.query_one("#menu-tabs", Tabs).active = "tab-party"
 
     def action_bag(self) -> None:
         if not self._input_enabled:
@@ -168,5 +175,18 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
     def action_quit(self) -> None:
         self.app.exit()
 
+    def action_prev_tab(self) -> None:
+        if self._input_enabled:
+            self.query_one("#menu-tabs", Tabs).action_previous_tab()
+
+    def action_next_tab(self) -> None:
+        if self._input_enabled:
+            self.query_one("#menu-tabs", Tabs).action_next_tab()
+
+    def action_confirm(self) -> None:
+        tabs = self.query_one("#menu-tabs", Tabs)
+        match tabs.active:
+            case "tab-run": self.action_quit()
+
     def action_cancel(self) -> None:
-        self.show_main_menu()
+        pass

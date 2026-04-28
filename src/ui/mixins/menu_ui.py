@@ -1,4 +1,4 @@
-from textual.widgets    import ListView, ListItem, Label, Static
+from textual.widgets    import ListView, ListItem, Label, Static, Tabs
 from textual.containers import Horizontal
 from core.logger     import logger
 from data.type_chart import TYPE_CHART
@@ -52,16 +52,38 @@ TYPE_COLORS = _make_type_colors(_TYPE_BASE)
 class MenuUIMixin:
     """Handles action pane menu state switching."""
 
-    def show_main_menu(self) -> None:
-        self.query_one("#menu-main").display  = True
-        self.query_one("#menu-moves").display = False
+    def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
+        if not self._battle_ready:
+            return
+        event.stop()
+        if event.tab is None:
+            return
+        match event.tab.id:
+            case "tab-moves": self.show_move_menu()
+            case "tab-party": self.show_party_menu()
+            case "tab-items" | "tab-run" | "tab-menu":
+                self._show_items()
+                self.set_focus(None)
+
+    def _show_items(self) -> None:
+        self.query_one("#menu-moves").display      = False
         self.query_one("#menu-moves-rule").display = False
-        self.query_one("#menu-party").display = False
-        self.query_one("#menu-items").display = False
-        self.query_one("#detail-pane").display = False
-        self.query_one("#action-pane").border_title = "actions"
+        self.query_one("#menu-party").display      = False
+        self.query_one("#menu-items").display      = False
+        self.query_one("#detail-pane").display     = False
+
+    def show_main_menu(self) -> None:
+        tabs = self.query_one("#menu-tabs", Tabs)
+        match tabs.active:
+            case "tab-moves": self.show_move_menu()
+            case "tab-party": self.show_party_menu()
+            case _:           self._show_items()
 
     def show_move_menu(self) -> None:
+        self.query_one("#menu-party").display      = False
+        self.query_one("#menu-items").display      = False
+        self.query_one("#detail-pane").display     = False
+
         move_list = self.query_one("#menu-moves", ListView)
         move_list.clear()
 
@@ -78,12 +100,11 @@ class MenuUIMixin:
             )
             move_list.append(item)
 
-        move_list.append(ListItem(Label("Cancel")))
-        self.query_one("#menu-main").display  = False
-        self.query_one("#menu-moves").display = True
+        self.query_one("#menu-moves").display      = True
         self.query_one("#menu-moves-rule").display = True
-        self.query_one("#action-pane").border_title = "moves"
+        self.query_one("#action-pane").border_title = "actions"
         move_list.index = 0
+        move_list.focus()
 
     def _type_markup(self, move_type: str) -> str:
 
@@ -226,15 +247,14 @@ class MenuUIMixin:
             )
             party_list.append(ListItem(label))
 
-        cancel = ListItem(Label("Cancel"))
-        cancel.styles.height = "auto"
-        cancel.styles.margin_bottom = 0
-        party_list.append(cancel)
-
-        self.query_one("#menu-main").display  = False
-        self.query_one("#menu-party").display = True
-        self.query_one("#action-pane").border_title = "party"
+        self.query_one("#menu-moves").display      = False
+        self.query_one("#menu-moves-rule").display = False
+        self.query_one("#menu-items").display      = False
+        self.query_one("#detail-pane").display     = False
+        self.query_one("#menu-party").display      = True
+        self.query_one("#action-pane").border_title = "actions"
         party_list.index = 0
+        party_list.focus()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         logger.debug(f"on_list_view_selected: list={event.list_view.id} idx={event.list_view.index}")
@@ -243,24 +263,7 @@ class MenuUIMixin:
             return
         idx = event.list_view.index
 
-        if event.list_view.id == "menu-main":
-            match idx:
-                case 0:
-                    # check lock before showing move menu
-                    if self.player.locked_move is not None:
-                        move = self.player.locked_move
-                        self.player.locked_turns -= 1
-                        self.controller.select_player_move(move)
-                        self.controller.select_npc_move()
-                        self.show_main_menu()
-                        self.run_worker(self.resolve_and_display(), thread=False)
-                    else:
-                        self.show_move_menu()
-                case 1: self.show_party_menu()
-                case 2: pass
-                case 3: self.action_quit()
-
-        elif event.list_view.id == "menu-moves":
+        if event.list_view.id == "menu-moves":
             moveset = self.player.active().moveset
             if idx >= len(moveset):
                 self.show_main_menu()

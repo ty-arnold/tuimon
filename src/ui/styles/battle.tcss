@@ -210,6 +210,10 @@ Screen {
     padding: 0;
 }
 
+#menu-party ListItem:last-of-type {
+    margin-bottom: 0;
+}
+
 #menu-party ListItem.--highlight {
     background: $panel;
 }
@@ -218,6 +222,36 @@ Screen {
 #player-name, #player-level, #player-type, #player-status,
 #sprite-npc-label, #sprite-player-label, #detail-name {
     color: $text;
+}
+
+/* ── Tab bar ─────────────────────────────── */
+
+#menu-tabs {
+    height: 2;
+    background: transparent;
+    margin-bottom: 1;
+}
+
+#menu-tabs Tab {
+    background: transparent;
+    color: $text-muted;
+    padding: 0 2;
+}
+
+#menu-tabs Tab.-active {
+    color: $primary;
+    background: transparent;
+    text-style: bold;
+}
+
+#menu-tabs Tab:hover {
+    color: $text;
+    background: transparent;
+}
+
+#menu-tabs Underline {
+    color: $primary;
+    background: transparent;
 }
 
 /* ── Menus ────────────────────────────────── */
