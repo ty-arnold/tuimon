@@ -111,6 +111,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#player-panel").styles.padding = (1, 1, 0, 1)
         self.query_one("#npc-effects").styles.margin    = (1, 0, 0, 0)
         self.query_one("#player-effects").styles.margin = (1, 0, 0, 0)
+        self.query_one("#action-pane").styles.padding   = (1, 2, 0, 2)
 
         self.update_display()
 

@@ -18,16 +18,18 @@ Screen {
 }
 
 #action-pane {
-    height: 4fr;
+    height: auto;
+    min-height: 62%;
     border: round $primary;
     border-title-color: $primary;
     border-title-align: left;
-    padding: 1 2;
+    padding: 1 2 0 2;
     margin-bottom: 1;
 }
 
 #combat-log-panel {
-    height: 2fr;
+    height: 1fr;     /* ← fills remaining space */
+    
     border: round $secondary;
     border-title-color: $text-muted;
     border-title-align: left;

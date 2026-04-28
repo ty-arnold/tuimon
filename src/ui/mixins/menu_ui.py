@@ -83,6 +83,7 @@ class MenuUIMixin:
         self.query_one("#menu-moves").display = True
         self.query_one("#menu-moves-rule").display = True
         self.query_one("#action-pane").border_title = "moves"
+        move_list.index = 0
 
     def _type_markup(self, move_type: str) -> str:
 
@@ -225,11 +226,15 @@ class MenuUIMixin:
             )
             party_list.append(ListItem(label))
 
-        party_list.append(ListItem(Label("Cancel")))
+        cancel = ListItem(Label("Cancel"))
+        cancel.styles.height = "auto"
+        cancel.styles.margin_bottom = 0
+        party_list.append(cancel)
 
         self.query_one("#menu-main").display  = False
         self.query_one("#menu-party").display = True
         self.query_one("#action-pane").border_title = "party"
+        party_list.index = 0
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         logger.debug(f"on_list_view_selected: list={event.list_view.id} idx={event.list_view.index}")
