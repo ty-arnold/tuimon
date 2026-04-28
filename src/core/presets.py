@@ -35,7 +35,7 @@ def get_test_player() -> Trainer:
     party = [
         get_pokemon("pidgeot", lvl=50, move_names=[
             "fly",
-            "dig",
+            "sand-attack",
             "growl",
             "toxic"
         ]),

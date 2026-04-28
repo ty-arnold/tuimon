@@ -37,8 +37,8 @@ class HpBar(Widget):
         empty     = bar_width - filled
 
         # nerd font half circles - left cap filled color, right cap empty color
-        LEFT_CAP  = "\ue0b6"  # 
-        RIGHT_CAP = "\ue0b4"  # 
+        LEFT_CAP  = "\ue0b6"  #
+        RIGHT_CAP = "\ue0b4"  #
 
         if filled > 0 and empty > 0:
             bar  = f"[{self._color}]{LEFT_CAP}{'█' * filled}[/{self._color}]"

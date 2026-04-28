@@ -8,7 +8,7 @@ from battle.damage import apply_damage, apply_lifesteal, get_type_multiplier
 from battle.move_effects import is_protected, apply_move_effect
 from battle.modifiers import apply_modifier
 from battle.status_effects import apply_status_effect_from_move
-from core.game_print import record_stats_change, record_hp_change
+from core.game_print import record_stats_change, record_hp_change, record_effect_change
 from battle.accumulator import release_accumulator
 from data import acc_table
 
@@ -156,6 +156,9 @@ def handle_multiturn(move: Move, attacker: Trainer) -> bool:
         attacker.locked_turns       = move.multi_turn.turns - 1
         attacker.invulnerable_state = move.multi_turn.invulnerable_state
 
+        if attacker.invulnerable_state is not None:
+            record_effect_change(trainer_name=attacker.name)
+
         if move.multi_turn.charge_turn == 1:
             game_print(msg("target_effect", target=attacker.active().name, message=move.multi_turn.charge_message))
             return True
@@ -249,5 +252,8 @@ def apply_stat_change(move: Move, attacker: Trainer, defender: Trainer, old_stat
 def clear_move_lock(trainer: Trainer) -> None:
     if trainer.locked_move is not None and trainer.locked_turns == 0:
         trainer.active().accumulator = 0
+        had_invulnerable             = trainer.invulnerable_state is not None
         trainer.locked_move          = None
         trainer.invulnerable_state   = None
+        if had_invulnerable:
+            record_effect_change(trainer_name=trainer.name)

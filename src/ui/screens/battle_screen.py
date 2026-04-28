@@ -63,13 +63,13 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                 with Container(id="npc-panel"):
                     with Horizontal():
                         yield Label("", id="npc-name")
+                        yield Label("", id="npc-status")
                         yield Label("", id="npc-level")
                     yield Label("", id="npc-type")
                     yield HpBar(id="npc-hp-bar")
                     yield Rule(name="Stats")
                     yield Static("", id="npc-stats")
                     yield Label("", id="npc-effects")
-                    yield Label("", id="npc-status")
                 with Horizontal(id="sprite-panel"):
                     with Vertical(id="sprite-npc-wrap"):
                         yield Static("", id="sprite-npc")
@@ -81,13 +81,13 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                 with Container(id="player-panel"):
                     with Horizontal():
                         yield Label("", id="player-name")
+                        yield Label("", id="player-status")
                         yield Label("", id="player-level")
                     yield Label("", id="player-type")
                     yield HpBar(id="player-hp-bar")
                     yield Rule(name="Stats")
                     yield Static("", id="player-stats")
                     yield Label("", id="player-effects")
-                    yield Label("", id="player-status")
         yield Footer()
 
     def on_mount(self) -> None:

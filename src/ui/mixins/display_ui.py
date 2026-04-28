@@ -1,6 +1,7 @@
 from textual.widgets import Label, Static, RichLog
 from core.colors import status_markup
 from ui.widgets.hp_bar import HpBar
+from ui.mixins.menu_ui import TYPE_COLORS
 from core.logger import logger
 
 class DisplayUIMixin:
@@ -21,7 +22,7 @@ class DisplayUIMixin:
 
         self.query_one("#npc-name",  Label).update(f"[bold]{npc.name}[/bold]")
         self.query_one("#npc-level", Label).update(f"[dim]Lv.{npc.lvl}[/dim]")
-        self.query_one("#npc-type",  Label).update(" / ".join(npc.type))
+        self.query_one("#npc-type",  Label).update(self._format_types(npc.type))
 
         self.query_one("#npc-hp-bar", HpBar).set_hp(npc.hp, npc.max_hp)
 
@@ -45,7 +46,7 @@ class DisplayUIMixin:
 
         self.query_one("#player-name",  Label).update(f"[bold]{player.name}[/bold]")
         self.query_one("#player-level", Label).update(f"[dim]Lv.{player.lvl}[/dim]")
-        self.query_one("#player-type",  Label).update(" / ".join(player.type))
+        self.query_one("#player-type",  Label).update(self._format_types(player.type))
 
         self.query_one("#player-hp-bar", HpBar).set_hp(player.hp, player.max_hp)
 
@@ -84,6 +85,13 @@ class DisplayUIMixin:
         self.query_one("#combat-log-panel").border_subtitle = (
             f"turn {self.controller.turn}"
         )
+
+    def _format_types(self, types: list[str]) -> str:
+        parts = []
+        for t in types:
+            color = TYPE_COLORS.get(t, {}).get("text", "#aaaacc")
+            parts.append(f"[{color}]{t}[/{color}]")
+        return " [#555577]/[/#555577] ".join(parts)
 
     def _format_stats_combined(self, pokemon) -> "Table":
         from rich.table import Table
@@ -180,14 +188,20 @@ class DisplayUIMixin:
         """Format active field effects and battle states."""
         parts = []
 
-        # invulnerable state
+        # invulnerable state — merge with locked move turn count if both are active
         if trainer.invulnerable_state:
-            parts.append(f"[#4488cc]{trainer.invulnerable_state.capitalize()}[/#4488cc]")
+            if trainer.locked_move and trainer.locked_turns > 0:
+                turns    = trainer.locked_turns
+                turn_str = f"{turns} turn" + ("s" if turns != 1 else "")
+                parts.append(f"[#4488cc]{trainer.invulnerable_state.capitalize()} ({turn_str})[/#4488cc]")
+            else:
+                parts.append(f"[#4488cc]{trainer.invulnerable_state.capitalize()}[/#4488cc]")
 
-        # locked move
-        if trainer.locked_move:
-            turns = trainer.locked_turns
-            parts.append(f"[#4488cc]{trainer.locked_move.name} ({turns}t)[/#4488cc]")
+        # locked move — only show separately when not already shown via invulnerable state
+        elif trainer.locked_move:
+            turns    = trainer.locked_turns
+            turn_str = f"{turns} turn" + ("s" if turns != 1 else "")
+            parts.append(f"[#4488cc]{trainer.locked_move.name} ({turn_str})[/#4488cc]")
 
         # active field effects (screens, protect etc)
         for effect in trainer.active_effects:
