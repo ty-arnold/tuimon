@@ -1,6 +1,7 @@
 # Local Env
 .vscode/
 .DS_Store
+.claude/
 
 # Python
 __pycache__/

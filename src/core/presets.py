@@ -83,9 +83,9 @@ def get_test_npc() -> Trainer:
     party = [
             get_pokemon("blastoise", lvl=50, move_names=[
                 "toxic",
-                "ice-beam",
-                "gust",
-                "withdraw"
+                "toxic",
+                "toxic",
+                "toxic"
             ]),
             get_pokemon("charizard", lvl=50, move_names=[
                 "flamethrower",

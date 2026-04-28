@@ -18,7 +18,7 @@ Screen {
 }
 
 #action-pane {
-    height: 5fr;
+    height: 4fr;
     border: round $primary;
     border-title-color: $primary;
     border-title-align: left;
@@ -27,7 +27,7 @@ Screen {
 }
 
 #combat-log-panel {
-    height: 3fr;
+    height: 2fr;
     border: round $secondary;
     border-title-color: $text-muted;
     border-title-align: left;

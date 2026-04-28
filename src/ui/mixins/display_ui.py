@@ -12,6 +12,9 @@ class DisplayUIMixin:
 
         logger.debug(f"update_display: npc={npc.name} player={player.name}")
 
+        if self.query_one("#menu-party").display:
+            self.show_party_menu()
+
         # ── NPC panel ─────────────────────────────────────────────
         self.query_one("#npc-panel").border_title    = self.npc.name
         # self.query_one("#npc-panel").border_subtitle = f"EXP:"

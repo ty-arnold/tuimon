@@ -161,6 +161,7 @@ class MenuUIMixin:
             is_active  = i == self.player.selected_mon
             is_fainted = not pokemon.is_alive()
             hp_pct     = int((pokemon.hp / pokemon.max_hp) * 100)
+            logger.debug(f"show_party_menu: {pokemon.name} active={is_active} fainted={is_fainted} major_status={pokemon.major_status}")
 
             # colors based on state
             if is_active or is_fainted:
@@ -173,38 +174,48 @@ class MenuUIMixin:
                 bar_char   = "#44cc44" if hp_pct > 50 else "#ccaa22" if hp_pct > 25 else "#cc4444"
 
             # status badge
+            # status badges — collect all that apply and stack them
+            abbrev = {
+                "Burn":      "[on #441100][#ff8844] BRN [/#ff8844][/on #441100]",
+                "Poison":    "[on #220044][#bb44ff] PSN [/#bb44ff][/on #220044]",
+                "Paralysis": "[on #333300][#ffff44] PAR [/#ffff44][/on #333300]",
+                "Sleep":     "[on #003344][#44aaff] SLP [/#44aaff][/on #003344]",
+                "Freeze":    "[on #001144][#4488ff] FRZ [/#4488ff][/on #001144]",
+            }
+            badges = []
             if is_active:
-                badge = " [on #002244][#4488cc] out [/#4488cc][/on #002244]"
-            elif is_fainted:
-                badge = " [on #111122][#444466] FNT [/#444466][/on #111122]"
+                badges.append(" [on #002244][#4488cc] out [/#4488cc][/on #002244]")
+            if is_fainted:
+                badges.append(" [on #111122][#444466] FNT [/#444466][/on #111122]")
             elif pokemon.major_status:
-                abbrev = {
-                    "Burn":      "[on #441100][#ff8844] BRN [/#ff8844][/on #441100]",
-                    "Poison":    "[on #220044][#bb44ff] PSN [/#bb44ff][/on #220044]",
-                    "Paralysis": "[on #333300][#ffff44] PAR [/#ffff44][/on #333300]",
-                    "Sleep":     "[on #003344][#44aaff] SLP [/#44aaff][/on #003344]",
-                    "Freeze":    "[on #001144][#4488ff] FRZ [/#4488ff][/on #001144]",
-                }
-                badge = " " + abbrev.get(pokemon.major_status.name, "")
+                b = abbrev.get(pokemon.major_status.name, "")
+                if b:
+                    badges.append(" " + b)
             else:
-                badge = ""
+                logger.debug(f"show_party_menu: {pokemon.name} fell to else: is_fainted={is_fainted}, major_status={pokemon.major_status}")
+            badge = "".join(badges)
+            badge_width = 6 * len(badges)
 
             # hp bar using block characters
-            bar_width = 30
-            filled    = int(bar_width * hp_pct / 100)
-            empty     = bar_width - filled
-            bar       = f"[{bar_char}]{'█' * filled}[/{bar_char}][#222233]{'░' * empty}[/#222233]"
+            pane_width = self.query_one("#action-pane").size.width
+            available  = pane_width - 2  # border(2) + action-pane padding(4) + party-item padding(2)
+            bar_width  = available
+            filled     = int(bar_width * hp_pct / 100)
+            empty      = bar_width - filled
+            bar        = f"[{bar_char}]{'─' * filled}[/{bar_char}][#222233]{'─' * empty}[/#222233]"
 
-            # level right-aligned
-            name_lv = (
-                f"[{name_color}]{pokemon.name:<16}[/{name_color}]"
-                f"[#555577]Lv.{pokemon.lvl}[/#555577]"
-            )
+            # name left, level right-anchored
+            lv_str  = f"Lv.{pokemon.lvl}"
+            gap     = available - len(pokemon.name) - len(lv_str)
+            name_lv = f"[{name_color}]{pokemon.name}[/{name_color}]" + " " * max(0, gap) + f"[#555577]{lv_str}[/#555577]"
 
-            # hp left, status right
+            # hp left, badges immediately after
+            hp_str  = f"{pokemon.hp} / {pokemon.max_hp}"
+            hp_gap  = available - len(hp_str) - badge_width
             hp_line = (
-                f"[{hp_color}]{pokemon.hp} / {pokemon.max_hp}[/{hp_color}]"
-                f"{badge}"
+                f"[{hp_color}]{hp_str}[/{hp_color}]"
+                + " " * max(0, hp_gap)
+                + badge
             )
 
             label = Label(
