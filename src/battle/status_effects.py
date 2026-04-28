@@ -2,7 +2,7 @@ import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, StatusEffect
 from core import game_print, msg
-from core.game_print import record_status_change
+from core.game_print import record_status_change, record_hp_change
 
 def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, Optional[StatusEffect]]:
     import copy
@@ -33,15 +33,19 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
     match effect.name:
         case "Poison" | "Curse":
             if effect.damage is not None:
-                damage = round(pokemon.max_hp * effect.damage)
+                damage    = round(pokemon.max_hp * effect.damage)
+                hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
                 game_print(msg("generic_effect", pokemon=pokemon.name, effect=effect.name.lower()))
+                record_hp_change(pokemon.name, hp_before, pokemon.hp, pokemon.max_hp)
                 game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
         case "Burn":
             if effect.damage is not None:
-                damage = round(pokemon.max_hp * effect.damage)
+                damage    = round(pokemon.max_hp * effect.damage)
+                hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
                 game_print(msg("burn_damage", pokemon=pokemon.name))
+                record_hp_change(pokemon.name, hp_before, pokemon.hp, pokemon.max_hp)
                 game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
             else:
                 game_print(msg("is_confused", pokemon=pokemon.name))

@@ -1,22 +1,17 @@
 import asyncio
 from textual.widgets import RichLog, ProgressBar, Label
-from core.game_print import start_buffering, stop_buffering, HpSnapshot, StatusSnapshot, EffectSnapshot
+from core.game_print import start_buffering, stop_buffering, HpSnapshot, StatusSnapshot, EffectSnapshot, StatsSnapshot
 from core.logger     import logger
 from textual.color import Gradient
 from ui.widgets.hp_bar import HpBar
 
-MESSAGE_DELAY = 0.40
-HP_ANIM_SPEED = 1.5
+MESSAGE_DELAY = 0.60
+HP_ANIM_SPEED = 1.25
 
 class BattleUIMixin:
     """Handles turn resolution and animation."""
 
     async def resolve_and_display(self) -> None:
-        from core.game_print import (
-            start_buffering, stop_buffering,
-            HpSnapshot, StatusSnapshot, EffectSnapshot
-        )
-
         self._set_input_enabled(False)
         await asyncio.sleep(0.05)
 
@@ -33,9 +28,7 @@ class BattleUIMixin:
             if isinstance(item, HpSnapshot):
                 widget_id = self._get_hp_widget_id(item.pokemon_name)
                 if widget_id:
-                    start = round(item.start_pct * item.max_hp / 100)
-                    end   = round(item.end_pct   * item.max_hp / 100)
-                    await self.animate_hp_bar(widget_id, start, end, item.max_hp)
+                    await self.animate_hp_bar(widget_id, item.start_hp, item.end_hp, item.max_hp)
 
             elif isinstance(item, StatusSnapshot):
                 # update status badge immediately after the message
@@ -62,6 +55,11 @@ class BattleUIMixin:
                 else:
                     widget.display = False
 
+            elif isinstance(item, StatsSnapshot):
+                trainer   = self.npc if item.trainer_name == self.npc.name else self.player
+                widget_id = "#npc-stats" if trainer == self.npc else "#player-stats"
+                self.query_one(widget_id).update(self._format_stats_combined(trainer.active()))
+
             else:
                 log.write(item)
                 await asyncio.sleep(MESSAGE_DELAY)
@@ -87,15 +85,13 @@ class BattleUIMixin:
         if hp_diff == 0:
             return
 
-        MAX_STEPS   = 30
-        steps       = min(hp_diff, MAX_STEPS)
-        hp_per_step = hp_diff / steps
-        delay       = max(duration / steps, 0.016)
+        STEPS       = 30
+        hp_per_step = hp_diff / STEPS
+        delay       = duration / STEPS
 
-        for i in range(steps):
+        for i in range(STEPS):
             current = round(start_hp + direction * hp_per_step * (i + 1))
             bar.set_hp(current, max_hp)
-            await asyncio.sleep(0)
             await asyncio.sleep(delay)
 
     def _get_hp_widget_id(self, pokemon_name: str) -> str | None:

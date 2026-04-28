@@ -8,6 +8,7 @@ from battle.damage import apply_damage, apply_lifesteal, get_type_multiplier
 from battle.move_effects import is_protected, apply_move_effect
 from battle.modifiers import apply_modifier
 from battle.status_effects import apply_status_effect_from_move
+from core.game_print import record_stats_change, record_hp_change
 from battle.accumulator import release_accumulator
 from data import acc_table
 
@@ -94,25 +95,34 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
 
     # 10. apply recoil
     if move.recoil > 0 and damage > 0:
-        recoil_damage = round(damage * move.recoil)
+        recoil_damage  = round(damage * move.recoil)
+        hp_before      = attacker.active().hp
         attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
+        record_hp_change(attacker.active().name, hp_before, attacker.active().hp, attacker.active().max_hp)
         game_print(msg("recoil", pokemon=attacker.active().name, hp=recoil_damage))
 
     # 11. apply lifesteal
     if move.lifesteal > 0 and damage > 0:
+        hp_before = attacker.active().hp
         apply_lifesteal(move, attacker, damage)
+        record_hp_change(attacker.active().name, hp_before, attacker.active().hp, attacker.active().max_hp)
 
     # 12. apply heal
     if move.heal > 0:
-        heal_amount = round(attacker.active().max_hp * move.heal)
+        heal_amount  = round(attacker.active().max_hp * move.heal)
+        hp_before    = attacker.active().hp
         attacker.active().hp = min(attacker.active().max_hp,
                                    attacker.active().hp + heal_amount)
+        record_hp_change(attacker.active().name, hp_before, attacker.active().hp, attacker.active().max_hp)
         game_print(msg("heal", pokemon=attacker.active().name, hp=heal_amount))
 
     # 13. apply stat changes
     if move.stat_change:
-        old_stats = apply_stat_change(move, attacker, defender, [],)
+        old_stats = apply_stat_change(move, attacker, defender, [])
         print_stat_changes(old_stats)
+        for _, _, target, _ in old_stats:
+            name = attacker.name if target is attacker.active() else defender.name
+            record_stats_change(name)
 
     # 14. apply status effect
     if move.status_effect is not None:

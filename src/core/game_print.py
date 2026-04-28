@@ -16,8 +16,8 @@ _buffering:      bool      = False
 @dataclass
 class HpSnapshot:
     pokemon_name: str
-    start_pct:    int
-    end_pct:      int
+    start_hp:     int
+    end_hp:       int
     max_hp:       int
 
 @dataclass
@@ -31,12 +31,17 @@ class EffectSnapshot:
     """Records an effect change for UI update."""
     trainer_name: str
 
-def record_hp_change(pokemon_name: str, start_pct: int, end_pct: int, max_hp: int) -> None:
+@dataclass  
+class StatsSnapshot:
+    """Records an stat change for UI update."""
+    trainer_name: str
+
+def record_hp_change(pokemon_name: str, start_hp: int, end_hp: int, max_hp: int) -> None:
     if _buffering:
         _message_buffer.append(HpSnapshot(
             pokemon_name = pokemon_name,
-            start_pct    = start_pct,
-            end_pct      = end_pct,
+            start_hp     = start_hp,
+            end_hp       = end_hp,
             max_hp       = max_hp,
         ))
 
@@ -50,6 +55,12 @@ def record_status_change(trainer_name: str, pokemon_name: str) -> None:
 def record_effect_change(trainer_name: str) -> None:
     if _buffering:
         _message_buffer.append(EffectSnapshot(
+            trainer_name = trainer_name,
+        ))
+
+def record_stats_change(trainer_name: str) -> None:
+    if _buffering:
+        _message_buffer.append(StatsSnapshot(
             trainer_name = trainer_name,
         ))
 
