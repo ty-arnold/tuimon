@@ -55,13 +55,13 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
 def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffect]) -> None:
     # Remove expired effects and print removal messages
     removal_messages = {
-        "Poison":    " was cured of poison!",
-        "Paralysis": " was cured of paralysis!",
-        "Sleep":     " woke up!",
-        "Burn":      " was cured of its burn!",
-        "Freeze":    " thawed out!",
-        "Confusion": " snapped out of confusion!",
-        "Curse":     " is no longer cursed!",
+        "Poison":    "was cured of poison!",
+        "Paralysis": "was cured of paralysis!",
+        "Sleep":     "woke up!",
+        "Burn":      "was cured of its burn!",
+        "Freeze":    "thawed out!",
+        "Confusion": "snapped out of confusion!",
+        "Curse":     "is no longer cursed!",
     }
     for effect in effects_to_remove:
         pokemon.remove_status_effect(effect)

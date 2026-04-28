@@ -18,5 +18,6 @@ main.spec
 # Project specific
 !logs/.gitkeep
 logs/
+cache/sprite_cache.json
 cache/pokemon_cache.json
 cache/move_cache.json

@@ -2,6 +2,7 @@ from textual.widgets import Label, Static, RichLog
 from core.colors import status_markup
 from ui.widgets.hp_bar import HpBar
 from ui.mixins.menu_ui import TYPE_COLORS
+from data.sprite_cache import get_sprite
 from core.logger import logger
 
 class DisplayUIMixin:
@@ -18,7 +19,7 @@ class DisplayUIMixin:
 
         # ── NPC panel ─────────────────────────────────────────────
         self.query_one("#npc-panel").border_title    = self.npc.name
-        # self.query_one("#npc-panel").border_subtitle = f"EXP:"
+        self.query_one("#npc-panel").border_subtitle = self._format_party_balls(self.npc, "#cc88dd")
 
         self.query_one("#npc-name",  Label).update(f"[bold]{npc.name}[/bold]")
         self.query_one("#npc-level", Label).update(f"[dim]Lv.{npc.lvl}[/dim]")
@@ -42,7 +43,7 @@ class DisplayUIMixin:
 
         # ── Player panel ──────────────────────────────────────────
         self.query_one("#player-panel").border_title    = self.player.name
-        self.query_one("#player-panel").border_subtitle = f"EXP:"
+        self.query_one("#player-panel").border_subtitle = self._format_party_balls(self.player, "#66cc66")
 
         self.query_one("#player-name",  Label).update(f"[bold]{player.name}[/bold]")
         self.query_one("#player-level", Label).update(f"[dim]Lv.{player.lvl}[/dim]")
@@ -77,14 +78,28 @@ class DisplayUIMixin:
         else:
             player_effects_widget.display = False
 
-        # ── Sprite labels ─────────────────────────────────────────
-        self.query_one("#sprite-npc-label",    Static).update(npc.name)
-        self.query_one("#sprite-player-label", Static).update(player.name)
+        # ── Sprites ───────────────────────────────────────────────
+        npc_lines    = get_sprite(npc.name,    "front")
+        player_lines = get_sprite(player.name, "back")
+        self.query_one("#sprite-npc",    Static).update("\n".join(npc_lines))
+        self.query_one("#sprite-player", Static).update("\n".join(player_lines))
+        self.query_one("#sprite-npc-label",    Static).update(f"[dim]{npc.name}[/dim]")
+        self.query_one("#sprite-player-label", Static).update(f"[dim]{player.name}[/dim]")
 
         # ── Combat log turn counter ───────────────────────────────
         self.query_one("#combat-log-panel").border_subtitle = (
-            f"turn {self.controller.turn}"
+            f"turn {self.controller.turn + 1}"
         )
+
+    def _format_party_balls(self, trainer, color: str) -> str:
+        BALL = "󰐝"
+        balls = []
+        for pokemon in trainer.party:
+            if pokemon.is_alive():
+                balls.append(f"[{color}]{BALL}[/{color}]")
+            else:
+                balls.append(f"[#333344]{BALL}[/#333344]")
+        return " ".join(balls)
 
     def _format_types(self, types: list[str]) -> str:
         parts = []

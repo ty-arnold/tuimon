@@ -95,9 +95,9 @@ class BattleUIMixin:
             await asyncio.sleep(delay)
 
     def _get_hp_widget_id(self, pokemon_name: str) -> str | None:
-        if pokemon_name == self.npc.active().name:
+        if any(p.name == pokemon_name for p in self.npc.party):
             return "#npc-hp-bar"
-        elif pokemon_name == self.player.active().name:
+        if any(p.name == pokemon_name for p in self.player.party):
             return "#player-hp-bar"
         return None
 

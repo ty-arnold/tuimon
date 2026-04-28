@@ -19,7 +19,7 @@ Screen {
 
 #action-pane {
     height: auto;
-    min-height: 62%;
+    min-height: 68%;
     border: round $primary;
     border-title-color: $primary;
     border-title-align: left;
@@ -74,25 +74,33 @@ Screen {
     padding: 0 1;
 }
 
-#sprite-npc-wrap {
-    width: 1fr;
-    align: left middle;
-}
-
 #sprite-player-wrap {
     width: 1fr;
+    height: 1fr;
+    align: left bottom;
+    offset: 8 1;
+}
+
+#sprite-npc-wrap {
+    width: 1fr;
+    height: 1fr;
     align: right middle;
+    offset: -8 1;
 }
 
 #sprite-vs {
-    width: 4;
-    color: $text-disabled;
-    text-align: center;
-    content-align: center middle;
+    display: none;
 }
 
-#sprite-npc   { color: #884499; }
-#sprite-player { color: #336633; }
+#sprite-npc, #sprite-player {
+    height: auto;
+    width: auto;
+}
+
+#sprite-npc-label, #sprite-player-label {
+    height: 1;
+    width: auto;
+}
 
 /* ── Panel content ────────────────────────── */
 

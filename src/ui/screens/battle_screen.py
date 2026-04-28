@@ -56,6 +56,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                     with Container(id="detail-pane"):
                         yield Label("", id="detail-name")
                         yield Grid(id="detail-grid")
+                        yield Rule(id="menu-moves-rule") 
                         yield Label("", id="detail-description", markup=True)
                 with Container(id="combat-log-panel"):
                     yield RichLog(id="combat-log", markup=True)
@@ -71,13 +72,13 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                     yield Static("", id="npc-stats")
                     yield Label("", id="npc-effects")
                 with Horizontal(id="sprite-panel"):
-                    with Vertical(id="sprite-npc-wrap"):
-                        yield Static("", id="sprite-npc")
-                        yield Static("", id="sprite-npc-label")
-                    yield Static("—", id="sprite-vs")
                     with Vertical(id="sprite-player-wrap"):
                         yield Static("", id="sprite-player")
                         yield Static("", id="sprite-player-label")
+                    yield Static("—", id="sprite-vs")
+                    with Vertical(id="sprite-npc-wrap"):
+                        yield Static("", id="sprite-npc")
+                        yield Static("", id="sprite-npc-label")
                 with Container(id="player-panel"):
                     with Horizontal():
                         yield Label("", id="player-name")
@@ -114,6 +115,16 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#action-pane").styles.padding   = (1, 2, 0, 2)
 
         self.update_display()
+
+        self._bob_phase = False
+        self.set_interval(0.5, self._bob_sprites)
+
+    def _bob_sprites(self) -> None:
+        self._bob_phase = not self._bob_phase
+        dy_player = 2 if self._bob_phase else 1
+        dy_npc    = 0 if self._bob_phase else 1
+        self.query_one("#sprite-player-wrap").styles.offset = (8,  dy_player)
+        self.query_one("#sprite-npc-wrap").styles.offset    = (-8, dy_npc)
 
         self.set_timer(0.2, self._start_battle)
 

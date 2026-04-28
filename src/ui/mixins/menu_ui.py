@@ -239,6 +239,8 @@ class MenuUIMixin:
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         logger.debug(f"on_list_view_selected: list={event.list_view.id} idx={event.list_view.index}")
         event.stop()
+        if not self._input_enabled:
+            return
         idx = event.list_view.index
 
         if event.list_view.id == "menu-main":

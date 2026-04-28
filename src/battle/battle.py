@@ -25,11 +25,13 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
             return True
         if not TUI_MODE:
             next_mon(player, npc)
-            
-    # checks if the second pokemon fainted - if so, skip its move turn
-    if order.second.selected_mon != second_mon_before:
+
+    # skip second's move if their active pokemon fainted
+    if not order.second.active().is_alive():
+        if order.first.active().is_alive():
+            process_status_effects(order.first.active())
         return None
-        
+
     if order.second_can_act:
         apply_move(order.second_choice, order.second, order.first, current_turn)
         clear_move_lock(order.second)
@@ -39,8 +41,10 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
         if not TUI_MODE:
             next_mon(player, npc)
 
-    process_status_effects(order.first.active())
-    process_status_effects(order.second.active())
+    if order.first.active().is_alive():
+        process_status_effects(order.first.active())
+    if order.second.active().is_alive():
+        process_status_effects(order.second.active())
     winner = check_winner(player, npc)
     if winner:
         return True
