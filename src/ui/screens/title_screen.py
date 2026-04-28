@@ -35,10 +35,10 @@ class TitleScreen(Screen):
     # track selected index for keyboard navigation
     _selected: int = 0
     _items = [
-        ("vs. AI",       "⚔",  "a",  "menu-vs-ai"),     # swords
-        ("vs. Online",   "⊹",  "o",  "menu-vs-online"),  # network/star
-        ("Team Builder", "⊞",  "t",  "menu-team"),       # grid/team
-        ("Shop",         "◈",  "s",  "menu-shop"),       # diamond
+        ("vs. AI",       "",  "a",  "menu-vs-ai"),     # swords
+        ("vs. Online",   "",  "o",  "menu-vs-online"),  # network/star
+        ("Team Builder", "󱁤",  "t",  "menu-team"),       # grid/team
+        ("Shop",         "󰒚",  "s",  "menu-shop"),       # diamond
         ("Quit",         "⊗",  "q",  "menu-quit"),       # close/exit
     ]
 
@@ -88,7 +88,7 @@ class TitleScreen(Screen):
         widget    = event.widget
         widget_id = widget.id or (widget.parent.id if widget.parent else None)
 
-        for i, (_, _, item_id) in enumerate(self._items):
+        for i, (_, _, _, item_id) in enumerate(self._items):
             if widget_id == item_id:
                 self._selected = i
                 self._update_selection()

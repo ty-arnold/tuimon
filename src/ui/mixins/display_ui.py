@@ -14,7 +14,7 @@ class DisplayUIMixin:
 
         # ── NPC panel ─────────────────────────────────────────────
         self.query_one("#npc-panel").border_title    = self.npc.name
-        self.query_one("#npc-panel").border_subtitle = f"HP: {npc.hp}/{npc.max_hp}"
+        # self.query_one("#npc-panel").border_subtitle = f"EXP:"
 
         self.query_one("#npc-name",  Label).update(f"[bold]{npc.name}[/bold]")
         self.query_one("#npc-level", Label).update(f"[dim]Lv.{npc.lvl}[/dim]")
@@ -38,7 +38,7 @@ class DisplayUIMixin:
 
         # ── Player panel ──────────────────────────────────────────
         self.query_one("#player-panel").border_title    = self.player.name
-        self.query_one("#player-panel").border_subtitle = f"HP: {player.hp}/{player.max_hp}"
+        self.query_one("#player-panel").border_subtitle = f"EXP:"
 
         self.query_one("#player-name",  Label).update(f"[bold]{player.name}[/bold]")
         self.query_one("#player-level", Label).update(f"[dim]Lv.{player.lvl}[/dim]")
@@ -101,7 +101,7 @@ class DisplayUIMixin:
             table.add_column(justify="center", ratio=1)
 
         # name row
-        table.add_row(*[Text(name, style="#888899") for name in stats])
+        table.add_row(*[Text(name, style="bold #888899") for name in stats])
 
         # value + stage on same line
         val_cells = []
@@ -109,7 +109,7 @@ class DisplayUIMixin:
             if val is not None:
                 if stage != 0:
                     stage_str = f"+{stage}" if stage > 0 else str(stage)
-                    color     = "#44cc44" if stage > 0 else "#cc4444"
+                    color     = "#0dc958" if stage > 0 else "#cc4444"
                     val_cells.append(Text.from_markup(
                         f"[#aaaacc]{val}[/#aaaacc] [{color}]({stage_str})[/{color}]"
                     ))
@@ -118,7 +118,7 @@ class DisplayUIMixin:
             else:
                 if stage != 0:
                     stage_str = f"+{stage}" if stage > 0 else str(stage)
-                    color     = "#44cc44" if stage > 0 else "#cc4444"
+                    color     = "#0dc958" if stage > 0 else "#cc4444"
                     val_cells.append(Text.from_markup(
                         f"[{color}]({stage_str})[/{color}]"
                     ))

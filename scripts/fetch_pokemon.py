@@ -2,8 +2,8 @@
 import requests
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from pokemon.cache_manager import get_pokemon_cache, save_pokemon_cache
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
+from pokemon import get_pokemon_cache, save_pokemon_cache
 
 BASE_URL = "https://pokeapi.co/api/v2"
 
@@ -54,7 +54,10 @@ if __name__ == "__main__":
         "charizard",
         "blastoise",
         "alakazam",
-        "pidgeot"
+        "pidgeot",
+        "alakazam",
+        "lapras",
+        "nidoking"
         # add any others you need here
     ]
     for name in pokemon_to_fetch:

@@ -2,6 +2,7 @@ import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, StatusEffect
 from core import game_print, msg
+from core.game_print import record_status_change
 
 def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, Optional[StatusEffect]]:
     import copy
@@ -14,6 +15,10 @@ def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, O
     if random.random() < effect.chance_to_apply:
         success = defender.active().apply_status_effect(effect)
         if success:
+            record_status_change(
+                trainer_name = defender.name,
+                pokemon_name = defender.active().name,
+            )
             return "afflicted", effect
         else:
             return "already", effect  # blocked because major status already exists

@@ -20,6 +20,17 @@ class HpSnapshot:
     end_pct:      int
     max_hp:       int
 
+@dataclass
+class StatusSnapshot:
+    """Records a status change for UI update."""
+    trainer_name: str
+    pokemon_name: str
+
+@dataclass  
+class EffectSnapshot:
+    """Records an effect change for UI update."""
+    trainer_name: str
+
 def record_hp_change(pokemon_name: str, start_pct: int, end_pct: int, max_hp: int) -> None:
     if _buffering:
         _message_buffer.append(HpSnapshot(
@@ -27,6 +38,19 @@ def record_hp_change(pokemon_name: str, start_pct: int, end_pct: int, max_hp: in
             start_pct    = start_pct,
             end_pct      = end_pct,
             max_hp       = max_hp,
+        ))
+
+def record_status_change(trainer_name: str, pokemon_name: str) -> None:
+    if _buffering:
+        _message_buffer.append(StatusSnapshot(
+            trainer_name = trainer_name,
+            pokemon_name = pokemon_name,
+        ))
+
+def record_effect_change(trainer_name: str) -> None:
+    if _buffering:
+        _message_buffer.append(EffectSnapshot(
+            trainer_name = trainer_name,
         ))
 
 def set_output_handler(handler: Callable[[str], None]) -> None:

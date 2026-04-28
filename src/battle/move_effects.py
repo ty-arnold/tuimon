@@ -2,6 +2,7 @@ import random, copy
 from models import Move, Trainer, MoveEffect
 from core.logger import logger
 from core import game_print, msg
+from core.game_print import record_effect_change
 
 
 def apply_move_effect(
@@ -19,6 +20,8 @@ def apply_move_effect(
 
     effect  = move.move_effect
     target  = attacker if effect.target == "self" else defender
+
+    record_effect_change(trainer_name=attacker.name)
 
     match effect.effect_type:
         case "protect":

@@ -1,7 +1,7 @@
 import os
 import asyncio
 from textual.app        import ComposeResult
-from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label
+from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label, Rule
 from textual.containers import Horizontal, Vertical, Container, Grid
 from textual.screen     import Screen
 from models.trainer     import Trainer
@@ -50,6 +50,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                         yield ListItem(Label("Items"), id="action-items")
                         yield ListItem(Label("Run"),   id="action-run")
                     yield ListView(id="menu-moves")
+                    yield Rule(id="menu-moves-rule")
                     yield ListView(id="menu-party")
                     yield ListView(id="menu-items")
                     with Container(id="detail-pane"):
@@ -65,9 +66,10 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                         yield Label("", id="npc-level")
                     yield Label("", id="npc-type")
                     yield HpBar(id="npc-hp-bar")
-                    yield Label("", id="npc-status")
+                    yield Rule(name="Stats")
                     yield Static("", id="npc-stats")
                     yield Label("", id="npc-effects")
+                    yield Label("", id="npc-status")
                 with Horizontal(id="sprite-panel"):
                     with Vertical(id="sprite-npc-wrap"):
                         yield Static("", id="sprite-npc")
@@ -82,9 +84,10 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                         yield Label("", id="player-level")
                     yield Label("", id="player-type")
                     yield HpBar(id="player-hp-bar")
-                    yield Label("", id="player-status")
+                    yield Rule(name="Stats")
                     yield Static("", id="player-stats")
                     yield Label("", id="player-effects")
+                    yield Label("", id="player-status")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -97,6 +100,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.query_one("#sprite-panel").border_title     = "vs"
 
         self.query_one("#menu-moves").display = False
+        self.query_one("#menu-moves-rule").display = False
         self.query_one("#menu-party").display = False
         self.query_one("#menu-items").display = False
         self.query_one("#detail-pane").display = False

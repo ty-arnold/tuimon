@@ -16,16 +16,16 @@ class HpBar(Widget):
         super().__init__(**kwargs)
         self._current = 0
         self._maximum = 100
-        self._color   = "#44cc44"
+        self._color   = "#0dc958"
 
     def set_hp(self, current: int, maximum: int) -> None:
         self._current = current
         self._maximum = maximum
         pct = (current / maximum) if maximum > 0 else 0
         if pct > 0.5:
-            self._color = "#44cc44"
+            self._color = "#0dc958"
         elif pct > 0.25:
-            self._color = "#ccaa22"
+            self._color = "#c7ab42"
         else:
             self._color = "#cc4444"
         self.refresh()

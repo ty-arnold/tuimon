@@ -55,6 +55,7 @@ class MenuUIMixin:
     def show_main_menu(self) -> None:
         self.query_one("#menu-main").display  = True
         self.query_one("#menu-moves").display = False
+        self.query_one("#menu-moves-rule").display = False
         self.query_one("#menu-party").display = False
         self.query_one("#menu-items").display = False
         self.query_one("#detail-pane").display = False
@@ -80,6 +81,7 @@ class MenuUIMixin:
         move_list.append(ListItem(Label("Cancel")))
         self.query_one("#menu-main").display  = False
         self.query_one("#menu-moves").display = True
+        self.query_one("#menu-moves-rule").display = True
         self.query_one("#action-pane").border_title = "moves"
 
     def _type_markup(self, move_type: str) -> str:
@@ -154,10 +156,66 @@ class MenuUIMixin:
     def show_party_menu(self) -> None:
         party_list = self.query_one("#menu-party", ListView)
         party_list.clear()
-        for pokemon in self.player.party:
-            status = "FNT" if not pokemon.is_alive() else f"{pokemon.hp}/{pokemon.max_hp}"
-            party_list.append(ListItem(Label(f"{pokemon.name}  {status}")))
+
+        for i, pokemon in enumerate(self.player.party):
+            is_active  = i == self.player.selected_mon
+            is_fainted = not pokemon.is_alive()
+            hp_pct     = int((pokemon.hp / pokemon.max_hp) * 100)
+
+            # colors based on state
+            if is_active or is_fainted:
+                name_color = "#444466"
+                hp_color   = "#444466"
+                bar_char   = "#333344"
+            else:
+                name_color = "#ffffff"
+                hp_color   = "#aaaacc"
+                bar_char   = "#44cc44" if hp_pct > 50 else "#ccaa22" if hp_pct > 25 else "#cc4444"
+
+            # status badge
+            if is_active:
+                badge = " [on #002244][#4488cc] out [/#4488cc][/on #002244]"
+            elif is_fainted:
+                badge = " [on #111122][#444466] FNT [/#444466][/on #111122]"
+            elif pokemon.major_status:
+                abbrev = {
+                    "Burn":      "[on #441100][#ff8844] BRN [/#ff8844][/on #441100]",
+                    "Poison":    "[on #220044][#bb44ff] PSN [/#bb44ff][/on #220044]",
+                    "Paralysis": "[on #333300][#ffff44] PAR [/#ffff44][/on #333300]",
+                    "Sleep":     "[on #003344][#44aaff] SLP [/#44aaff][/on #003344]",
+                    "Freeze":    "[on #001144][#4488ff] FRZ [/#4488ff][/on #001144]",
+                }
+                badge = " " + abbrev.get(pokemon.major_status.name, "")
+            else:
+                badge = ""
+
+            # hp bar using block characters
+            bar_width = 30
+            filled    = int(bar_width * hp_pct / 100)
+            empty     = bar_width - filled
+            bar       = f"[{bar_char}]{'█' * filled}[/{bar_char}][#222233]{'░' * empty}[/#222233]"
+
+            # level right-aligned
+            name_lv = (
+                f"[{name_color}]{pokemon.name:<16}[/{name_color}]"
+                f"[#555577]Lv.{pokemon.lvl}[/#555577]"
+            )
+
+            # hp left, status right
+            hp_line = (
+                f"[{hp_color}]{pokemon.hp} / {pokemon.max_hp}[/{hp_color}]"
+                f"{badge}"
+            )
+
+            label = Label(
+                f"{name_lv}\n{bar}\n{hp_line}",
+                markup=True,
+                classes="party-item"
+            )
+            party_list.append(ListItem(label))
+
         party_list.append(ListItem(Label("Cancel")))
+
         self.query_one("#menu-main").display  = False
         self.query_one("#menu-party").display = True
         self.query_one("#action-pane").border_title = "party"

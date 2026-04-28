@@ -44,6 +44,30 @@ def get_test_player() -> Trainer:
             "horn-attack",
             "thunder-wave",
             "toxic"
+        ]),
+        get_pokemon("lapras", lvl=50, move_names=[
+            "fly",
+            "dig",
+            "growl",
+            "toxic"
+        ]),
+        get_pokemon("nidoking", lvl=50, move_names=[
+            "double-kick",
+            "horn-attack",
+            "thunder-wave",
+            "toxic"
+        ]),
+        get_pokemon("charizard", lvl=50, move_names=[
+            "fly",
+            "dig",
+            "growl",
+            "toxic"
+        ]),
+        get_pokemon("alakazam", lvl=50, move_names=[
+            "double-kick",
+            "horn-attack",
+            "thunder-wave",
+            "toxic"
         ])
     ]
     # filter out any None values and assert party is valid
