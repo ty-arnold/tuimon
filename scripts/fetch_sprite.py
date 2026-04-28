@@ -25,23 +25,46 @@ BACK_W,  BACK_H  = 30, 15
 
 # ── Fetching ──────────────────────────────────────────────────────────────────
 
-def fetch_sprite_urls(name: str) -> tuple[str, str]:
+def fetch_sprite_urls(name: str) -> tuple[str, str, str | None, str | None, int]:
     resp = requests.get(f"{POKEAPI}/{name.lower()}", timeout=10)
     resp.raise_for_status()
-    data  = resp.json()
-    front = data["sprites"]["front_default"]
-    back  = data["sprites"]["back_default"]
+    data   = resp.json()
+    front  = data["sprites"]["front_default"]
+    back   = data["sprites"]["back_default"]
     if not front:
         raise ValueError(f"No front_default sprite for {name}")
     if not back:
         raise ValueError(f"No back_default sprite for {name}")
-    return front, back
+
+    anim   = (data["sprites"]
+              .get("versions", {})
+              .get("generation-v", {})
+              .get("black-white", {})
+              .get("animated", {}))
+    front_anim = anim.get("front_default")
+    back_anim  = anim.get("back_default")
+    return front, back, front_anim, back_anim
 
 
 def download_image(url: str) -> Image.Image:
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
-    return Image.open(io.BytesIO(resp.content)).convert("RGBA")
+    return Image.open(io.BytesIO(resp.content))
+
+
+def extract_gif_frames(gif: Image.Image) -> tuple[list[Image.Image], int]:
+    """Return (frames as RGBA Images, average frame duration in ms)."""
+    frames    = []
+    durations = []
+    try:
+        while True:
+            frames.append(gif.copy().convert("RGBA"))
+            durations.append(gif.info.get("duration", 100))
+            gif.seek(gif.tell() + 1)
+    except EOFError:
+        pass
+    avg_ms = int(sum(durations) / len(durations)) if durations else 100
+    return frames, avg_ms
 
 
 # ── Conversion ────────────────────────────────────────────────────────────────
@@ -96,7 +119,8 @@ def image_to_rich_markup(img: Image.Image, width: int, height: int) -> list[str]
 def load_cache() -> dict:
     if os.path.exists(CACHE_PATH):
         with open(CACHE_PATH) as f:
-            return json.load(f)
+            content = f.read().strip()
+            return json.loads(content) if content else {}
     return {}
 
 
@@ -112,11 +136,24 @@ def cache_pokemon(name: str, cache: dict) -> bool:
         return False
 
     try:
-        front_url, back_url = fetch_sprite_urls(key)
-        front_rows = image_to_rich_markup(download_image(front_url), FRONT_W, FRONT_H)
-        back_rows  = image_to_rich_markup(download_image(back_url),  BACK_W,  BACK_H)
-        cache[key] = {"front": front_rows, "back": back_rows}
-        print(f"  {name}: cached (front {FRONT_W}×{FRONT_H}, back {BACK_W}×{BACK_H})")
+        front_url, back_url, front_anim_url, back_anim_url = fetch_sprite_urls(key)
+        front_rows = image_to_rich_markup(download_image(front_url).convert("RGBA"), FRONT_W, FRONT_H)
+        back_rows  = image_to_rich_markup(download_image(back_url).convert("RGBA"),  BACK_W,  BACK_H)
+        entry = {"front": front_rows, "back": back_rows}
+
+        if front_anim_url and back_anim_url:
+            front_gif                = download_image(front_anim_url)
+            back_gif                 = download_image(back_anim_url)
+            front_frames, front_ms   = extract_gif_frames(front_gif)
+            back_frames,  back_ms    = extract_gif_frames(back_gif)
+            entry["front_anim"]      = [image_to_rich_markup(f, FRONT_W, FRONT_H) for f in front_frames]
+            entry["back_anim"]       = [image_to_rich_markup(f, BACK_W,  BACK_H)  for f in back_frames]
+            entry["frame_ms"]        = (front_ms + back_ms) // 2
+            print(f"  {name}: cached — static + {len(front_frames)} anim frames @ {entry['frame_ms']}ms")
+        else:
+            print(f"  {name}: cached — static only (no Gen 5 anim)")
+
+        cache[key] = entry
         return True
     except Exception as e:
         print(f"  {name}: failed — {e}")

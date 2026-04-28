@@ -41,3 +41,17 @@ def get_sprite(name: str, view: str = "front") -> list[str]:
     cache = _load()
     entry = cache.get(name.lower(), {})
     return entry.get(view, _FALLBACK.get(view, _FALLBACK["front"]))
+
+
+def get_sprite_frames(name: str, view: str = "front") -> list[list[str]] | None:
+    """Return animated frames for the given view, or None if no animation cached."""
+    cache = _load()
+    entry = cache.get(name.lower(), {})
+    key   = f"{view}_anim"
+    return entry.get(key)
+
+
+def get_frame_ms(name: str) -> int:
+    """Return the average frame duration in ms, defaulting to 150."""
+    cache = _load()
+    return cache.get(name.lower(), {}).get("frame_ms", 150)

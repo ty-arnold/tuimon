@@ -125,15 +125,25 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self._battle_ready = True
         self.show_move_menu()
 
-        self._bob_phase = False
-        self.set_interval(0.5, self._bob_sprites)
+        self._anim_frame = 0
+        self.set_interval(0.15, self._animate_sprites)
 
-    def _bob_sprites(self) -> None:
-        self._bob_phase = not self._bob_phase
-        dy_player = 2 if self._bob_phase else 1
-        dy_npc    = 0 if self._bob_phase else 1
-        self.query_one("#sprite-player-wrap").styles.offset = (8,  dy_player)
-        self.query_one("#sprite-npc-wrap").styles.offset    = (-8, dy_npc)
+    def _animate_sprites(self) -> None:
+        from data.sprite_cache import get_sprite_frames
+        self._anim_frame += 1
+        npc    = self.npc.active()
+        player = self.player.active()
+
+        npc_frames    = get_sprite_frames(npc.name,    "front")
+        player_frames = get_sprite_frames(player.name, "back")
+
+        if npc_frames:
+            lines = npc_frames[self._anim_frame % len(npc_frames)]
+            self.query_one("#sprite-npc", Static).update("\n".join(lines))
+
+        if player_frames:
+            lines = player_frames[self._anim_frame % len(player_frames)]
+            self.query_one("#sprite-player", Static).update("\n".join(lines))
 
         self.set_timer(0.2, self._start_battle)
 
