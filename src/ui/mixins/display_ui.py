@@ -1,9 +1,10 @@
 from textual.widgets import Label, Static, RichLog
-from core.colors import status_markup
+from core.colors     import status_markup
 from ui.widgets.hp_bar import HpBar
 from ui.mixins.menu_ui import TYPE_COLORS
+from ui.palette        import Colors
 from data.sprite_cache import get_sprite
-from core.logger import logger
+from core.logger       import logger
 
 class DisplayUIMixin:
     """Handles updating all pokemon panels."""
@@ -11,6 +12,7 @@ class DisplayUIMixin:
     def update_display(self) -> None:
         npc    = self.npc.active()
         player = self.player.active()
+        c      = Colors(self.app)
 
         logger.debug(f"update_display: npc={npc.name} player={player.name}")
 
@@ -19,7 +21,7 @@ class DisplayUIMixin:
 
         # ── NPC panel ─────────────────────────────────────────────
         self.query_one("#npc-panel").border_title    = self.npc.name
-        self.query_one("#npc-panel").border_subtitle = self._format_party_balls(self.npc, "#cc88dd")
+        self.query_one("#npc-panel").border_subtitle = self._format_party_balls(self.npc, c.npc_title)
 
         self.query_one("#npc-name",  Label).update(f"[bold]{npc.name}[/bold]")
         self.query_one("#npc-level", Label).update(f"[dim]Lv.{npc.lvl}[/dim]")
@@ -32,7 +34,6 @@ class DisplayUIMixin:
 
         self.query_one("#npc-stats", Static).update(self._format_stats_combined(npc))
 
-        # NPC effects
         npc_effects = self._format_effects(self.npc)
         npc_effects_widget = self.query_one("#npc-effects", Label)
         if npc_effects:
@@ -43,7 +44,7 @@ class DisplayUIMixin:
 
         # ── Player panel ──────────────────────────────────────────
         self.query_one("#player-panel").border_title    = self.player.name
-        self.query_one("#player-panel").border_subtitle = self._format_party_balls(self.player, "#66cc66")
+        self.query_one("#player-panel").border_subtitle = self._format_party_balls(self.player, c.player_title)
 
         self.query_one("#player-name",  Label).update(f"[bold]{player.name}[/bold]")
         self.query_one("#player-level", Label).update(f"[dim]Lv.{player.lvl}[/dim]")
@@ -54,22 +55,8 @@ class DisplayUIMixin:
         player_status = self._format_status(player)
         self.query_one("#player-status", Label).update(player_status)
 
-        # speed indicator
-        player_spd = player.get_stat("stat_spd")
-        npc_spd    = npc.get_stat("stat_spd")
-        if player_spd > npc_spd:
-            speed_str = f"[#44cc44]▶ goes first[/#44cc44]  SPD {player_spd} vs {npc_spd}"
-        elif player_spd < npc_spd:
-            speed_str = f"[#cc4444]▶ goes second[/#cc4444]  SPD {player_spd} vs {npc_spd}"
-        else:
-            speed_str = f"[#ccaa22]▶ speed tie[/#ccaa22]  SPD {player_spd}"
-        # self.query_one("#player-prio", Label).update(speed_str)
-
         self.query_one("#player-stats", Static).update(self._format_stats_combined(player))
 
-        # self.query_one("#player-pp", Label).update(self._format_pp(player))
-
-        # Player effects
         player_effects = self._format_effects(self.player)
         player_effects_widget = self.query_one("#player-effects", Label)
         if player_effects:
@@ -92,69 +79,67 @@ class DisplayUIMixin:
         )
 
     def _format_party_balls(self, trainer, color: str) -> str:
-        BALL = "󰐝"
+        BALL  = "󰐝"
+        c     = Colors(self.app)
         balls = []
         for pokemon in trainer.party:
             if pokemon.is_alive():
                 balls.append(f"[{color}]{BALL}[/{color}]")
             else:
-                balls.append(f"[#333344]{BALL}[/#333344]")
+                balls.append(f"[{c.text_dim}]{BALL}[/{c.text_dim}]")
         return " ".join(balls)
 
     def _format_types(self, types: list[str]) -> str:
+        c     = Colors(self.app)
         parts = []
         for t in types:
-            color = TYPE_COLORS.get(t, {}).get("text", "#aaaacc")
+            color = TYPE_COLORS.get(t, {}).get("text", c.text_ui)
             parts.append(f"[{color}]{t}[/{color}]")
-        return " [#555577]/[/#555577] ".join(parts)
+        return f" [{c.text_muted_ui}]/[/{c.text_muted_ui}] ".join(parts)
 
     def _format_stats_combined(self, pokemon) -> "Table":
         from rich.table import Table
         from rich.text  import Text
+        c = Colors(self.app)
 
         stats = {
-            "Attack": (pokemon.stage_attk, pokemon.get_stat("stat_attk")),
-            "Defense": (pokemon.stage_def,  pokemon.get_stat("stat_def")),
-            "Sp. Attack": (pokemon.stage_sp_attk, pokemon.get_stat("stat_sp_attk")),
-            "Sp. Defense": (pokemon.stage_sp_def,  pokemon.get_stat("stat_sp_def")),
-            "Speed": (pokemon.stage_spd,     pokemon.get_stat("stat_spd")),
-            "Accuracy": (pokemon.stage_acc,     None),
-            "Evasion": (pokemon.stage_eva,     None),
+            "Attack":     (pokemon.stage_attk,    pokemon.get_stat("stat_attk")),
+            "Defense":    (pokemon.stage_def,      pokemon.get_stat("stat_def")),
+            "Sp. Attack": (pokemon.stage_sp_attk,  pokemon.get_stat("stat_sp_attk")),
+            "Sp. Defense":(pokemon.stage_sp_def,   pokemon.get_stat("stat_sp_def")),
+            "Speed":      (pokemon.stage_spd,      pokemon.get_stat("stat_spd")),
+            "Accuracy":   (pokemon.stage_acc,      None),
+            "Evasion":    (pokemon.stage_eva,      None),
         }
 
         table = Table.grid(expand=True, padding=(0, 1))
         for _ in stats:
             table.add_column(justify="center", ratio=1)
 
-        # name row
-        table.add_row(*[Text(name, style="bold #888899") for name in stats])
+        table.add_row(*[Text(name, style=f"bold {c.text_label}") for name in stats])
 
-        # value + stage on same line
         val_cells = []
         for stage, val in stats.values():
             if val is not None:
                 if stage != 0:
                     stage_str = f"+{stage}" if stage > 0 else str(stage)
-                    color     = "#0dc958" if stage > 0 else "#cc4444"
+                    color     = c.success if stage > 0 else c.error
                     val_cells.append(Text.from_markup(
-                        f"[#aaaacc]{val}[/#aaaacc] [{color}]({stage_str})[/{color}]"
+                        f"[{c.text_ui}]{val}[/{c.text_ui}] [{color}]({stage_str})[/{color}]"
                     ))
                 else:
-                    val_cells.append(Text(str(val), style="#aaaacc"))
+                    val_cells.append(Text(str(val), style=c.text_ui))
             else:
                 if stage != 0:
                     stage_str = f"+{stage}" if stage > 0 else str(stage)
-                    color     = "#0dc958" if stage > 0 else "#cc4444"
+                    color     = c.success if stage > 0 else c.error
                     val_cells.append(Text.from_markup(
                         f"[{color}]({stage_str})[/{color}]"
                     ))
                 else:
-                    val_cells.append(Text("—", style="#555577"))
+                    val_cells.append(Text("—", style=c.text_muted_ui))
 
         table.add_row(*val_cells)
-        logger.debug(f"stages: attk={pokemon.stage_attk} def={pokemon.stage_def}")
-        logger.debug(f"stats: attk={pokemon.stat_attk} def={pokemon.stat_def}")
-
         return table
 
     def _format_status(self, pokemon) -> str:
@@ -174,76 +159,39 @@ class DisplayUIMixin:
                 parts.append(status_markup("CFZ"))
         return " ".join(parts) if parts else ""
 
-    # def _format_stats(self, pokemon) -> "Table":
-    #     from rich.table import Table
-    #     from rich.text  import Text
-    #     from battle.modifiers import get_modifier_value
-
-    #     stats = {
-    #         "ATK": pokemon.get_stat("stat_attk"),
-    #         "DEF": pokemon.get_stat("stat_def"),
-    #         "SpA": pokemon.get_stat("stat_sp_attk"),
-    #         "SpD": pokemon.get_stat("stat_sp_def"),
-    #         "SPD": pokemon.get_stat("stat_spd"),
-    #     }
-
-    #     table = Table.grid(expand=True, padding=(0, 1))
-    #     for _ in stats:
-    #         table.add_column(justify="center", ratio=1)
-
-    #     # label row
-    #     table.add_row(*[Text(name, style="#888899") for name in stats])
-
-    #     # value row
-    #     table.add_row(*[Text(str(val), style="#ccccee") for val in stats.values()])
-
-    #     return table
-
     def _format_effects(self, trainer) -> str:
-        """Format active field effects and battle states."""
+        c     = Colors(self.app)
         parts = []
 
-        # invulnerable state — merge with locked move turn count if both are active
         if trainer.invulnerable_state:
             if trainer.locked_move and trainer.locked_turns > 0:
                 turns    = trainer.locked_turns
                 turn_str = f"{turns} turn" + ("s" if turns != 1 else "")
-                parts.append(f"[#4488cc]{trainer.invulnerable_state.capitalize()} ({turn_str})[/#4488cc]")
+                parts.append(f"[{c.effect_lock}]{trainer.invulnerable_state.capitalize()} ({turn_str})[/{c.effect_lock}]")
             else:
-                parts.append(f"[#4488cc]{trainer.invulnerable_state.capitalize()}[/#4488cc]")
-
-        # locked move — only show separately when not already shown via invulnerable state
+                parts.append(f"[{c.effect_lock}]{trainer.invulnerable_state.capitalize()}[/{c.effect_lock}]")
         elif trainer.locked_move:
             turns    = trainer.locked_turns
             turn_str = f"{turns} turn" + ("s" if turns != 1 else "")
-            parts.append(f"[#4488cc]{trainer.locked_move.name} ({turn_str})[/#4488cc]")
+            parts.append(f"[{c.effect_lock}]{trainer.locked_move.name} ({turn_str})[/{c.effect_lock}]")
 
-        # active field effects (screens, protect etc)
         for effect in trainer.active_effects:
             turns = getattr(effect, "turns", None)
             name  = effect.effect_type.replace("_", " ").title()
             if turns:
-                parts.append(f"[#ccaa22]{name} {turns}t[/#ccaa22]")
+                parts.append(f"[{c.warning}]{name} {turns}t[/{c.warning}]")
             else:
-                parts.append(f"[#ccaa22]{name}[/#ccaa22]")
+                parts.append(f"[{c.warning}]{name}[/{c.warning}]")
 
         return "  ".join(parts) if parts else ""
 
     def _format_pp(self, pokemon) -> str:
+        c     = Colors(self.app)
         parts = []
         for move in pokemon.moveset:
-            color = "red" if move.pp <= move.pp // 4 else "dim"
+            color = c.error if move.pp <= move.pp // 4 else c.text_muted_ui
             parts.append(f"[{color}]{move.name[:10]}[/{color}] {move.pp}")
         return "  ".join(parts)
-
-    def _update_hp_bar_color(self, widget_id: str, pct: int) -> None:
-        bar = self.query_one(widget_id, HpBar)
-        if pct > 50:
-            bar.styles.color = "green"
-        elif pct > 25:
-            bar.styles.color = "yellow"
-        else:
-            bar.styles.color = "red"
 
     def log_message(self, message: str) -> None:
         self.query_one("#combat-log", RichLog).write(message)

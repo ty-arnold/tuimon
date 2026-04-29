@@ -81,16 +81,16 @@ def get_test_player() -> Trainer:
 
 def get_test_npc() -> Trainer:
     party = [
-            get_pokemon("alakazam", lvl=50, move_names=[
-                "double-kick",
-                "horn-attack",
-                "thunder-wave",
-                "toxic"
-            ]),
             get_pokemon("blastoise", lvl=50, move_names=[
                 "toxic",
                 "toxic",
                 "toxic",
+                "toxic"
+            ]),
+            get_pokemon("alakazam", lvl=50, move_names=[
+                "double-kick",
+                "horn-attack",
+                "thunder-wave",
                 "toxic"
             ]),
             get_pokemon("charizard", lvl=50, move_names=[

@@ -102,14 +102,16 @@ class BattleUIMixin:
         return None
 
     def _update_hp_bar_color(self, widget_id: str, pct: int) -> None:
+        from ui.palette import Colors
         bar = self.query_one(widget_id, HpBar)
+        c   = Colors(self.app)
 
         if pct > 50:
-            color = "#44cc44"
+            color = c.success
         elif pct > 25:
-            color = "#ccaa22"
+            color = c.warning
         else:
-            color = "#cc4444"
+            color = c.error
 
         # gradient with same color start and end = solid color
         bar.styles.color = color

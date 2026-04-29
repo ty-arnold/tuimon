@@ -3,6 +3,7 @@ from textual.containers import Horizontal
 from core.logger     import logger
 from data.type_chart import TYPE_CHART
 from core.colors     import markup
+from ui.palette      import Colors
 
 _TYPE_BASE = {
     "Normal":   "#888888",
@@ -136,10 +137,11 @@ class MenuUIMixin:
         return f"[on {bg}][{fg}]{padded}[/{fg}][/on {bg}]"
 
     def _pp_markup(self, move) -> str:
+        c = Colors(self.app)
         if move.pp == 0:
-            return f"[#cc4444]PP:{move.pp}[/#cc4444]"
+            return f"[{c.error}]PP:{move.pp}[/{c.error}]"
         else:
-            return f"[#555577]PP:{move.pp}[/#555577]"
+            return f"[{c.text_muted_ui}]PP:{move.pp}[/{c.text_muted_ui}]"
 
     def _get_effectiveness(self, move, defender_types: list[str]) -> float:
         from data.type_chart import TYPE_CHART 
@@ -151,34 +153,29 @@ class MenuUIMixin:
         return multiplier
 
     def _effectiveness_markup(self, effectiveness: float) -> str:
+        c = Colors(self.app)
         if effectiveness == 0:
-            return "[#555577]0×[/#555577]"
+            return f"[{c.text_muted_ui}]0×[/{c.text_muted_ui}]"
         elif effectiveness < 1:
-            return "[#f38ba8]½×[/#f38ba8]"
+            return f"[{c.error}]½×[/{c.error}]"
         elif effectiveness > 1:
-            return "[bold][#a6e3a1]2×[/#a6e3a1][/bold]"
+            return f"[bold][{c.success}]2×[/{c.success}][/bold]"
         else:
-            return "[#555577]1×[/#555577]"
+            return f"[{c.text_muted_ui}]1×[/{c.text_muted_ui}]"
 
     def _category_markup(self, category: str) -> str:
-        labels = {
-            "physical": "Phys",
-            "special":  "Spec",
-            "status":   "Stat",
-        }
-        colors = {
-            "physical": "#f38ba8",
-            "special":  "#89b4fa",
-            "status":   "#a6e3a1",
-        }
-        lbl   = labels.get(category, category[:4])
-        color = colors.get(category, "#888899")
+        c      = Colors(self.app)
+        labels = {"physical": "Phys", "special": "Spec", "status": "Stat"}
+        colors = {"physical": c.error, "special": c.secondary, "status": c.success}
+        lbl    = labels.get(category, category[:4])
+        color  = colors.get(category, c.text_label)
         return f"[{color}]{lbl}[/{color}]"
 
     def show_party_menu(self) -> None:
         party_list = self.query_one("#menu-party", ListView)
         party_list.clear()
 
+        c = Colors(self.app)
         for i, pokemon in enumerate(self.player.party):
             is_active  = i == self.player.selected_mon
             is_fainted = not pokemon.is_alive()
@@ -187,16 +184,15 @@ class MenuUIMixin:
 
             # colors based on state
             if is_active or is_fainted:
-                name_color = "#444466"
-                hp_color   = "#444466"
-                bar_char   = "#333344"
+                name_color = c.party_disabled
+                hp_color   = c.party_disabled
+                bar_char   = c.text_dim
             else:
                 name_color = "#ffffff"
-                hp_color   = "#aaaacc"
-                bar_char   = "#44cc44" if hp_pct > 50 else "#ccaa22" if hp_pct > 25 else "#cc4444"
+                hp_color   = c.text_ui
+                bar_char   = c.success if hp_pct > 50 else c.warning if hp_pct > 25 else c.error
 
-            # status badge
-            # status badges — collect all that apply and stack them
+            # status badges — fixed colors (semantically tied to status type, not theme)
             abbrev = {
                 "Burn":      "[on #441100][#ff8844] BRN [/#ff8844][/on #441100]",
                 "Poison":    "[on #220044][#bb44ff] PSN [/#bb44ff][/on #220044]",
@@ -206,9 +202,9 @@ class MenuUIMixin:
             }
             badges = []
             if is_active:
-                badges.append(" [on #002244][#4488cc] out [/#4488cc][/on #002244]")
+                badges.append(f" [on #002244][{c.effect_lock}] out [/{c.effect_lock}][/on #002244]")
             if is_fainted:
-                badges.append(" [on #111122][#444466] FNT [/#444466][/on #111122]")
+                badges.append(f" [on {c.fainted_bg}][{c.party_disabled}] FNT [/{c.party_disabled}][/on {c.fainted_bg}]")
             elif pokemon.major_status:
                 b = abbrev.get(pokemon.major_status.name, "")
                 if b:
@@ -220,16 +216,20 @@ class MenuUIMixin:
 
             # hp bar using block characters
             pane_width = self.query_one("#action-pane").size.width
-            available  = pane_width - 2  # border(2) + action-pane padding(4) + party-item padding(2)
+            available  = pane_width - 2
             bar_width  = available
             filled     = int(bar_width * hp_pct / 100)
             empty      = bar_width - filled
-            bar        = f"[{bar_char}]{'─' * filled}[/{bar_char}][#222233]{'─' * empty}[/#222233]"
+            bar        = f"[{bar_char}]{'─' * filled}[/{bar_char}][{c.hp_empty}]{'─' * empty}[/{c.hp_empty}]"
 
             # name left, level right-anchored
             lv_str  = f"Lv.{pokemon.lvl}"
             gap     = available - len(pokemon.name) - len(lv_str)
-            name_lv = f"[{name_color}]{pokemon.name}[/{name_color}]" + " " * max(0, gap) + f"[#555577]{lv_str}[/#555577]"
+            name_lv = (
+                f"[{name_color}]{pokemon.name}[/{name_color}]"
+                + " " * max(0, gap)
+                + f"[{c.text_muted_ui}]{lv_str}[/{c.text_muted_ui}]"
+            )
 
             # hp left, badges immediately after
             hp_str  = f"{pokemon.hp} / {pokemon.max_hp}"
@@ -308,26 +308,27 @@ class MenuUIMixin:
         self._show_move_detail(move)
 
     def _show_move_detail(self, move) -> None:
+        c          = Colors(self.app)
         type_key   = move.type[0].strip().capitalize()
-        type_color = TYPE_COLORS.get(type_key, {}).get("text", "#aaaacc")
+        type_color = TYPE_COLORS.get(type_key, {}).get("text", c.text_ui)
         acc        = "—" if move.acc is None else f"{int(move.acc * 100)}%"
 
         rows = [
-            ("Type",     move.type[0],                          type_color),
-            ("Power",    str(move.power) if move.power else "—", "#ccccee"),
-            ("Accuracy", acc,                                    "#ccccee"),
-            ("PP",       f"{move.pp}/{move.max_pp}",             "#ccccee"),
+            ("Type",     move.type[0],                           type_color),
+            ("Power",    str(move.power) if move.power else "—", c.text_bright),
+            ("Accuracy", acc,                                     c.text_bright),
+            ("PP",       f"{move.pp}/{move.max_pp}",              c.text_bright),
         ]
         if move.priority != 0:
-            rows.append(("Priority", str(move.priority),        "#ccccee"))
+            rows.append(("Priority", str(move.priority),         c.text_bright))
         if move.recoil > 0:
-            rows.append(("Recoil",   f"{int(move.recoil * 100)}%", "#f38ba8"))
+            rows.append(("Recoil",   f"{int(move.recoil * 100)}%", c.error))
         if move.status_effect:
-            rows.append(("Effect",   move.status_effect.name,   "#f9e2af"))
+            rows.append(("Effect",   move.status_effect.name,    c.warning))
         if move.multi_turn:
-            rows.append(("Effect",   "Charge → invulnerable",   "#f9e2af"))
+            rows.append(("Effect",   "Charge → invulnerable",    c.warning))
         if move.flinch_chance > 0:
-            rows.append(("Flinch",   f"{int(move.flinch_chance * 100)}%", "#fab387"))
+            rows.append(("Flinch",   f"{int(move.flinch_chance * 100)}%", c.accent))
 
         self.query_one("#detail-name", Label).update(f"[bold]{move.name}[/bold]")
 
@@ -337,10 +338,9 @@ class MenuUIMixin:
             grid.mount(Label(label, classes="detail-label"))
             grid.mount(Label(f"[{color}]{value}[/{color}]", classes="detail-value", markup=True))
 
-        # update description label separately
         desc_label = self.query_one("#detail-description", Label)
         if move.description:
-            desc_label.update(f"[#aaaacc]{move.description}[/#aaaacc]")
+            desc_label.update(f"[{c.text_ui}]{move.description}[/{c.text_ui}]")
             desc_label.display = True
         else:
             desc_label.display = False
