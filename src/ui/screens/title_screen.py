@@ -106,7 +106,8 @@ class TitleScreen(Screen):
         self.notify("Coming soon!", severity="warning")
 
     def action_team(self) -> None:
-        self.notify("Coming soon!", severity="warning")
+        from ui.screens.party_builder_screen import PartyBuilderScreen
+        self.app.push_screen(PartyBuilderScreen())
 
     def action_shop(self) -> None:
         self.notify("Coming soon!", severity="warning")

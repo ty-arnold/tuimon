@@ -1,0 +1,213 @@
+/* ui/styles/party_builder.tcss */
+
+#pb-main {
+    height: 1fr;
+    padding: 1;
+}
+
+/* ── Party panel (left) ────────────────────────────────── */
+
+#party-panel {
+    width: 30;
+    border: round $primary;
+    border-title-color: $primary;
+    border-title-align: left;
+    padding: 0 1 1 1;
+    margin-right: 1;
+}
+
+#team-tabs {
+    height: 3;
+    background: transparent;
+    margin-bottom: 1;
+}
+
+#team-tabs Tab {
+    background: transparent;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+#team-tabs Tab.-active {
+    color: $primary;
+    background: transparent;
+    text-style: bold;
+}
+
+#team-tabs Underline {
+    color: $primary;
+    background: transparent;
+}
+
+#party-panel ListItem {
+    height: 2;
+    padding: 0 1;
+    margin-bottom: 1;
+    color: $text-muted;
+    background: transparent;
+    border: none;
+}
+
+#party-panel ListItem:last-of-type {
+    margin-bottom: 0;
+}
+
+#party-panel ListItem.selected {
+    background: $panel;
+    color: $text;
+}
+
+/* ── Inventory panel (middle) ──────────────────────────── */
+
+#inventory-panel {
+    width: 1fr;
+    border: round $secondary;
+    border-title-color: $text-muted;
+    border-title-align: left;
+    padding: 1 1 0 1;
+    margin-right: 1;
+}
+
+#inv-search-label {
+    height: 1;
+    color: $text-muted;
+    margin-bottom: 0;
+}
+
+#inv-search {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#inv-scroll {
+    height: 1fr;
+}
+
+#inv-grid {
+    layout: grid;
+    grid-size: 4;
+    grid-columns: 1fr 1fr 1fr 1fr;
+    height: auto;
+    width: 100%;
+}
+
+.pokemon-cell {
+    height: 9;
+    border: round $panel;
+    border-title-color: $text-muted;
+    background: $surface;
+    padding: 1 1 0 1;
+    color: $text;
+    text-align: center;
+}
+
+.pokemon-cell:focus {
+    border: round $primary;
+    background: $panel;
+}
+
+/* ── Detail panel (right) ──────────────────────────────── */
+
+#detail-panel {
+    width: 36;
+    border: round $secondary;
+    border-title-color: $text-muted;
+    border-title-align: left;
+    padding: 1 2;
+}
+
+#poke-header {
+    height: 1;
+    margin-bottom: 1;
+}
+
+#poke-name {
+    width: 1fr;
+}
+
+#poke-level {
+    width: auto;
+}
+
+#poke-types {
+    height: 1;
+    margin-bottom: 1;
+}
+
+#poke-stats {
+    height: 2;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#moves-header {
+    height: 1;
+    color: $text-muted;
+    margin-bottom: 1;
+}
+
+#detail-panel ListItem {
+    height: 1;
+    padding: 0 1;
+    background: transparent;
+    color: $text-muted;
+    border: none;
+    margin-bottom: 1;
+}
+
+#detail-panel ListItem:last-of-type {
+    margin-bottom: 0;
+}
+
+#detail-panel ListItem.selected {
+    background: $panel;
+    color: $text;
+}
+
+/* ── Move search pane ──────────────────────────────────── */
+
+#move-search-pane {
+    display: none;
+    height: 1fr;
+}
+
+#move-input {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#move-loading {
+    height: 1;
+    margin-bottom: 1;
+}
+
+#move-results {
+    height: 1fr;
+    background: transparent;
+    border: none;
+}
+
+#move-results ListItem {
+    height: 1;
+    padding: 0 1;
+    background: transparent;
+    color: $text-muted;
+}
+
+#move-results ListItem:hover,
+#move-results ListItem.--highlight {
+    background: $panel;
+    color: $text;
+}
+
+/* ── Footer ────────────────────────────────────────────── */
+
+Footer {
+    background: $surface;
+    color: $text-muted;
+}
+
+Footer > .footer--key {
+    background: $secondary;
+    color: $primary;
+}
