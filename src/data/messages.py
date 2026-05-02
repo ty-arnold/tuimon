@@ -38,11 +38,13 @@ MESSAGES = {
     "flying_hit":         "It hit {pokemon} out of the sky!",
     "invuln_hit":         "It hit {pokemon}!",
     "doesnt_effect":      "It doesnt effect {pokemon}!",
-    "protect_self":       "{pokemon} protected itself!"
+    "protect_self":       "{pokemon} protected itself!",
+    "switch":             "{trainer} withdrew {old_mon}, go {new_mon}!"
 }
 
 MESSAGE_COLORS = {
     "battle_start":    "info",
+    "switch":          "info",
     "target_effect":   "move",
     "move_used":       "move",
     "took_damage":     "damage",

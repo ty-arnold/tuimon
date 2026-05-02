@@ -175,7 +175,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
     def action_party(self) -> None:
         if not self._input_enabled:
             return
-        if self.controller.phase == BattlePhase.PLAYER_ACTION:
+        if self.controller.phase in (BattlePhase.PLAYER_ACTION, BattlePhase.SWITCH_PROMPT):
             self.query_one("#menu-tabs", Tabs).active = "tab-party"
 
     def action_bag(self) -> None:

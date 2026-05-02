@@ -1,14 +1,15 @@
 import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, TurnOrder
+from models.turn_order import BattleAction
 from core import game_print, msg
 from battle.status_effects import get_all_effects
 
 def get_turn_order(
-    player:        Trainer,
-    player_choice: Move,
-    npc:           Trainer,
-    npc_choice:    Move,
+    player:         Trainer,
+    player_choice:  BattleAction,
+    npc:            Trainer,
+    npc_choice:     BattleAction,
     player_can_act: bool,
     npc_can_act:    bool
 ) -> TurnOrder:
@@ -34,7 +35,7 @@ def get_turn_order(
             second_can_act = player_can_act
         )
 
-def _determine_first(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move) -> bool:
+def _determine_first(player: Trainer, player_choice: BattleAction, npc: Trainer, npc_choice: BattleAction) -> bool:
     # priority takes precedence over speed
     if player_choice.priority != npc_choice.priority:
         return player_choice.priority > npc_choice.priority

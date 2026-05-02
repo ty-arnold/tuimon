@@ -1,30 +1,32 @@
 import random
 from core.game_print import game_print
 from core import msg
-from models import Move, Trainer
+from models import Move, Trainer, BattleAction, TurnOrder
 from battle.turn_order     import check_can_act, get_turn_order
 from battle.move_handler   import apply_move, clear_move_lock
 from battle.status_effects import process_status_effects
+from battle.move_effects   import clear_switch_effects
 from ui.input import get_party
 from core.logger import logger
 
-def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice: Move, current_turn: int) -> bool | None:
-    from core.config import TUI_MODE
-    player_can_act, player_cant_act_reason = check_can_act(player.active())
-    npc_can_act,    npc_cant_act_reason    = check_can_act(npc.active())
+def _resolve_switches(order: TurnOrder):
+    if order.first_choice.kind == "switch" and order.first_choice.switch_slot is not None:
+        execute_switch(order.first, order.first_choice.switch_slot)
+    
+    if order.second_choice.kind == "switch" and order.second_choice.switch_slot is not None:
+        execute_switch(order.second, order.second_choice.switch_slot) 
 
-    order = get_turn_order(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
-
+def _resolve_moves(order: TurnOrder, current_turn: int, TUI_MODE: bool) -> bool | None:
     second_mon_before = order.second.selected_mon
 
-    if order.first_can_act:
-        apply_move(order.first_choice, order.first, order.second, current_turn)
+    if order.first_can_act and order.first_choice.kind == "move":
+        apply_move(order.first_choice.move, order.first, order.second, current_turn)
         clear_move_lock(order.first)
-        winner = check_winner(player, npc)
+        winner = check_winner(order.first, order.second)
         if winner:
             return True
         if not TUI_MODE:
-            next_mon(player, npc)
+            next_mon(order.first, order.second)
 
     # skip second's move if their active pokemon fainted
     if not order.second.active().is_alive():
@@ -32,14 +34,33 @@ def resolve_turn(player: Trainer, player_choice: Move, npc: Trainer, npc_choice:
             process_status_effects(order.first.active())
         return None
 
-    if order.second_can_act:
-        apply_move(order.second_choice, order.second, order.first, current_turn)
+    if order.second_can_act and order.second_choice.kind == "move":
+        apply_move(order.second_choice.move, order.second, order.first, current_turn)
         clear_move_lock(order.second)
-        winner = check_winner(player, npc)
+        winner = check_winner(order.first, order.second)
         if winner:
             return True
         if not TUI_MODE:
-            next_mon(player, npc)
+            next_mon(order.first, order.second)
+    
+def resolve_turn(
+        player: Trainer, 
+        player_choice: BattleAction, 
+        npc: Trainer, 
+        npc_choice: BattleAction, 
+        current_turn: int
+    ) -> bool | None:
+    from core.config import TUI_MODE
+    player_can_act, player_cant_act_reason = check_can_act(player.active())
+    npc_can_act,    npc_cant_act_reason    = check_can_act(npc.active())
+
+    order = get_turn_order(player, player_choice, npc, npc_choice, player_can_act, npc_can_act)
+
+    if player_choice.kind == "switch" or npc_choice.kind == "switch":
+        _resolve_switches(order)
+
+    if player_choice.kind == "move" or npc_choice.kind == "move":
+        _resolve_moves(order, current_turn, TUI_MODE)
 
     if order.first.active().is_alive():
         process_status_effects(order.first.active())
@@ -65,6 +86,13 @@ def get_npc_move(trainer: Trainer) -> Move:
         return None
 
     return random.choice(available)
+
+def execute_switch(trainer: Trainer, selected_mon: int) -> None:
+    old_mon = trainer.active()
+    trainer.active().clear_all_modifiers()
+    clear_switch_effects(trainer)
+    trainer.selected_mon = selected_mon
+    game_print(msg("switch", trainer=trainer.name, old_mon=old_mon.name, new_mon=trainer.active().name))
 
 def next_mon(player: Trainer, npc: Trainer) -> None:
     if not player.active().is_alive():

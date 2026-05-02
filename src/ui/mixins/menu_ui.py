@@ -4,6 +4,7 @@ from core.logger     import logger
 from data.type_chart import TYPE_CHART
 from core.colors     import markup
 from ui.palette      import Colors
+from core            import BattlePhase
 
 _TYPE_BASE = {
     "Normal":   "#888888",
@@ -264,33 +265,62 @@ class MenuUIMixin:
         idx = event.list_view.index
 
         if event.list_view.id == "menu-moves":
+            # Locked into a multi-turn move — force the locked move
+            if self.player.locked_move is not None:
+                move = self.player.locked_move
+                self.player.locked_turns -= 1
+                self.controller.select_player_move(move)
+                self.controller.select_npc_move()
+                self.show_main_menu()
+                self.run_worker(self.resolve_and_display(), thread=False)
+                return
             moveset = self.player.active().moveset
             if idx >= len(moveset):
                 self.show_main_menu()
             else:
                 move = moveset[idx]
-                # these MUST happen before run_worker
                 self.controller.select_player_move(move)
                 self.controller.select_npc_move()
                 self.show_main_menu()
-                # worker starts AFTER moves are selected
                 self.run_worker(self.resolve_and_display(), thread=False)
 
         elif event.list_view.id == "menu-party":
             party = self.player.party
             if idx >= len(party):
                 self.show_main_menu()
-            else:
-                pokemon = party[idx]
-                if not pokemon.is_alive():
-                    self.log_message(f"{pokemon.name} has fainted!")
-                elif idx == self.player.selected_mon:
-                    self.log_message(f"{pokemon.name} is already out!")
-                else:
-                    self.player.selected_mon = idx
-                    self.log_message(f"Go, {pokemon.name}!")
-                    self.update_display()
-                    self.show_main_menu()
+                return
+            pokemon = party[idx]
+            if not pokemon.is_alive():
+                self.log_message(f"{pokemon.name} has fainted!")
+                return
+            if idx == self.player.selected_mon:
+                self.log_message(f"{pokemon.name} is already out!")
+                return
+            # ── Voluntary switch: costs a turn, NPC attacks ──
+            if self.controller.phase == BattlePhase.PLAYER_ACTION:
+                if self.player.locked_move is not None:
+                    self.log_message(
+                        f"{self.player.active().name} can't switch out "
+                        f"while locked into {self.player.locked_move.name}!"
+                    )
+                    return
+                self.controller.select_player_switch(idx)
+                self.controller.select_npc_move()
+                self.show_main_menu()
+                self.run_worker(self.resolve_and_display(), thread=False)
+                return
+            # ── Forced switch after faint: immediate, no NPC attack ──
+            if self.controller.phase == BattlePhase.SWITCH_PROMPT:
+                self.player.active().clear_all_modifiers()
+                clear_switch_effects(self.player)
+                self.player.locked_move = None
+                self.player.invulnerable_state = None
+                self.player.selected_mon = idx
+                self.log_message(f"Go, {pokemon.name}!")
+                self.controller.phase = BattlePhase.PLAYER_ACTION
+                self.update_display()
+                self.show_main_menu()
+                return
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """Update detail pane when highlighted item changes."""
