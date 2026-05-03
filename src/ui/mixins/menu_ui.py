@@ -61,27 +61,43 @@ class MenuUIMixin:
         self.query_one("#menu-items").display      = False
         self.query_one("#detail-pane").display     = False
 
+        # Skip repopulation if content hasn't changed and menu is already visible
+        content_key = (self.player.locked_move.name if self.player.locked_move else "",
+                       tuple(m.name for m in self.player.active().moveset))
+        if content_key == getattr(self, "_last_move_content", None):
+            if self.query_one("#menu-moves").display:
+                return
+        self._last_move_content = content_key
+
         move_list = self.query_one("#menu-moves", ListView)
         move_list.clear()
 
-        defender_types = self.npc.active().type
-
-        for move in self.player.active().moveset:
-            effectiveness = self._get_effectiveness(move, defender_types)
-            eff_markup    = self._effectiveness_markup(effectiveness)
-            cat_markup    = self._category_markup(move.category)
-
+        # Locked into a multi-turn move — show only that move
+        if self.player.locked_move is not None:
+            move = self.player.locked_move
             item = ListItem(
-                Label(move.name, classes="move-name"),
-                Label(f"{cat_markup}  {eff_markup}", classes="move-tags", markup=True),
+                Label(f"{move.name} (locked)", classes="move-name"),
+                Label(f"[dim]continuation[/dim]", classes="move-tags", markup=True),
             )
             move_list.append(item)
+        else:
+            defender_types = self.npc.active().type
+            for move in self.player.active().moveset:
+                effectiveness = self._get_effectiveness(move, defender_types)
+                eff_markup    = self._effectiveness_markup(effectiveness)
+                cat_markup    = self._category_markup(move.category)
+
+                item = ListItem(
+                    Label(move.name, classes="move-name"),
+                    Label(f"{cat_markup}  {eff_markup}", classes="move-tags", markup=True),
+                )
+                move_list.append(item)
 
         self.query_one("#menu-moves").display      = True
         self.query_one("#menu-moves-rule").display = True
         self.query_one("#action-pane").border_title = "actions"
         move_list.index = 0
-        move_list.focus()
+        self.set_focus(move_list, scroll_visible=False)
 
     def _type_markup(self, move_type: str) -> str:
 
@@ -148,6 +164,15 @@ class MenuUIMixin:
         return f"[{color}]{lbl}[/{color}]"
 
     def show_party_menu(self) -> None:
+        content_key = tuple(
+            (p.name, p.hp, p.max_hp, p.is_alive(), p.major_status.name if p.major_status else None)
+            for p in self.player.party
+        )
+        if content_key == getattr(self, "_last_party_content", None):
+            if self.query_one("#menu-party").display:
+                return
+        self._last_party_content = content_key
+
         party_list = self.query_one("#menu-party", ListView)
         party_list.clear()
 
@@ -230,7 +255,7 @@ class MenuUIMixin:
         self.query_one("#menu-party").display      = True
         self.query_one("#action-pane").border_title = "actions"
         party_list.index = 0
-        party_list.focus()
+        self.set_focus(party_list, scroll_visible=False)
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         logger.debug(f"on_list_view_selected: list={event.list_view.id} idx={event.list_view.index}")
@@ -240,15 +265,17 @@ class MenuUIMixin:
         idx = event.list_view.index
 
         if event.list_view.id == "menu-moves":
-            moveset = self.player.active().moveset
-            if idx >= len(moveset):
-                self.show_main_menu()
+            if self.player.locked_move is not None:
+                self.controller.select_player_move(self.player.locked_move)
             else:
-                move = moveset[idx]
-                self.controller.select_player_move(move)
-                self.controller.select_npc_move()
-                self.show_main_menu()
-                self.run_worker(self.resolve_and_display(), thread=False)
+                moveset = self.player.active().moveset
+                if idx >= len(moveset):
+                    self.show_main_menu()
+                    return
+                self.controller.select_player_move(moveset[idx])
+            self.controller.select_npc_move()
+            self.show_main_menu()
+            self.run_worker(self.resolve_and_display(), thread=False)
 
         elif event.list_view.id == "menu-party":
             party = self.player.party
