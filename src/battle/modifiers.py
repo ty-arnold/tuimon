@@ -11,7 +11,7 @@ def apply_modifier(move: Move, pokemon: Pokemon, current_turn: int, events: list
     modifier.expires_turn = current_turn + modifier.turns if modifier.turns > 0 else -1
     pokemon.add_modifier(modifier)
     if events is not None:
-        events.append(Message(text=msg("modifier", pokemon=pokemon.name, modifier=modifier)))
+        events.append(msg("modifier", pokemon=pokemon.name, modifier=modifier))
 
 
 def get_modifier_value(
@@ -35,7 +35,7 @@ def get_modifier_value(
             expired.append(modifier)
             if modifier.consume_message:
                 if events is not None:
-                    events.append(Message(text=msg(message=modifier.consume_message)))
+                    events.append(msg(message=modifier.consume_message))
     for modifier in expired:
         pokemon.remove_modifier(modifier)
 

@@ -7,55 +7,11 @@ from data.type_chart import TYPE_CHART
 from core.colors     import markup
 from ui.palette      import Colors
 from core            import BattlePhase
+from ui.type_colors  import TYPE_COLORS
 
 if TYPE_CHECKING:
     from models.trainer import Trainer
     from battle.controller import BattleController
-
-_TYPE_BASE = {
-    "Normal":   "#888888",
-    "Fire":     "#dd4400",
-    "Water":    "#2288cc",
-    "Electric": "#ccaa00",
-    "Grass":    "#228833",
-    "Ice":      "#44aacc",
-    "Fighting": "#882200",
-    "Poison":   "#882288",
-    "Ground":   "#aa8833",
-    "Flying":   "#6688cc",
-    "Psychic":  "#cc2266",
-    "Bug":      "#668822",
-    "Rock":     "#888844",
-    "Ghost":    "#554488",
-    "Dragon":   "#4422cc",
-    "Dark":     "#443322",
-    "Steel":    "#888899",
-}
-
-def _make_type_colors(base: dict) -> dict:
-    """
-    Derive bg, fg, and text from a base color per type.
-    bg  = base color (for badge background)
-    fg  = white or black depending on brightness
-    text = lighter version of base (for colored text)
-    """
-    from textual.color import Color
-    result = {}
-    for type_name, hex_color in base.items():
-        color      = Color.parse(hex_color)
-        # lighten for text by blending with white
-        lightened  = color.blend(Color.parse("#ffffff"), 0.4)
-        # fg is white for dark colors, black for light ones
-        brightness = (color.r * 299 + color.g * 587 + color.b * 114) / 1000
-        fg         = "#111111" if brightness > 128 else "#ffffff"
-        result[type_name] = {
-            "bg":   hex_color,
-            "fg":   fg,
-            "text": lightened.hex,
-        }
-    return result
-
-TYPE_COLORS = _make_type_colors(_TYPE_BASE)
 
 class MenuUIMixin:
     """Handles the action pane — move/party/item menus and detail display."""
@@ -70,27 +26,6 @@ class MenuUIMixin:
     show_party_menu: Any
     update_display: Any
     resolve_and_display: Any
-    """Handles action pane menu state switching."""
-
-    def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
-        if not self._battle_ready:
-            return
-        event.stop()
-        if event.tab is None:
-            return
-        match event.tab.id:
-            case "tab-moves": self.show_move_menu()
-            case "tab-party": self.show_party_menu()
-            case "tab-items" | "tab-run" | "tab-menu":
-                self._show_items()
-                self.set_focus(None)
-
-    def _show_items(self) -> None:
-        self.query_one("#menu-moves").display      = False
-        self.query_one("#menu-moves-rule").display = False
-        self.query_one("#menu-party").display      = False
-        self.query_one("#menu-items").display      = False
-        self.query_one("#detail-pane").display     = False
 
     def show_main_menu(self) -> None:
         tabs = self.query_one("#menu-tabs", Tabs)
@@ -100,6 +35,8 @@ class MenuUIMixin:
             case _:           self._show_items()
 
     def show_move_menu(self) -> None:
+        if self.query_one("#menu-moves").display:
+            return
         self.query_one("#menu-party").display      = False
         self.query_one("#menu-items").display      = False
         self.query_one("#detail-pane").display     = False
@@ -191,6 +128,8 @@ class MenuUIMixin:
         return f"[{color}]{lbl}[/{color}]"
 
     def show_party_menu(self) -> None:
+        if self.query_one("#menu-party").display:
+            return
         party_list = self.query_one("#menu-party", ListView)
         party_list.clear()
 

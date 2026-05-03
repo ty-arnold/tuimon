@@ -60,16 +60,16 @@ def check_can_act(pokemon: Pokemon, events: list[TurnEvent] | None = None) -> tu
                 hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
                 if events is not None:
-                    events.append(Message(text=msg("confusion_self_hit", pokemon=pokemon.name)))
+                    events.append(msg("confusion_self_hit", pokemon=pokemon.name))
                     events.append(HPChange(
                         trainer="", pokemon_name=pokemon.name,
                         old_hp=hp_before, new_hp=pokemon.hp, max_hp=pokemon.max_hp,
                     ))
-                    events.append(Message(text=msg("took_damage", pokemon=pokemon.name, damage=damage), color="damage"))
+                    events.append(msg("took_damage", pokemon=pokemon.name, damage=damage))
                 return False, "Confusion"  # skip attack this turn
             else:
                 if events is not None:
-                    events.append(Message(text=msg("is_confused", pokemon=pokemon.name)))
+                    events.append(msg("is_confused", pokemon=pokemon.name))
         elif not effect.can_act():
             return False, effect.name
     return True, None

@@ -1,6 +1,7 @@
 from core.logger import logger
+from models import Pokemon, Trainer, Move
 
-def dump_pokemon(pokemon):
+def dump_pokemon(pokemon: Pokemon):
     logger.debug(f"--- {pokemon.name} ---")
     logger.debug(f"  HP:           {pokemon.hp}/{pokemon.max_hp}")
     logger.debug(f"  Level:        {pokemon.lvl}")
@@ -16,7 +17,7 @@ def dump_pokemon(pokemon):
     logger.debug(f"  Minor Status: {[e.name for e in pokemon.minor_status]}")
     logger.debug(f"  Moveset:      {[m.name for m in pokemon.moveset]}")
 
-def dump_trainer(trainer):
+def dump_trainer(trainer: Trainer):
     logger.debug(f"=== {trainer.name} ===")
     logger.debug(f"  Selected Mon:       {trainer.selected_mon}")
     logger.debug(f"  Locked Move:        {trainer.locked_move.name if trainer.locked_move else None}")
@@ -26,7 +27,7 @@ def dump_trainer(trainer):
     for pokemon in trainer.party:
         dump_pokemon(pokemon)
 
-def dump_move(move):
+def dump_move(move: Move):
     logger.debug(f"--- Move: {move.name} ---")
     logger.debug(f"  Type:              {move.type}")
     logger.debug(f"  Category:          {move.category}")
@@ -52,7 +53,7 @@ def dump_move(move):
     else:
         logger.debug(f"  Multi Turn:        None")
 
-def dump_battle_state(player, npc, turn=None):
+def dump_battle_state(player: Trainer, npc: Trainer, turn=None):
     if turn:
         logger.debug(f"{'='*40}")
         logger.debug(f"TURN {turn}")

@@ -1,10 +1,9 @@
-from typing import Optional
 from pokemon.pokemon_factory import create_pokemon_from_api
 from core.game_print import game_print
-from models import Pokemon
+from models import Pokemon, Trainer
 
 
-def print_actions(trainer):
+def print_actions(trainer: Trainer):
     while True:
         try:
             game_print(f"{trainer.name}'s {trainer.active().name}:")

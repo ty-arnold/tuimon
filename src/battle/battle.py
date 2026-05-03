@@ -2,7 +2,7 @@ import random
 from core import msg
 from models import Move, Trainer, BattleAction, TurnOrder
 from models.turn_result import Message, Switch, TurnEvent
-from battle.turn_order     import check_can_act, get_turn_order
+from battle.initiative   import check_can_act, get_turn_order
 from battle.move_handler   import apply_move, clear_move_lock
 from battle.status_effects import process_status_effects
 from battle.move_effects   import clear_switch_effects
@@ -106,10 +106,10 @@ def execute_switch(trainer: Trainer, selected_mon: int, events: list[TurnEvent] 
 def check_winner(player: Trainer, npc: Trainer, events: list[TurnEvent] | None = None) -> Trainer | None:
     if not any(pokemon.is_alive() for pokemon in player.party):
         if events is not None:
-            events.append(Message(text=msg("wins", trainer=npc.name)))
+            events.append(msg("wins", trainer=npc.name))
         return npc
     if not any(pokemon.is_alive() for pokemon in npc.party):
         if events is not None:
-            events.append(Message(text=msg("wins", trainer=player.name)))
+            events.append(msg("wins", trainer=player.name))
         return player
     return None

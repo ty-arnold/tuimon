@@ -1,17 +1,17 @@
 # ui/app.py
+from typing import Any
 from textual.app    import App
-from textual.screen import Screen
 from models.trainer import Trainer
 from ui.theme       import TUIMON_DARK, CATPPUCCIN_MOCHA
 
 class TuimonApp(App):
 
-    THEMES = {
+    THEMES: dict[str, Any] = {
         "tuimon-dark":  TUIMON_DARK,
         "catppuccin-mocha": CATPPUCCIN_MOCHA
     }
 
-    SCREENS = {
+    SCREENS: dict[str, Any] = {
         "battle": "ui.screens.battle_screen.BattleScreen",
         "end":    "ui.screens.end_screen.EndScreen",
     }

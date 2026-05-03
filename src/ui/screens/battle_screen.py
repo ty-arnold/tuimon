@@ -8,7 +8,7 @@ from models.trainer     import Trainer
 from battle.controller  import BattleController
 from core.game_print    import game_print, set_async_queue
 from core.logger        import logger
-from core.messages      import msg
+from core.msg             import msg
 from core.battle_state  import BattlePhase
 from ui.widgets.hp_bar  import HpBar
 
@@ -41,8 +41,8 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         super().__init__()
         self.player         = player
         self.npc            = npc
-        self._input_enabled = True
-        self._battle_ready  = False
+        self._input_enabled      = True
+        self._battle_ready       = False
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main"):
@@ -129,7 +129,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.set_interval(0.15, self._animate_sprites)
 
     def _animate_sprites(self) -> None:
-        from data.sprite_cache import get_sprite_frames
+        from assets.sprite_cache import get_sprite_frames
         self._anim_frame += 1
         npc    = self.npc.active()
         player = self.player.active()

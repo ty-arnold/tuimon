@@ -1,6 +1,6 @@
 from models import Move, Trainer, Pokemon
 from core import game_print
-from ui.print import print_actions
+from cli.print import print_actions
 
 def get_turn(trainer: Trainer) -> Move | None:
     if trainer.locked_move is not None:

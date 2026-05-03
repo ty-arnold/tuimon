@@ -11,8 +11,8 @@ logger = logging.getLogger("tuimon")
 
 from models       import Trainer, BattleAction
 from battle       import resolve_turn
-from ui           import build_party, dump_battle_state, dump_move
-from ui.input     import get_turn
+from ui           import dump_battle_state, dump_move
+from cli.input    import get_turn
 from core         import game_print, msg
 from core.presets import get_test_player, get_test_npc
 from pokemon      import create_pokemon_from_api
@@ -22,7 +22,7 @@ if DEBUG:
     player = get_test_player()
     npc    = get_test_npc()
 else:
-    from ui.print import build_party
+    from cli.print import build_party
     from pokemon.pokemon_factory import create_pokemon_from_api
     from models import Trainer
     player_party = build_party("Ash", party_size=2)
@@ -44,6 +44,7 @@ else:
             player = get_test_player()
             npc    = get_test_npc()
         else:
+            from cli.print import build_party
             player_party_raw = build_party("Ash", party_size=2)
             player_party     = [p for p in player_party_raw if p is not None]
             assert len(player_party) > 0, "Failed to create player party!"

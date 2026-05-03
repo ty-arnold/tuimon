@@ -17,9 +17,9 @@ from pokemon.cache_manager  import (
 from pokemon.gen3_names    import get_gen3_names
 from saves.teams_save      import load_teams, save_teams
 from saves.inventory_save  import load_inventory
-from data.icon_cache       import get_icon
+from assets.icon_cache       import get_icon
 from ui.palette            import Colors
-from ui.mixins.menu_ui     import TYPE_COLORS
+from ui.type_colors         import TYPE_COLORS
 from core.logger           import logger
 
 

@@ -57,7 +57,7 @@ def handle_protect_effect(
             chance = 1 / (2 ** trainer.consecutive_protect)
             if random.random() > chance:
                 if events is not None:
-                    events.append(Message(text=msg("target_effect", pokemon=trainer.active().name, message=effect.fail_message)))
+                    events.append(msg("target_effect", pokemon=trainer.active().name, message=effect.fail_message))
                 trainer.consecutive_protect = 0
                 return True
 
@@ -73,7 +73,7 @@ def handle_protect_effect(
     )
     trainer.consecutive_protect += 1
     if events is not None:
-        events.append(Message(text=msg("target_effect", target=trainer.active().name, message=effect.message)))
+        events.append(msg("target_effect", target=trainer.active().name, message=effect.message))
     return True
 
 
@@ -88,14 +88,14 @@ def handle_screen_effect(
            e.properties.get("category_condition") == effect.properties.get("category_condition")
            for e in trainer.active_effects):
         if events is not None:
-            events.append(Message(text=msg("but_it_failed")))
+            events.append(msg("but_it_failed"))
         return True
 
     screen        = copy.deepcopy(effect)
     screen.turns  = current_turn + effect.turns  # store expiry turn
     trainer.active_effects.append(screen)
     if events is not None:
-        events.append(Message(text=msg("target_effect", target=trainer.active().name, message=effect.message)))
+        events.append(msg("target_effect", target=trainer.active().name, message=effect.message))
     return True
 
 
@@ -107,14 +107,14 @@ def handle_mist_effect(
 ) -> bool:
     if any(e.effect_type == "mist" for e in trainer.active_effects):
         if events is not None:
-            events.append(Message(text=msg("but_it_failed")))
+            events.append(msg("but_it_failed"))
         return True
 
     mist       = copy.deepcopy(effect)
     mist.turns = current_turn + effect.turns
     trainer.active_effects.append(mist)
     if events is not None:
-        events.append(Message(text=msg("target_effect", target=trainer.active().name, message=effect.message)))
+        events.append(msg("target_effect", target=trainer.active().name, message=effect.message))
     return True
 
 
@@ -149,7 +149,7 @@ def get_screen_modifier(
         if effect.turns <= current_turn:
             expired.append(effect)
             if events is not None:
-                events.append(Message(text=msg("screen_wore_off")))
+                events.append(msg("screen_wore_off"))
 
     for effect in expired:
         defender.active_effects.remove(effect)

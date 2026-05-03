@@ -2,7 +2,7 @@ import json
 import os
 from models import Move
 
-CACHE_DIR     = "cache"
+CACHE_DIR     = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "cache")
 POKEMON_CACHE = os.path.join(CACHE_DIR, "pokemon_cache.json")
 MOVE_CACHE    = os.path.join(CACHE_DIR, "move_cache.json")
 

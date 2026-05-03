@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any
 import asyncio
 from textual.widgets import RichLog, Label
 from core.logger     import logger
+from core.colors     import log_color
 from core.battle_state import BattlePhase
 from models.turn_result import Message, HPChange, StatusApplied, EffectChange, StatChange, Switch, Faint
 from ui.widgets.hp_bar import HpBar
@@ -81,7 +82,8 @@ class BattleUIMixin:
                 await asyncio.sleep(MESSAGE_DELAY)
 
             elif isinstance(item, Message):
-                log.write(item.text)
+                text = log_color(item.color, item.text) if item.color else item.text
+                log.write(text)
                 await asyncio.sleep(MESSAGE_DELAY)
 
             else:

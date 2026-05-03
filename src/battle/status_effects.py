@@ -39,27 +39,27 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect, events: list[TurnEven
                 hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
                 if events is not None:
-                    events.append(Message(text=msg("generic_effect", pokemon=pokemon.name, effect=effect.name.lower())))
+                    events.append(msg("generic_effect", pokemon=pokemon.name, effect=effect.name.lower()))
                     events.append(HPChange(
                         trainer="", pokemon_name=pokemon.name,
                         old_hp=hp_before, new_hp=pokemon.hp, max_hp=pokemon.max_hp,
                     ))
-                    events.append(Message(text=msg("took_damage", pokemon=pokemon.name, damage=damage), color="damage"))
+                    events.append(msg("took_damage", pokemon=pokemon.name, damage=damage))
         case "Burn":
             if effect.damage is not None:
                 damage    = round(pokemon.max_hp * effect.damage)
                 hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
                 if events is not None:
-                    events.append(Message(text=msg("burn_damage", pokemon=pokemon.name)))
+                    events.append(msg("burn_damage", pokemon=pokemon.name))
                     events.append(HPChange(
                         trainer="", pokemon_name=pokemon.name,
                         old_hp=hp_before, new_hp=pokemon.hp, max_hp=pokemon.max_hp,
                     ))
-                    events.append(Message(text=msg("took_damage", pokemon=pokemon.name, damage=damage), color="damage"))
+                    events.append(msg("took_damage", pokemon=pokemon.name, damage=damage))
             else:
                 if events is not None:
-                    events.append(Message(text=msg("is_confused", pokemon=pokemon.name)))
+                    events.append(msg("is_confused", pokemon=pokemon.name))
 
     return False
 
@@ -79,7 +79,7 @@ def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffec
         pokemon.remove_status_effect(effect)
         message = removal_messages.get(effect.name, " is no longer affected!")
         if events is not None:
-            events.append(Message(text=msg("target_effect", target=pokemon.name, message=message)))
+            events.append(msg("target_effect", target=pokemon.name, message=message))
 
 
 def get_all_effects(pokemon: Pokemon) -> list[StatusEffect]:

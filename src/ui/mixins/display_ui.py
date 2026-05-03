@@ -3,13 +3,15 @@ from typing import TYPE_CHECKING, Any
 from textual.widgets import Label, Static, RichLog
 from core.colors     import status_markup
 from ui.widgets.hp_bar import HpBar
-from ui.mixins.menu_ui import TYPE_COLORS
+from ui.type_colors    import TYPE_COLORS
 from ui.palette        import Colors
-from data.sprite_cache import get_sprite
+from assets.sprite_cache import get_sprite
 from core.logger       import logger
+from rich.table import Table
 
 if TYPE_CHECKING:
     from models.trainer import Trainer
+    from models.pokemon import Pokemon
     from battle.controller import BattleController
 
 class DisplayUIMixin:
@@ -19,6 +21,7 @@ class DisplayUIMixin:
     controller: BattleController
     app: Any
     query_one: Any
+    show_party_menu: Any
 
     def update_display(self) -> None:
         npc    = self.npc.active()
@@ -89,7 +92,7 @@ class DisplayUIMixin:
             f"turn {self.controller.turn + 1}"
         )
 
-    def _format_party_balls(self, trainer, color: str) -> str:
+    def _format_party_balls(self, trainer: Trainer, color: str) -> str:
         BALL  = "󰐝"
         c     = Colors(self.app)
         balls = []
@@ -108,8 +111,7 @@ class DisplayUIMixin:
             parts.append(f"[{color}]{t}[/{color}]")
         return f" [{c.text_muted_ui}]/[/{c.text_muted_ui}] ".join(parts)
 
-    def _format_stats_combined(self, pokemon) -> "Table":
-        from rich.table import Table
+    def _format_stats_combined(self, pokemon: "Pokemon") -> "Table":
         from rich.text  import Text
         c = Colors(self.app)
 
@@ -153,7 +155,7 @@ class DisplayUIMixin:
         table.add_row(*val_cells)
         return table
 
-    def _format_status(self, pokemon) -> str:
+    def _format_status(self, pokemon: "Pokemon") -> str:
         parts = []
         if pokemon.major_status:
             abbrev = {
@@ -170,7 +172,7 @@ class DisplayUIMixin:
                 parts.append(status_markup("CFZ"))
         return " ".join(parts) if parts else ""
 
-    def _format_effects(self, trainer) -> str:
+    def _format_effects(self, trainer: Trainer) -> str:
         c     = Colors(self.app)
         parts = []
 
@@ -196,7 +198,7 @@ class DisplayUIMixin:
 
         return "  ".join(parts) if parts else ""
 
-    def _format_pp(self, pokemon) -> str:
+    def _format_pp(self, pokemon: "Pokemon") -> str:
         c     = Colors(self.app)
         parts = []
         for move in pokemon.moveset:

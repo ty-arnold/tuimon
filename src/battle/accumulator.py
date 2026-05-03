@@ -15,7 +15,7 @@ def release_accumulator(
     accumulated = attacker.active().accumulator
 
     if config.release_message and events is not None:
-        events.append(Message(text=msg("accumulator_release", pokemon=attacker.active().name, message=config.release_message)))
+        events.append(msg("accumulator_release", pokemon=attacker.active().name, message=config.release_message))
 
     damage = 0
 
@@ -34,12 +34,12 @@ def release_accumulator(
         multiplier = get_type_multiplier(move.type[0], defender.active().type)
         damage     = round(damage * multiplier)
         if multiplier < 1 and events is not None:
-            events.append(Message(text=msg("not_effective"), color="weak"))
+            events.append(msg("not_effective"))
         elif multiplier > 1 and events is not None:
-            events.append(Message(text=msg("super_effective"), color="super"))
+            events.append(msg("super_effective"))
 
     defender.active().hp = max(0, defender.active().hp - damage)
     if events is not None:
-        events.append(Message(text=msg("took_damage", pokemon=defender.active().name, damage=damage), color="damage"))
+        events.append(msg("took_damage", pokemon=defender.active().name, damage=damage))
     attacker.active().accumulator = 0
     return damage
