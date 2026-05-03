@@ -5,7 +5,7 @@ from textual.widgets import RichLog, Label
 from core.logger     import logger
 from core.colors     import log_color
 from core.battle_state import BattlePhase
-from models.turn_result import Message, HPChange, StatusApplied, EffectChange, StatChange, Switch, Faint
+from models.turn_result import Message, HPChange, StatusApplied, StatusRemoved, EffectChange, StatChange, Switch, Faint
 from ui.widgets.hp_bar import HpBar
 
 if TYPE_CHECKING:
@@ -46,6 +46,18 @@ class BattleUIMixin:
                     await self.animate_hp_bar(widget_id, item.old_hp, item.new_hp, item.max_hp)
 
             elif isinstance(item, StatusApplied):
+                trainer = self.npc    if item.trainer == self.npc.name    else self.player
+                pokemon = trainer.active()
+                status_str = self._format_status(pokemon)
+                widget_id  = "#npc-status" if trainer == self.npc else "#player-status"
+                widget     = self.query_one(widget_id, Label)
+                if status_str:
+                    widget.update(status_str)
+                    widget.display = True
+                else:
+                    widget.display = False
+
+            elif isinstance(item, StatusRemoved):
                 trainer = self.npc    if item.trainer == self.npc.name    else self.player
                 pokemon = trainer.active()
                 status_str = self._format_status(pokemon)

@@ -30,7 +30,7 @@ def _resolve_moves(
     # skip second's move if their active pokemon fainted
     if not order.second.active().is_alive():
         if order.first.active().is_alive():
-            process_status_effects(order.first.active(), events=events)
+            process_status_effects(order.first.active(), events=events, trainer_name=order.first.name)
         return None
 
     if order.second_can_act and order.second_choice.kind == "move":
@@ -69,9 +69,9 @@ def resolve_turn(
             return True
 
     if order.first.active().is_alive():
-        process_status_effects(order.first.active(), events=events)
+        process_status_effects(order.first.active(), events=events, trainer_name=order.first.name)
     if order.second.active().is_alive():
-        process_status_effects(order.second.active(), events=events)
+        process_status_effects(order.second.active(), events=events, trainer_name=order.second.name)
 
     return True if check_winner(player, npc, events=events) else None
 

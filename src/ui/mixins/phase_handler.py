@@ -33,7 +33,7 @@ class PhaseHandlerMixin:
         logger.debug(f"_handle_phase_ui: phase={phase}")
         match phase:
             case BattlePhase.PLAYER_ACTION:
-                self.show_main_menu()
+                pass  # menu was already shown before turn resolution
             case BattlePhase.SWITCH_PROMPT:
                 self.show_party_menu()
             case BattlePhase.NPC_SWITCH:

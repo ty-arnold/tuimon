@@ -44,4 +44,22 @@ MESSAGE_TEMPLATES: dict[str, MessageTemplate] = {
     "doesnt_effect":      MessageTemplate("It doesn't affect {pokemon}!", "weak"),
     "protect_self":       MessageTemplate("{pokemon} protected itself!", "move"),
     "switch":             MessageTemplate("{trainer} withdrew {old_mon}, go {new_mon}!", "info"),
+
+    # Status application messages
+    "status_poison":      MessageTemplate("{pokemon} was poisoned!", "status"),
+    "status_paralysis":   MessageTemplate("{pokemon} was paralyzed! It may be unable to move!", "status"),
+    "status_sleep":       MessageTemplate("{pokemon} fell asleep!", "status"),
+    "status_burn":        MessageTemplate("{pokemon} was burned!", "status"),
+    "status_freeze":      MessageTemplate("{pokemon} was frozen solid!", "status"),
+    "status_confusion":   MessageTemplate("{pokemon} became confused!", "status"),
+    "status_curse":       MessageTemplate("{pokemon} was cursed!", "status"),
+
+    "status_already_poison":    MessageTemplate("{pokemon} is already poisoned!", ""),
+    "status_already_paralysis": MessageTemplate("{pokemon} is already paralyzed!", ""),
+    "status_already_sleep":     MessageTemplate("{pokemon} is already asleep!", ""),
+    "status_already_burn":      MessageTemplate("{pokemon} is already burned!", ""),
+    "status_already_freeze":    MessageTemplate("{pokemon} is already frozen!", ""),
+    "status_already_confusion": MessageTemplate("{pokemon} is already confused!", ""),
+    "status_already_curse":     MessageTemplate("{pokemon} is already cursed!", ""),
+    "status_already_major":     MessageTemplate("{pokemon} already has a status condition!", ""),
 }

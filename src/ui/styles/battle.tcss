@@ -274,8 +274,10 @@ ListItem:hover {
 }
 
 ListItem.--highlight {
-    background: $panel;
+    background: $primary 25%;
     color: $text;
+    text-style: bold;
+    outline: round $primary;
 }
 
 .move-name {

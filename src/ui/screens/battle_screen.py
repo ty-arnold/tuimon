@@ -43,6 +43,8 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         self.npc            = npc
         self._input_enabled      = True
         self._battle_ready       = False
+        self._prev_arrow_label   = None
+        self._prev_text          = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main"):

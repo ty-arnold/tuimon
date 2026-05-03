@@ -348,40 +348,15 @@ def _emit_stat_events(events: list, old_stats: list, attacker: Trainer, defender
 
 
 def _emit_status_message(events: list, target: Pokemon, effect: StatusEffect, result: str) -> None:
-    status_messages = {
-        "Poison": " was poisoned!",
-        "Paralysis": " was paralyzed!",
-        "Sleep": " was put to sleep!",
-        "Burn": " was burned!",
-        "Freeze": " was frozen!",
-        "Confusion": " became confused!",
-        "Curse": " was cursed!",
-    }
-    already_messages = {
-        "Poison": " is already poisoned!",
-        "Paralysis": " is already paralyzed!",
-        "Sleep": " is already asleep!",
-        "Burn": " is already burned!",
-        "Freeze": " is already frozen!",
-        "Confusion": " is already confused!",
-        "Curse": " is already cursed!",
-    }
-    major_status_messages = {
-        "Poison": " already has a status condition!",
-        "Paralysis": " already has a status condition!",
-        "Sleep": " already has a status condition!",
-        "Burn": " already has a status condition!",
-        "Freeze": " already has a status condition!",
-    }
+    name = effect.name.lower()
 
     if result == "afflicted":
-        events.append(msg(
-            "target_effect", color="status", target=target.name,
-            message=f"{target.name}{status_messages.get(effect.name, ' was affected!')}",
-        ))
+        events.append(msg(f"status_{name}", pokemon=target.name))
     elif result == "already":
         if effect.is_major and target.major_status is not None:
-            msg_text = f"{target.name}{major_status_messages.get(effect.name, ' already has a status condition!')}"
+            if target.major_status.name == effect.name:
+                events.append(msg(f"status_already_{name}", pokemon=target.name))
+            else:
+                events.append(msg("status_already_major", pokemon=target.name))
         else:
-            msg_text = f"{target.name}{already_messages.get(effect.name, ' is already affected!')}"
-        events.append(msg("target_effect", target=target.name, message=msg_text))
+            events.append(msg(f"status_already_{name}", pokemon=target.name))

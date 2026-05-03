@@ -28,6 +28,12 @@ class StatusApplied:
 
 
 @dataclass
+class StatusRemoved:
+    """A status condition was removed — triggers badge update."""
+    trainer: str
+
+
+@dataclass
 class EffectChange:
     """Effect list changed (invulnerability, screens, protect, etc.)."""
     trainer: str
@@ -62,6 +68,7 @@ TurnEvent = (
     Message
     | HPChange
     | StatusApplied
+    | StatusRemoved
     | EffectChange
     | StatChange
     | Switch

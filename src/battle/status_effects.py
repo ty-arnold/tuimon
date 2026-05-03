@@ -2,7 +2,7 @@ import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, StatusEffect
 from core import msg
-from models.turn_result import Message, HPChange, StatusApplied, TurnEvent
+from models.turn_result import Message, HPChange, StatusApplied, StatusRemoved, TurnEvent
 
 
 def apply_status_effect_from_move(
@@ -64,8 +64,8 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect, events: list[TurnEven
     return False
 
 
-def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffect], events: list[TurnEvent] | None = None) -> None:
-    # Remove expired effects and print removal messages
+def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffect],
+                           events: list[TurnEvent] | None = None, trainer_name: str = "") -> None:
     removal_messages = {
         "Poison":    "was cured of poison!",
         "Paralysis": "was cured of paralysis!",
@@ -80,6 +80,7 @@ def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffec
         message = removal_messages.get(effect.name, " is no longer affected!")
         if events is not None:
             events.append(msg("target_effect", target=pokemon.name, message=message))
+            events.append(StatusRemoved(trainer=trainer_name))
 
 
 def get_all_effects(pokemon: Pokemon) -> list[StatusEffect]:
@@ -87,11 +88,12 @@ def get_all_effects(pokemon: Pokemon) -> list[StatusEffect]:
     return ([pokemon.major_status] if pokemon.major_status else []) + pokemon.minor_status
 
 
-def process_status_effects(pokemon: Pokemon, events: list[TurnEvent] | None = None) -> None:
+def process_status_effects(pokemon: Pokemon, events: list[TurnEvent] | None = None,
+                            trainer_name: str = "") -> None:
     effects_to_remove = []
 
     for effect in get_all_effects(pokemon):
         if process_effect(pokemon, effect, events):
             effects_to_remove.append(effect)
 
-    remove_expired_effects(pokemon, effects_to_remove, events)
+    remove_expired_effects(pokemon, effects_to_remove, events, trainer_name)

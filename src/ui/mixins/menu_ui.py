@@ -19,7 +19,9 @@ class MenuUIMixin:
     npc: Trainer
     controller: BattleController
     _input_enabled: bool
+    _battle_ready: bool
     query_one: Any
+    set_focus: Any
     app: Any
     log_message: Any
     show_main_menu: Any
@@ -34,9 +36,27 @@ class MenuUIMixin:
             case "tab-party": self.show_party_menu()
             case _:           self._show_items()
 
-    def show_move_menu(self) -> None:
-        if self.query_one("#menu-moves").display:
+    def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
+        if not self._battle_ready:
             return
+        event.stop()
+        if event.tab is None:
+            return
+        match event.tab.id:
+            case "tab-moves": self.show_move_menu()
+            case "tab-party": self.show_party_menu()
+            case _:
+                self._show_items()
+                self.set_focus(None)
+
+    def _show_items(self) -> None:
+        self.query_one("#menu-moves").display      = False
+        self.query_one("#menu-moves-rule").display = False
+        self.query_one("#menu-party").display      = False
+        self.query_one("#menu-items").display      = False
+        self.query_one("#detail-pane").display     = False
+
+    def show_move_menu(self) -> None:
         self.query_one("#menu-party").display      = False
         self.query_one("#menu-items").display      = False
         self.query_one("#detail-pane").display     = False
@@ -128,8 +148,6 @@ class MenuUIMixin:
         return f"[{color}]{lbl}[/{color}]"
 
     def show_party_menu(self) -> None:
-        if self.query_one("#menu-party").display:
-            return
         party_list = self.query_one("#menu-party", ListView)
         party_list.clear()
 
