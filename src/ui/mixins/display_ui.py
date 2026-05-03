@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 from textual.widgets import Label, Static, RichLog
 from core.colors     import status_markup
 from ui.widgets.hp_bar import HpBar
@@ -6,8 +8,17 @@ from ui.palette        import Colors
 from data.sprite_cache import get_sprite
 from core.logger       import logger
 
+if TYPE_CHECKING:
+    from models.trainer import Trainer
+    from battle.controller import BattleController
+
 class DisplayUIMixin:
     """Handles updating all pokemon panels."""
+    player: Trainer
+    npc: Trainer
+    controller: BattleController
+    app: Any
+    query_one: Any
 
     def update_display(self) -> None:
         npc    = self.npc.active()

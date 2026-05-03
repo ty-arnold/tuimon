@@ -9,7 +9,7 @@ if ENABLE_LOGS:
 
 logger = logging.getLogger("tuimon")
 
-from models       import Trainer
+from models       import Trainer, BattleAction
 from battle       import resolve_turn
 from ui           import build_party, dump_battle_state, dump_move
 from ui.input     import get_turn
@@ -22,7 +22,7 @@ if DEBUG:
     player = get_test_player()
     npc    = get_test_npc()
 else:
-    from print import build_party
+    from ui.print import build_party
     from pokemon.pokemon_factory import create_pokemon_from_api
     from models import Trainer
     player_party = build_party("Ash", party_size=2)
@@ -75,7 +75,9 @@ else:
                 dump_move(npc_move)
 
             if player_move is not None and npc_move is not None:
-                winner = resolve_turn(player, player_move, npc, npc_move, current_turn)
+                pa = BattleAction(kind="move", move=player_move)
+                na = BattleAction(kind="move", move=npc_move)
+                winner = resolve_turn(player, pa, npc, na, current_turn)
                 if winner:
                     game_print(winner)
                     break  

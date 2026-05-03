@@ -1,42 +1,21 @@
 from typing import Optional
 from models import Move, Trainer, Accumulator
-from core import game_print, msg
+from core import msg
+from models.turn_result import Message, TurnEvent
 from battle.damage import calculate_damage, get_type_multiplier
 
-def handle_accumulator(
-    move:         Move,
-    attacker:     Trainer,
-    defender:     Trainer,
-    current_turn: int
-) -> Optional[int]:
-    if move.multi_turn is None:
-        return None
-
-    config = move.multi_turn.accumulator
-    if config is None:
-        return None
-
-    # accumulate phase - not the release turn yet
-    if attacker.locked_turns > 0:
-        if config.type == "damage_taken":
-            pass  # accumulated in apply_damage hook
-        elif config.type == "turn_count":
-            attacker.active().accumulator += 1
-        return None  # still accumulating
-
-    # release turn
-    return release_accumulator(move, attacker, defender, config)
 
 def release_accumulator(
     move:     Move,
     attacker: Trainer,
     defender: Trainer,
-    config:   Accumulator
+    config:   Accumulator,
+    events:   list | None = None
 ) -> int:
     accumulated = attacker.active().accumulator
 
-    if config.release_message:
-        game_print(msg("accumulator_release", pokemon=attacker.active().name, message=config.release_message))
+    if config.release_message and events is not None:
+        events.append(Message(text=msg("accumulator_release", pokemon=attacker.active().name, message=config.release_message)))
 
     damage = 0
 
@@ -54,12 +33,13 @@ def release_accumulator(
     if not config.ignore_type:
         multiplier = get_type_multiplier(move.type[0], defender.active().type)
         damage     = round(damage * multiplier)
-        if multiplier < 1:
-            game_print(msg("not_effective"))
-        elif multiplier > 1:
-            game_print(msg("super_effective"))
+        if multiplier < 1 and events is not None:
+            events.append(Message(text=msg("not_effective"), color="weak"))
+        elif multiplier > 1 and events is not None:
+            events.append(Message(text=msg("super_effective"), color="super"))
 
     defender.active().hp = max(0, defender.active().hp - damage)
-    game_print(msg("took_damage", pokemon=defender.active().name, damage=damage))
+    if events is not None:
+        events.append(Message(text=msg("took_damage", pokemon=defender.active().name, damage=damage), color="damage"))
     attacker.active().accumulator = 0
     return damage

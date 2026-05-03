@@ -1,32 +1,34 @@
 import random
 from typing import Optional
-from models import Move, Trainer
+from models import Move, Trainer, Pokemon, StatusEffect
 from core.logger import logger
-from core import game_print, msg
-from ui import print_stat_changes, print_status_effect
+from core import msg
+from models.turn_result import Message, HPChange, EffectChange, StatChange, StatusApplied, TurnEvent
 from battle.damage import apply_damage, apply_lifesteal, get_type_multiplier
 from battle.move_effects import is_protected, apply_move_effect
 from battle.modifiers import apply_modifier
 from battle.status_effects import apply_status_effect_from_move
-from core.game_print import record_stats_change, record_hp_change, record_effect_change
 from battle.accumulator import release_accumulator
 from data import acc_table
 
-def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: int) -> Optional[bool]:
+def apply_move(
+    move: Move, attacker: Trainer, defender: Trainer,
+    current_turn: int, events: list[TurnEvent] | None = None
+) -> Optional[bool]:
     logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
-    game_print(msg("move_used", pokemon=attacker.active().name, move=move.name))
+    if events is not None:
+        events.append(Message(text=msg("move_used", pokemon=attacker.active().name, move=move.name)))
 
     # 1. handle charge turn for multi turn moves
-    # must be first - if charging, nothing else happens
     if move.multi_turn is not None:
-        if handle_multiturn(move, attacker):
+        if handle_multiturn(move, attacker, events=events):
             return None
 
     # 2. check if defender is protected
-    # protect blocks everything except specific moves
     if is_protected(defender, move):
-        game_print(msg("blocked", pokemon=attacker.active().name))
+        if events is not None:
+            events.append(Message(text=msg("blocked", pokemon=attacker.active().name)))
         attacker.active().accumulator = 0
         defender.consecutive_protect  = 0
         return None
@@ -34,37 +36,34 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
         defender.consecutive_protect = 0
 
     # 3. check invulnerability (fly, dig, etc)
-    # separate from protect since some moves can still hit
     if defender.invulnerable_state is not None:
-        if handle_invulnerability(move, attacker, defender):
+        if handle_invulnerability(move, attacker, defender, events=events):
             return None
 
     # 4. check accuracy
-    # only checked if target is not invulnerable
     if not check_accuracy(move, attacker, defender):
-        game_print(msg("missed", pokemon=attacker.active().name))
+        if events is not None:
+            events.append(Message(text=msg("missed", pokemon=attacker.active().name), color="miss"))
         attacker.active().accumulator = 0
         return None
 
     # 5. check type immunity
-    # after accuracy so misses dont trigger immunity messages
-    if check_immunity(move, attacker, defender):
+    if check_immunity(move, attacker, defender, events=events):
         attacker.active().accumulator = 0
         return None
 
     # 6. decrement pp
-    # only after all failure checks pass
     move.pp -= 1
 
-    # 7. apply move effect for status moves like protect, light screen
+    # 7. apply move effect for status moves
     if move.move_effect is not None:
-        ended = apply_move_effect(move, attacker, defender, current_turn)
+        ended = apply_move_effect(move, attacker, defender, current_turn, events=events)
         if ended and move.category == "status":
             return None
 
-    # 8. apply modifier if move has one like charge
+    # 8. apply modifier
     if move.modifier is not None:
-        apply_modifier(move, attacker.active(), current_turn)
+        apply_modifier(move, attacker.active(), current_turn, events=events)
         if move.category == "status":
             return None
 
@@ -72,40 +71,46 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
     damage = 0
     if move.category != "status":
         if move.multi_turn is not None and move.multi_turn.accumulator is not None:
-            # check if this is the release turn
             if attacker.locked_turns == 0 and attacker.locked_move is not None:
                 damage = release_accumulator(move, attacker, defender,
-                                             move.multi_turn.accumulator)
+                                             move.multi_turn.accumulator, events=events)
                 attacker.active().accumulator = 0
-                # return check_winner(attacker, defender)
         else:
-            # handle multi hit moves
             if move.min_hits is not None and move.max_hits is not None:
                 roll        = random.randint(move.min_hits, move.max_hits)
                 hits_landed = 0
                 for _ in range(roll):
-                    hit_damage = apply_damage(move, attacker, defender, current_turn)
+                    hit_damage = apply_damage(move, attacker, defender, current_turn, events=events)
                     damage    += hit_damage
                     hits_landed += 1
                     if not defender.active().is_alive():
                         break
-                game_print(msg("hit_x_times", times=hits_landed))
+                if events is not None:
+                    events.append(Message(text=msg("hit_x_times", times=hits_landed)))
             else:
-                damage = apply_damage(move, attacker, defender, current_turn)
+                damage = apply_damage(move, attacker, defender, current_turn, events=events)
 
     # 10. apply recoil
     if move.recoil > 0 and damage > 0:
         recoil_damage  = round(damage * move.recoil)
         hp_before      = attacker.active().hp
         attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-        record_hp_change(attacker.active().name, hp_before, attacker.active().hp, attacker.active().max_hp)
-        game_print(msg("recoil", pokemon=attacker.active().name, hp=recoil_damage))
+        if events is not None:
+            events.append(HPChange(
+                trainer=attacker.name, pokemon_name=attacker.active().name,
+                old_hp=hp_before, new_hp=attacker.active().hp, max_hp=attacker.active().max_hp,
+            ))
+            events.append(Message(text=msg("recoil", pokemon=attacker.active().name, hp=recoil_damage), color="damage"))
 
     # 11. apply lifesteal
     if move.lifesteal > 0 and damage > 0:
         hp_before = attacker.active().hp
-        apply_lifesteal(move, attacker, damage)
-        record_hp_change(attacker.active().name, hp_before, attacker.active().hp, attacker.active().max_hp)
+        apply_lifesteal(move, attacker, damage, events=events)
+        if events is not None:
+            events.append(HPChange(
+                trainer=attacker.name, pokemon_name=attacker.active().name,
+                old_hp=hp_before, new_hp=attacker.active().hp, max_hp=attacker.active().max_hp,
+            ))
 
     # 12. apply heal
     if move.heal > 0:
@@ -113,32 +118,31 @@ def apply_move(move: Move, attacker: Trainer, defender: Trainer, current_turn: i
         hp_before    = attacker.active().hp
         attacker.active().hp = min(attacker.active().max_hp,
                                    attacker.active().hp + heal_amount)
-        record_hp_change(attacker.active().name, hp_before, attacker.active().hp, attacker.active().max_hp)
-        game_print(msg("heal", pokemon=attacker.active().name, hp=heal_amount))
+        if events is not None:
+            events.append(HPChange(
+                trainer=attacker.name, pokemon_name=attacker.active().name,
+                old_hp=hp_before, new_hp=attacker.active().hp, max_hp=attacker.active().max_hp,
+            ))
+            events.append(Message(text=msg("heal", pokemon=attacker.active().name, hp=heal_amount)))
 
     # 13. apply stat changes
     if move.stat_change:
         old_stats = apply_stat_change(move, attacker, defender, [])
-        print_stat_changes(old_stats)
-        for _, _, target, _ in old_stats:
-            name = attacker.name if target is attacker.active() else defender.name
-            record_stats_change(name)
+        if events is not None:
+            _emit_stat_events(events, old_stats, attacker, defender)
 
     # 14. apply status effect
     if move.status_effect is not None:
-        result, effect = apply_status_effect_from_move(move, defender)
-        if effect is not None:
-            print_status_effect(defender.active(), effect, result)
+        result, effect = apply_status_effect_from_move(move, defender, events=events)
+        if effect is not None and events is not None:
+            _emit_status_message(events, defender.active(), effect, result)
 
     # 15. lock recharge moves after attacking
     if move.multi_turn is not None and move.multi_turn.charge_turn == 2:
         attacker.locked_move  = move
         attacker.locked_turns = 1
 
-    # 16. check winner
-    # return check_winner(attacker, defender)
-
-def handle_multiturn(move: Move, attacker: Trainer) -> bool:
+def handle_multiturn(move: Move, attacker: Trainer, events: list[TurnEvent] | None = None) -> bool:
     logger.debug(f"DEBUG handle_charge_turn:")
     logger.debug(f"  move.name:          {move.name}")
     logger.debug(f"  locked_move:        {attacker.locked_move}")
@@ -148,7 +152,8 @@ def handle_multiturn(move: Move, attacker: Trainer) -> bool:
     if attacker.locked_move is not None and attacker.locked_move.multi_turn is not None:
         logger.debug(f"  charge_turn:        {attacker.locked_move.multi_turn.charge_turn}")
         if attacker.locked_move.multi_turn.charge_turn == 2:
-            game_print(msg("target_effect", target=attacker.active().name, message=attacker.locked_move.multi_turn.charge_message))
+            if events is not None:
+                events.append(Message(text=msg("target_effect", target=attacker.active().name, message=attacker.locked_move.multi_turn.charge_message)))
             return True
 
     if move.multi_turn is not None and attacker.locked_move is None:
@@ -157,16 +162,18 @@ def handle_multiturn(move: Move, attacker: Trainer) -> bool:
         attacker.invulnerable_state = move.multi_turn.invulnerable_state
 
         if attacker.invulnerable_state is not None:
-            record_effect_change(trainer_name=attacker.name)
+            if events is not None:
+                events.append(EffectChange(trainer=attacker.name))
 
         if move.multi_turn.charge_turn == 1:
-            game_print(msg("target_effect", target=attacker.active().name, message=move.multi_turn.charge_message))
+            if events is not None:
+                events.append(Message(text=msg("target_effect", target=attacker.active().name, message=move.multi_turn.charge_message)))
             return True
 
     return False
 
+
 def check_accuracy(move: Move, attacker: Trainer, defender: Trainer) -> bool:
-    # acc of None means the move never misses
     if move.acc is None:
         logger.debug(f"{move.name} never misses!")
         return True
@@ -177,7 +184,11 @@ def check_accuracy(move: Move, attacker: Trainer, defender: Trainer) -> bool:
         return False
     return True
 
-def handle_invulnerability(move: Move, attacker: Trainer, defender: Trainer) -> bool:
+
+def handle_invulnerability(
+    move: Move, attacker: Trainer, defender: Trainer,
+    events: list[TurnEvent] | None = None
+) -> bool:
     can_hit = (
         defender.invulnerable_state is not None and
         defender.invulnerable_state in (move.hits_invulnerable or [])
@@ -185,39 +196,46 @@ def handle_invulnerability(move: Move, attacker: Trainer, defender: Trainer) -> 
 
     if can_hit:
         if defender.invulnerable_state == "flying":
-            game_print(msg("flying_hit", pokemon=defender.active().name))
+            if events is not None:
+                events.append(Message(text=msg("flying_hit", pokemon=defender.active().name)))
         else:
-            game_print(msg("invuln_hit", pokemon=defender.active().name))
+            if events is not None:
+                events.append(Message(text=msg("invuln_hit", pokemon=defender.active().name)))
         return False
 
     message = "is invulnerable!"
     if defender.locked_move is not None and defender.locked_move.multi_turn is not None:
         message = defender.locked_move.multi_turn.invulnerable_message or "is invulnerable!"
 
-    game_print(msg("target_effect", target=defender.active().name, message=message))
-    game_print(msg("missed", pokemon=attacker.active().name))
+    if events is not None:
+        events.append(Message(text=msg("target_effect", target=defender.active().name, message=message)))
+        events.append(Message(text=msg("missed", pokemon=attacker.active().name), color="miss"))
     return True
 
-def check_immunity(move: Move, attacker: Trainer, defender: Trainer) -> bool:
+
+def check_immunity(
+    move: Move, attacker: Trainer, defender: Trainer,
+    events: list[TurnEvent] | None = None
+) -> bool:
     """Returns True if the move is blocked, False if it can hit."""
 
-    # check type immunities on the move itself
     for immune_type in move.immune_types:
         if immune_type in defender.active().type:
-            game_print(msg("doesnt_effect", pokemon=defender.active().name))
+            if events is not None:
+                events.append(Message(text=msg("doesnt_effect", pokemon=defender.active().name)))
             return True
 
-    # check if defender is using a blocking move
     for immune_move in move.immune_moves:
         if (defender.locked_move is not None and
                 defender.locked_move.name.lower() == immune_move):
-            game_print(msg("self_protect", pokemon=defender.active().name))
+            if events is not None:
+                events.append(Message(text=msg("self_protect", pokemon=defender.active().name)))
             return True
 
-    # check type chart immunity (0x effectiveness)
     multiplier = get_type_multiplier(move.type[0], defender.active().type)
     if multiplier == 0:
-        game_print(msg("no_effect"))
+        if events is not None:
+            events.append(Message(text=msg("no_effect")))
         return True
 
     return False
@@ -249,11 +267,124 @@ def apply_stat_change(move: Move, attacker: Trainer, defender: Trainer, old_stat
 
     return old_stats
 
-def clear_move_lock(trainer: Trainer) -> None:
+
+def clear_move_lock(trainer: Trainer, events: list[TurnEvent] | None = None) -> None:
     if trainer.locked_move is not None and trainer.locked_turns == 0:
         trainer.active().accumulator = 0
         had_invulnerable             = trainer.invulnerable_state is not None
         trainer.locked_move          = None
         trainer.invulnerable_state   = None
         if had_invulnerable:
-            record_effect_change(trainer_name=trainer.name)
+            if events is not None:
+                events.append(EffectChange(trainer=trainer.name))
+
+
+STAT_NAMES = {
+    "stat_attk":    "Attack",
+    "stat_def":     "Defense",
+    "stat_sp_attk": "Special Attack",
+    "stat_sp_def":  "Special Defense",
+    "stat_spd":     "Speed",
+    "acc":          "Accuracy",
+    "eva":          "Evasion",
+}
+
+STAT_MESSAGES = {
+    "stat_attk":    ("'s attack rose",        "'s attack fell"),
+    "stat_def":     ("'s defense rose",       "'s defense fell"),
+    "stat_sp_attk": ("'s sp. attack rose",    "'s sp. attack fell"),
+    "stat_sp_def":  ("'s sp. defense rose",   "'s sp. defense fell"),
+    "stat_spd":     ("'s speed rose",         "'s speed fell"),
+    "stat_acc":     ("'s accuracy rose",      "'s accuracy fell"),
+    "stat_eva":     ("'s evasion rose",       "'s evasion fell"),
+}
+
+STAT_AMOUNTS = {1: "", 2: " sharply", 3: " drastically"}
+
+STAT_ATTR_MAP = {
+    "stat_attk":    "stage_attk",
+    "stat_def":     "stage_def",
+    "stat_sp_attk": "stage_sp_attk",
+    "stat_sp_def":  "stage_sp_def",
+    "stat_spd":     "stage_spd",
+    "stat_acc":     "stage_acc",
+    "stat_eva":     "stage_eva",
+}
+
+
+def _emit_stat_events(events: list, old_stats: list, attacker: Trainer, defender: Trainer) -> None:
+    seen = set()
+    for stat, _old_value, target, actual_change in old_stats:
+        trainer = attacker if target is attacker.active() else defender
+        pokemon_name = target.name
+        trainer_name = trainer.name
+
+        if stat in STAT_MESSAGES:
+            if actual_change == 0:
+                display_name = STAT_NAMES.get(stat, stat)
+                events.append(Message(
+                    text=msg("target_effect", target=pokemon_name,
+                             message=f"{pokemon_name}'s {display_name} won't go any further!"),
+                    color="status",
+                ))
+            else:
+                up_msg, down_msg = STAT_MESSAGES[stat]
+                direction = up_msg if actual_change > 0 else down_msg
+                amount = STAT_AMOUNTS.get(abs(actual_change), " drastically")
+                events.append(Message(
+                    text=msg("target_effect", target=pokemon_name,
+                             message=f"{pokemon_name}{direction}{amount}!"),
+                    color="status",
+                ))
+
+            dedup_key = (trainer_name, stat)
+            if dedup_key not in seen:
+                seen.add(dedup_key)
+                stage_attr = STAT_ATTR_MAP.get(stat, "stage_" + stat.replace("stat_", ""))
+                stage_val = getattr(target, stage_attr, 0)
+                events.append(StatChange(
+                    trainer=trainer_name, pokemon_name=pokemon_name,
+                    stat_name=stat, stage_change=actual_change,
+                    was_capped=(actual_change == 0),
+                ))
+
+
+def _emit_status_message(events: list, target: Pokemon, effect: StatusEffect, result: str) -> None:
+    status_messages = {
+        "Poison": " was poisoned!",
+        "Paralysis": " was paralyzed!",
+        "Sleep": " was put to sleep!",
+        "Burn": " was burned!",
+        "Freeze": " was frozen!",
+        "Confusion": " became confused!",
+        "Curse": " was cursed!",
+    }
+    already_messages = {
+        "Poison": " is already poisoned!",
+        "Paralysis": " is already paralyzed!",
+        "Sleep": " is already asleep!",
+        "Burn": " is already burned!",
+        "Freeze": " is already frozen!",
+        "Confusion": " is already confused!",
+        "Curse": " is already cursed!",
+    }
+    major_status_messages = {
+        "Poison": " already has a status condition!",
+        "Paralysis": " already has a status condition!",
+        "Sleep": " already has a status condition!",
+        "Burn": " already has a status condition!",
+        "Freeze": " already has a status condition!",
+    }
+
+    if result == "afflicted":
+        events.append(Message(
+            text=msg("target_effect", target=target.name,
+                     message=f"{target.name}{status_messages.get(effect.name, ' was affected!')}"),
+            color="status",
+        ))
+    elif result == "already":
+        if effect.is_major and target.major_status is not None:
+            msg_text = f"{target.name}{major_status_messages.get(effect.name, ' already has a status condition!')}"
+        else:
+            msg_text = f"{target.name}{already_messages.get(effect.name, ' is already affected!')}"
+        events.append(Message(text=msg("target_effect", target=target.name, message=msg_text), color="status"))

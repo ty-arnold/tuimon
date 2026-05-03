@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 from textual.widgets    import ListView, ListItem, Label, Static, Tabs
 from textual.containers import Horizontal
 from core.logger     import logger
@@ -5,6 +7,10 @@ from data.type_chart import TYPE_CHART
 from core.colors     import markup
 from ui.palette      import Colors
 from core            import BattlePhase
+
+if TYPE_CHECKING:
+    from models.trainer import Trainer
+    from battle.controller import BattleController
 
 _TYPE_BASE = {
     "Normal":   "#888888",
@@ -52,6 +58,18 @@ def _make_type_colors(base: dict) -> dict:
 TYPE_COLORS = _make_type_colors(_TYPE_BASE)
 
 class MenuUIMixin:
+    """Handles the action pane — move/party/item menus and detail display."""
+    player: Trainer
+    npc: Trainer
+    controller: BattleController
+    _input_enabled: bool
+    query_one: Any
+    app: Any
+    log_message: Any
+    show_main_menu: Any
+    show_party_menu: Any
+    update_display: Any
+    resolve_and_display: Any
     """Handles action pane menu state switching."""
 
     def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
@@ -265,15 +283,6 @@ class MenuUIMixin:
         idx = event.list_view.index
 
         if event.list_view.id == "menu-moves":
-            # Locked into a multi-turn move — force the locked move
-            if self.player.locked_move is not None:
-                move = self.player.locked_move
-                self.player.locked_turns -= 1
-                self.controller.select_player_move(move)
-                self.controller.select_npc_move()
-                self.show_main_menu()
-                self.run_worker(self.resolve_and_display(), thread=False)
-                return
             moveset = self.player.active().moveset
             if idx >= len(moveset):
                 self.show_main_menu()

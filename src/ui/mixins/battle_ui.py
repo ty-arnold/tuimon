@@ -1,15 +1,31 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any
 import asyncio
-from textual.widgets import RichLog, ProgressBar, Label
-from core.game_print import start_buffering, stop_buffering, HpSnapshot, StatusSnapshot, EffectSnapshot, StatsSnapshot
+from textual.widgets import RichLog, Label
 from core.logger     import logger
-from textual.color import Gradient
+from core.battle_state import BattlePhase
+from models.turn_result import Message, HPChange, StatusApplied, EffectChange, StatChange, Switch, Faint
 from ui.widgets.hp_bar import HpBar
+
+if TYPE_CHECKING:
+    from models.trainer import Trainer
+    from battle.controller import BattleController
 
 MESSAGE_DELAY = 0.60
 HP_ANIM_SPEED = 1.25
 
 class BattleUIMixin:
     """Handles turn resolution and animation."""
+    player: Trainer
+    npc: Trainer
+    controller: BattleController
+    _input_enabled: bool
+    query_one: Any
+    update_display: Any
+    _format_status: Any
+    _format_effects: Any
+    _format_stats_combined: Any
+    _handle_phase_ui: Any
 
     async def resolve_and_display(self) -> None:
         self._set_input_enabled(False)
@@ -19,20 +35,17 @@ class BattleUIMixin:
         log.write(f"[dim]───────── turn {self.controller.turn + 1} ─────────[/dim]")
         await asyncio.sleep(0.1)
 
-        start_buffering()
-        phase    = self.controller.execute_turn()
-        self._handle_phase_buffered(phase)
-        messages = stop_buffering()
+        result = self.controller.execute_turn()
+        self._handle_winner(result)
 
-        for item in messages:
-            if isinstance(item, HpSnapshot):
+        for item in result.events:
+            if isinstance(item, HPChange):
                 widget_id = self._get_hp_widget_id(item.pokemon_name)
                 if widget_id:
-                    await self.animate_hp_bar(widget_id, item.start_hp, item.end_hp, item.max_hp)
+                    await self.animate_hp_bar(widget_id, item.old_hp, item.new_hp, item.max_hp)
 
-            elif isinstance(item, StatusSnapshot):
-                # update status badge immediately after the message
-                trainer = self.npc    if item.trainer_name == self.npc.name    else self.player
+            elif isinstance(item, StatusApplied):
+                trainer = self.npc    if item.trainer == self.npc.name    else self.player
                 pokemon = trainer.active()
                 status_str = self._format_status(pokemon)
                 widget_id  = "#npc-status" if trainer == self.npc else "#player-status"
@@ -43,9 +56,8 @@ class BattleUIMixin:
                 else:
                     widget.display = False
 
-            elif isinstance(item, EffectSnapshot):
-                # update effects badge immediately
-                trainer    = self.npc    if item.trainer_name == self.npc.name    else self.player
+            elif isinstance(item, EffectChange):
+                trainer    = self.npc    if item.trainer == self.npc.name    else self.player
                 effects_str = self._format_effects(trainer)
                 widget_id   = "#npc-effects" if trainer == self.npc else "#player-effects"
                 widget      = self.query_one(widget_id, Label)
@@ -55,18 +67,42 @@ class BattleUIMixin:
                 else:
                     widget.display = False
 
-            elif isinstance(item, StatsSnapshot):
-                trainer   = self.npc if item.trainer_name == self.npc.name else self.player
+            elif isinstance(item, StatChange):
+                trainer   = self.npc if item.trainer == self.npc.name else self.player
                 widget_id = "#npc-stats" if trainer == self.npc else "#player-stats"
                 self.query_one(widget_id).update(self._format_stats_combined(trainer.active()))
 
-            else:
-                log.write(item)
+            elif isinstance(item, Switch):
+                log.write(f"{item.old_name} switched out. Go, {item.new_name}!")
                 await asyncio.sleep(MESSAGE_DELAY)
+
+            elif isinstance(item, Faint):
+                log.write(f"[bold red]{item.pokemon_name} fainted![/bold red]")
+                await asyncio.sleep(MESSAGE_DELAY)
+
+            elif isinstance(item, Message):
+                log.write(item.text)
+                await asyncio.sleep(MESSAGE_DELAY)
+
+            else:
+                log.write(str(item))
+                await asyncio.sleep(MESSAGE_DELAY)
+
+        # NPC auto-switch handles its own display and state mutation
+        if result.phase == BattlePhase.NPC_SWITCH:
+            self._do_npc_switch()
+            log.write(f"Opponent sent out {self.npc.active().name}!")
+            await asyncio.sleep(MESSAGE_DELAY)
 
         self.update_display()
         self._set_input_enabled(True)
-        self._handle_phase_ui(phase)
+        self._handle_phase_ui(result.phase)
+
+    def _handle_winner(self, result) -> None:
+        if result.winner:
+            log = self.query_one("#combat-log", RichLog)
+            msg = "You won!" if result.winner == "player" else "You lost!"
+            log.write(f"[bold]{msg}[/bold]")
 
     async def animate_hp_bar(
         self,
@@ -100,22 +136,6 @@ class BattleUIMixin:
         if any(p.name == pokemon_name for p in self.player.party):
             return "#player-hp-bar"
         return None
-
-    def _update_hp_bar_color(self, widget_id: str, pct: int) -> None:
-        from ui.palette import Colors
-        bar = self.query_one(widget_id, HpBar)
-        c   = Colors(self.app)
-
-        if pct > 50:
-            color = c.success
-        elif pct > 25:
-            color = c.warning
-        else:
-            color = c.error
-
-        # gradient with same color start and end = solid color
-        bar.styles.color = color
-        bar.set_hp(current, max_hp)
 
     def _set_input_enabled(self, enabled: bool) -> None:
         self._input_enabled = enabled

@@ -2,7 +2,8 @@ import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, TurnOrder
 from models.turn_order import BattleAction
-from core import game_print, msg
+from models.turn_result import Message, HPChange, TurnEvent
+from core import msg
 from battle.status_effects import get_all_effects
 
 def get_turn_order(
@@ -50,18 +51,25 @@ def _determine_first(player: Trainer, player_choice: BattleAction, npc: Trainer,
     # speed tie - randomize
     return random.random() > 0.5
 
-def check_can_act(pokemon: Pokemon) -> tuple[bool, Optional[str]]:
+def check_can_act(pokemon: Pokemon, events: list[TurnEvent] | None = None) -> tuple[bool, Optional[str]]:
     all_effects = get_all_effects(pokemon)
     for effect in all_effects:
         if effect.name == "Confusion":
             if random.random() < 0.5:  # 50% chance to hurt itself
                 damage = round(pokemon.max_hp * 0.1)
+                hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(msg("confusion_self_hit", pokemon=pokemon.name))
-                game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
+                if events is not None:
+                    events.append(Message(text=msg("confusion_self_hit", pokemon=pokemon.name)))
+                    events.append(HPChange(
+                        trainer="", pokemon_name=pokemon.name,
+                        old_hp=hp_before, new_hp=pokemon.hp, max_hp=pokemon.max_hp,
+                    ))
+                    events.append(Message(text=msg("took_damage", pokemon=pokemon.name, damage=damage), color="damage"))
                 return False, "Confusion"  # skip attack this turn
             else:
-                game_print(msg("is_confused", pokemon=pokemon.name))
+                if events is not None:
+                    events.append(Message(text=msg("is_confused", pokemon=pokemon.name)))
         elif not effect.can_act():
             return False, effect.name
     return True, None

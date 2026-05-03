@@ -6,7 +6,8 @@ from battle.modifiers import get_modifier_value
 from battle.move_effects import get_screen_modifier
 from core.logger import logger
 from core import msg
-from core.game_print import record_hp_change, game_print
+from models.turn_result import Message, HPChange, TurnEvent
+
 
 def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
     multiplier = 1
@@ -15,11 +16,13 @@ def get_type_multiplier(move_type: str, defender_types: list[str]) -> int:
         multiplier *= TYPE_CHART.get(move_type, {}).get(defender_type, 1)
     return multiplier
 
+
 def apply_damage(
     move:         Move,
     attacker:     Trainer,
     defender:     Trainer,
-    current_turn: int
+    current_turn: int,
+    events:       list[TurnEvent] | None = None
 ) -> int:
     power_modifier  = get_modifier_value("power_modifier",  move, attacker.active(), current_turn)
     damage_modifier = get_modifier_value("damage_modifier", move, attacker.active(), current_turn)
@@ -29,43 +32,52 @@ def apply_damage(
     damage_modifier *= screen_modifier
     
     effective_power    = round(move.power * power_modifier)
-    damage, multiplier = calculate_damage(move, attacker, defender, effective_power)
+    damage, multiplier = calculate_damage(move, attacker, defender, effective_power, events=events)
     damage             = round(damage * damage_modifier)
 
     target    = defender.active()
     hp_before = target.hp
     target.hp = max(0, target.hp - damage)
 
-    record_hp_change(
-        pokemon_name = target.name,
-        start_hp     = hp_before,
-        end_hp       = target.hp,
-        max_hp       = target.max_hp,
-    )
+    if events is not None:
+        events.append(HPChange(
+            trainer=defender.name,
+            pokemon_name=target.name,
+            old_hp=hp_before,
+            new_hp=target.hp,
+            max_hp=target.max_hp,
+        ))
 
     if multiplier == 0:
-        game_print(msg("no_effect"))
+        if events is not None:
+            events.append(Message(text=msg("no_effect")))
     elif multiplier < 1:
-        game_print(msg("not_effective"))
+        if events is not None:
+            events.append(Message(text=msg("not_effective"), color="weak"))
     elif multiplier > 1:
-        game_print(msg("super_effective"))
+        if events is not None:
+            events.append(Message(text=msg("super_effective"), color="super"))
 
     if (defender.locked_move is not None and
         defender.locked_move.multi_turn is not None and
         defender.locked_move.multi_turn.accumulator is not None and
         defender.locked_move.multi_turn.accumulator.type == "damage_taken"):
         defender.active().accumulator += damage
-        game_print(msg("storing_energy",   pokemon=defender.active().name))
+        if events is not None:
+            events.append(Message(text=msg("storing_energy", pokemon=defender.active().name)))
         
-    game_print(msg("took_damage", pokemon=target.name, damage=damage))
+    if events is not None:
+        events.append(Message(text=msg("took_damage", pokemon=target.name, damage=damage), color="damage"))
 
     return damage 
+
 
 def calculate_damage(
     move:           Move,
     attacker:       Trainer,
     defender:       Trainer,
-    effective_power: Optional[int] = None
+    effective_power: Optional[int] = None,
+    events:          list | None = None
 ) -> tuple[int, float]:
 
     if move.category == "physical":
@@ -82,8 +94,8 @@ def calculate_damage(
     # calculate critical hit chance based on move crit rate
     crit_chance = crit_rate_table.get(move.crit_rate, 1/16)
     critical    = 2 if random.random() < crit_chance else 1
-    if critical == 2:
-        game_print(msg("critical_hit"))
+    if critical == 2 and events is not None:
+        events.append(Message(text=msg("critical_hit"), color="crit"))
 
     # use effective_power if provided (from modifiers like charge)
     # otherwise use the move's base power
@@ -102,15 +114,19 @@ def calculate_damage(
 
     return damage, multiplier
 
-def apply_lifesteal(move: Move, attacker: Pokemon, damage: int) -> None:
+
+def apply_lifesteal(move: Move, attacker: Pokemon, damage: int, events: list[TurnEvent] | None = None) -> None:
     heal_amount = round(damage * move.lifesteal)
     attacker.active().hp = min(
         attacker.active().max_hp,
         attacker.active().hp + heal_amount
     )
-    game_print(msg("drain", pokemon=attacker.active().name, hp=heal_amount))
+    if events is not None:
+        events.append(Message(text=msg("drain", pokemon=attacker.active().name, hp=heal_amount)))
 
-def apply_recoil(move: Move, attacker: Pokemon, damage: int) -> None:
+
+def apply_recoil(move: Move, attacker: Pokemon, damage: int, events: list[TurnEvent] | None = None) -> None:
     recoil_damage = round(damage * move.recoil)
     attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
-    game_print(msg("recoil", pokemon=attacker.active().name, hp=recoil_damage))
+    if events is not None:
+        events.append(Message(text=msg("recoil", pokemon=attacker.active().name, hp=recoil_damage)))

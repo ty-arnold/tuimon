@@ -5,3 +5,7 @@ from models.move          import MultiTurn, Accumulator, Move
 from models.pokemon       import Pokemon
 from models.trainer       import Trainer
 from models.turn_order    import TurnOrder, BattleAction
+from models.turn_result   import (
+    TurnResult, TurnEvent, Message, HPChange, StatusApplied,
+    EffectChange, StatChange, Switch, Faint,
+)

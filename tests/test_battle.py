@@ -4,9 +4,9 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from battle import check_winner, resolve_turn, apply_move, resolve_turn, get_turn_order
+from battle import check_winner, resolve_turn, apply_move, get_turn_order
 from helpers import make_pokemon, make_move, make_trainer
-from models import Trainer, Pokemon, Move
+from models import Trainer, Pokemon, Move, BattleAction
 
 class TestBattle(unittest.TestCase):
 
@@ -20,14 +20,14 @@ class TestBattle(unittest.TestCase):
         player_mon.hp = 0
         player        = make_trainer(pokemon=[player_mon])
         npc           = make_trainer(pokemon=[make_pokemon()])
-        self.assertTrue(check_winner(player, npc))
+        self.assertIsNotNone(check_winner(player, npc))
 
     def test_check_winner_returns_player_when_npc_fainted(self):
         npc_mon    = make_pokemon()
         npc_mon.hp = 0
         player     = make_trainer(pokemon=[make_pokemon()])
         npc        = make_trainer(pokemon=[npc_mon])
-        self.assertTrue(check_winner(player, npc))
+        self.assertIsNotNone(check_winner(player, npc))
 
     def test_faster_pokemon_attacks_first(self):
         attack_order = []
@@ -57,7 +57,8 @@ class TestBattle(unittest.TestCase):
         current_turn = 1
         # should not raise any exceptions
         try:
-            resolve_turn(player, move, npc, move, current_turn)
+            action = BattleAction(kind="move", move=move)
+            resolve_turn(player, action, npc, action, current_turn)
         except Exception as e:
             self.fail(f"resolve_turn raised an exception: {e}")
 
@@ -68,7 +69,8 @@ class TestBattle(unittest.TestCase):
         npc     = make_trainer(pokemon=[npc_mon])
         move    = make_move(category="physical", power=250, acc=1.0)
         current_turn = 1
-        resolve_turn(player, move, npc, move, current_turn)
+        action = BattleAction(kind="move", move=move)
+        resolve_turn(player, action, npc, action, current_turn)
         self.assertIsNotNone(check_winner(player, npc))
 
     def test_switching_pokemon_updates_selected_mon(self):
@@ -92,40 +94,38 @@ class TestBattle(unittest.TestCase):
 class TestMovePriority(unittest.TestCase):
 
     def test_higher_priority_move_goes_first(self):
-        # player has slower pokemon but higher priority move
         player = make_trainer(pokemon=[make_pokemon(stat_spd=50)])
         npc    = make_trainer(pokemon=[make_pokemon(stat_spd=150)])
 
-        # high priority move like quick attack
         player_move = make_move(name="Quick Attack", power=40, acc=1.0, priority=1)
         npc_move    = make_move(name="Tackle",       power=40, acc=1.0, priority=0)
 
-        order = get_turn_order(player, player_move, npc, npc_move, True, True)
+        order = get_turn_order(player, BattleAction(kind="move", move=player_move),
+                               npc, BattleAction(kind="move", move=npc_move), True, True)
         self.assertEqual(order.first, player)
         self.assertEqual(order.second, npc)
 
     def test_lower_priority_move_goes_second(self):
-        # player has faster pokemon but lower priority move
         player = make_trainer(pokemon=[make_pokemon(stat_spd=150)])
         npc    = make_trainer(pokemon=[make_pokemon(stat_spd=50)])
 
         player_move = make_move(name="Tackle",       power=40, acc=1.0, priority=0)
         npc_move    = make_move(name="Quick Attack", power=40, acc=1.0, priority=1)
 
-        order = get_turn_order(player, player_move, npc, npc_move, True, True)
+        order = get_turn_order(player, BattleAction(kind="move", move=player_move),
+                               npc, BattleAction(kind="move", move=npc_move), True, True)
         self.assertEqual(order.first, npc)
         self.assertEqual(order.second, player)
 
     def test_equal_priority_uses_speed(self):
-        # both moves have same priority, faster pokemon goes first
         player = make_trainer(pokemon=[make_pokemon()])
         npc    = make_trainer(pokemon=[make_pokemon()])
 
         player.active().stat_spd = 150
         npc.active().stat_spd    = 50
 
-        player_move = make_move(priority=0)
-        npc_move    = make_move(priority=0)
+        player_move = BattleAction(kind="move", move=make_move(priority=0))
+        npc_move    = BattleAction(kind="move", move=make_move(priority=0))
 
         order = get_turn_order(player, player_move, npc, npc_move, True, True)
         self.assertEqual(order.first, player)
@@ -138,27 +138,25 @@ class TestMovePriority(unittest.TestCase):
         player.active().stat_spd = 50
         npc.active().stat_spd    = 150
 
-        player_move = make_move(priority=0)
-        npc_move    = make_move(priority=0)
+        player_move = BattleAction(kind="move", move=make_move(priority=0))
+        npc_move    = BattleAction(kind="move", move=make_move(priority=0))
 
         order = get_turn_order(player, player_move, npc, npc_move, True, True)
         self.assertEqual(order.first, npc)
         self.assertEqual(order.second, player)
 
     def test_equal_priority_equal_speed_resolves(self):
-        # speed tie should not crash and should return a valid order
         player = make_trainer(pokemon=[make_pokemon()])
         npc    = make_trainer(pokemon=[make_pokemon()])
 
         player.active().stat_spd = 100
         npc.active().stat_spd    = 100
 
-        player_move = make_move(priority=0)
-        npc_move    = make_move(priority=0)
+        player_move = BattleAction(kind="move", move=make_move(priority=0))
+        npc_move    = BattleAction(kind="move", move=make_move(priority=0))
 
         try:
             order = get_turn_order(player, player_move, npc, npc_move, True, True)
-            # result should be one of two valid orderings
             self.assertIn(order.first, [player, npc])
             self.assertIn(order.second, [player, npc])
             self.assertNotEqual(order.first, order.second)
@@ -166,50 +164,44 @@ class TestMovePriority(unittest.TestCase):
             self.fail(f"get_turn_order raised an exception on speed tie: {e}")
 
     def test_negative_priority_goes_last(self):
-        # negative priority moves like trick room go last
         player = make_trainer(pokemon=[make_pokemon()])
         npc    = make_trainer(pokemon=[make_pokemon()])
 
-        player.active().stat_spd = 150  # faster pokemon
+        player.active().stat_spd = 150
         npc.active().stat_spd    = 50
 
-        player_move = make_move(name="Slow Move", power=0,  acc=1.0, priority=-1)
-        npc_move    = make_move(name="Tackle",    power=40, acc=1.0, priority=0)
+        player_move = BattleAction(kind="move", move=make_move(name="Slow Move", power=0, acc=1.0, priority=-1))
+        npc_move    = BattleAction(kind="move", move=make_move(name="Tackle",    power=40, acc=1.0, priority=0))
 
         order = get_turn_order(player, player_move, npc, npc_move, True, True)
-        # despite being faster, player's negative priority move goes second
         self.assertEqual(order.first,  npc)
         self.assertEqual(order.second, player)
 
     def test_same_high_priority_uses_speed(self):
-        # if both moves have the same high priority, speed still decides
         player = make_trainer(pokemon=[make_pokemon()])
         npc    = make_trainer(pokemon=[make_pokemon()])
 
         player.active().stat_spd = 50
         npc.active().stat_spd    = 150
 
-        player_move = make_move(name="Quick Attack", power=40, acc=1.0, priority=1)
-        npc_move    = make_move(name="Quick Attack", power=40, acc=1.0, priority=1)
+        player_move = BattleAction(kind="move", move=make_move(name="Quick Attack", power=40, acc=1.0, priority=1))
+        npc_move    = BattleAction(kind="move", move=make_move(name="Quick Attack", power=40, acc=1.0, priority=1))
 
         order = get_turn_order(player, player_move, npc, npc_move, True, True)
-        # both have priority 1, npc is faster so goes first
         self.assertEqual(order.first,  npc)
         self.assertEqual(order.second, player)
 
     def test_can_act_flags_preserved_in_order(self):
-        # verify can_act flags are correctly assigned to first and second
         player = make_trainer(pokemon=[make_pokemon(stat_spd=150)])
         npc    = make_trainer(pokemon=[make_pokemon(stat_spd=50)])
 
-        player_move = make_move(priority=0)
-        npc_move    = make_move(priority=0)
+        player_move = BattleAction(kind="move", move=make_move(priority=0))
+        npc_move    = BattleAction(kind="move", move=make_move(priority=0))
 
         order = get_turn_order(player, player_move, npc, npc_move,
                                player_can_act=True, npc_can_act=False)
 
-        # player is faster so goes first
         self.assertEqual(order.first,          player)
-        self.assertTrue(order.first_can_act)   # player can act
+        self.assertTrue(order.first_can_act)
         self.assertEqual(order.second,         npc)
-        self.assertFalse(order.second_can_act) # npc cannot act
+        self.assertFalse(order.second_can_act)

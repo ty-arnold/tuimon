@@ -1,10 +1,13 @@
 import random
 from typing import Optional
 from models import Move, Pokemon, Trainer, StatusEffect
-from core import game_print, msg
-from core.game_print import record_status_change, record_hp_change
+from core import msg
+from models.turn_result import Message, HPChange, StatusApplied, TurnEvent
 
-def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, Optional[StatusEffect]]:
+
+def apply_status_effect_from_move(
+    move: Move, defender: Trainer, events: list[TurnEvent] | None = None
+) -> tuple[str, Optional[StatusEffect]]:
     import copy
     
     if move.status_effect is None:
@@ -15,16 +18,15 @@ def apply_status_effect_from_move(move: Move, defender: Trainer) -> tuple[str, O
     if random.random() < effect.chance_to_apply:
         success = defender.active().apply_status_effect(effect)
         if success:
-            record_status_change(
-                trainer_name = defender.name,
-                pokemon_name = defender.active().name,
-            )
+            if events is not None:
+                events.append(StatusApplied(trainer=defender.name))
             return "afflicted", effect
         else:
             return "already", effect  # blocked because major status already exists
     return "failed", effect
 
-def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
+
+def process_effect(pokemon: Pokemon, effect: StatusEffect, events: list[TurnEvent] | None = None) -> bool:
     # Process a single status effect. Returns True if the effect should be removed
     if effect.check_should_end():
         return True
@@ -36,23 +38,33 @@ def process_effect(pokemon: Pokemon, effect: StatusEffect) -> bool:
                 damage    = round(pokemon.max_hp * effect.damage)
                 hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(msg("generic_effect", pokemon=pokemon.name, effect=effect.name.lower()))
-                record_hp_change(pokemon.name, hp_before, pokemon.hp, pokemon.max_hp)
-                game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
+                if events is not None:
+                    events.append(Message(text=msg("generic_effect", pokemon=pokemon.name, effect=effect.name.lower())))
+                    events.append(HPChange(
+                        trainer="", pokemon_name=pokemon.name,
+                        old_hp=hp_before, new_hp=pokemon.hp, max_hp=pokemon.max_hp,
+                    ))
+                    events.append(Message(text=msg("took_damage", pokemon=pokemon.name, damage=damage), color="damage"))
         case "Burn":
             if effect.damage is not None:
                 damage    = round(pokemon.max_hp * effect.damage)
                 hp_before = pokemon.hp
                 pokemon.hp = max(0, pokemon.hp - damage)
-                game_print(msg("burn_damage", pokemon=pokemon.name))
-                record_hp_change(pokemon.name, hp_before, pokemon.hp, pokemon.max_hp)
-                game_print(msg("took_damage", pokemon=pokemon.name, damage=damage))
+                if events is not None:
+                    events.append(Message(text=msg("burn_damage", pokemon=pokemon.name)))
+                    events.append(HPChange(
+                        trainer="", pokemon_name=pokemon.name,
+                        old_hp=hp_before, new_hp=pokemon.hp, max_hp=pokemon.max_hp,
+                    ))
+                    events.append(Message(text=msg("took_damage", pokemon=pokemon.name, damage=damage), color="damage"))
             else:
-                game_print(msg("is_confused", pokemon=pokemon.name))
+                if events is not None:
+                    events.append(Message(text=msg("is_confused", pokemon=pokemon.name)))
 
     return False
 
-def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffect]) -> None:
+
+def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffect], events: list[TurnEvent] | None = None) -> None:
     # Remove expired effects and print removal messages
     removal_messages = {
         "Poison":    "was cured of poison!",
@@ -66,17 +78,20 @@ def remove_expired_effects(pokemon: Pokemon, effects_to_remove: list[StatusEffec
     for effect in effects_to_remove:
         pokemon.remove_status_effect(effect)
         message = removal_messages.get(effect.name, " is no longer affected!")
-        game_print(msg("target_effect", target=pokemon.name, message=message))
+        if events is not None:
+            events.append(Message(text=msg("target_effect", target=pokemon.name, message=message)))
+
 
 def get_all_effects(pokemon: Pokemon) -> list[StatusEffect]:
     # Get all active status effects for a pokemon
     return ([pokemon.major_status] if pokemon.major_status else []) + pokemon.minor_status
 
-def process_status_effects(pokemon: Pokemon) -> None:
+
+def process_status_effects(pokemon: Pokemon, events: list[TurnEvent] | None = None) -> None:
     effects_to_remove = []
 
     for effect in get_all_effects(pokemon):
-        if process_effect(pokemon, effect):
+        if process_effect(pokemon, effect, events):
             effects_to_remove.append(effect)
 
-    remove_expired_effects(pokemon, effects_to_remove)
+    remove_expired_effects(pokemon, effects_to_remove, events)

@@ -163,14 +163,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
             return
         if self.controller.phase != BattlePhase.PLAYER_ACTION:
             return
-        if self.player.locked_move is not None:
-            move = self.player.locked_move
-            self.player.locked_turns -= 1
-            self.controller.select_player_move(move)
-            self.controller.select_npc_move()
-            self.run_worker(self.resolve_and_display(), thread=False)
-        else:
-            self.query_one("#menu-tabs", Tabs).active = "tab-moves"
+        self.query_one("#menu-tabs", Tabs).active = "tab-moves"
 
     def action_party(self) -> None:
         if not self._input_enabled:

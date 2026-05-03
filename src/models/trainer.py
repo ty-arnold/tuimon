@@ -24,9 +24,5 @@ class Trainer:
             game_print(f"{i + 1}. {pokemon.name}")
         game_print(f"{len(self.party) + 1}. Cancel")
 
-    def print_hp(self) -> None:
-        from core.game_print import game_print
-        game_print(f"{self.name}'s {self.active().name}: {self.active().hp}/{self.active().max_hp}") 
-    
     def active(self) -> Pokemon:
         return self.party[self.selected_mon]
