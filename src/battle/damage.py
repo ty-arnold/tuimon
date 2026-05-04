@@ -93,7 +93,13 @@ def calculate_damage(
     
     # calculate critical hit chance based on move crit rate
     crit_chance = crit_rate_table.get(move.crit_rate, 1/16)
-    critical    = 2 if random.random() < crit_chance else 1
+
+    from battle.abilities import check_ability_prevents
+    if check_ability_prevents(defender.active(), "crit"):
+        critical = 1
+    else:
+        critical = 2 if random.random() < crit_chance else 1
+
     if critical == 2 and events is not None:
         events.append(msg("critical_hit"))
 

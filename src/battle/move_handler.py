@@ -260,6 +260,17 @@ def apply_stat_change(move: Move, attacker: Trainer, defender: Trainer, old_stat
             continue
 
         for stat, change in stat_changes.items():
+            if change < 0 and target_type != "self":
+                from battle.abilities import check_ability_prevents
+                if stat in ("stat_attk", "stage_attk"):
+                    if check_ability_prevents(target, "atk_drop"):
+                        continue
+                elif stat in ("acc", "stage_acc"):
+                    if check_ability_prevents(target, "acc_drop"):
+                        continue
+                elif check_ability_prevents(target, "stat_drop_by_opponent"):
+                    continue
+
             stage_attr = "stage_" + stat.replace("stat_", "")
             old_stage  = getattr(target, stage_attr)
             actual_change = target.apply_stage_change(stat, change)

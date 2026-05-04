@@ -5,6 +5,7 @@ from models import Move
 CACHE_DIR     = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "cache")
 POKEMON_CACHE = os.path.join(CACHE_DIR, "pokemon_cache.json")
 MOVE_CACHE    = os.path.join(CACHE_DIR, "move_cache.json")
+ABILITY_CACHE = os.path.join(CACHE_DIR, "abilities.json")
 
 def ensure_cache_dir():
     if not os.path.exists(CACHE_DIR):
@@ -165,7 +166,22 @@ def pokemon_to_dict(pokemon):
 
 def dict_to_pokemon(data, lvl=50, moveset=None):
     from models import Pokemon
-    return Pokemon(
+    from data.abilities import Ability
+
+    ability = None
+    abilities_list = data.get("abilities", [])
+    if abilities_list:
+        ability_cache = get_ability_cache()
+        ability_cache_lower = {k.lower(): v for k, v in ability_cache.items()}
+        ability_name = abilities_list[0]  # use first (primary) ability
+        ability_data = ability_cache_lower.get(ability_name.lower())
+        if ability_data:
+            ability = Ability(
+                name=ability_data["name"],
+                description=ability_data.get("short_effect", ""),
+            )
+
+    p = Pokemon(
         name         = data["name"],
         lvl          = lvl,
         type         = data["type"],
@@ -177,3 +193,13 @@ def dict_to_pokemon(data, lvl=50, moveset=None):
         stat_sp_def  = data["stat_sp_def"],
         stat_spd     = data["stat_spd"],
     )
+    p.ability = ability
+    return p
+
+
+def get_ability_cache() -> dict:
+    """Load ability data from cache file."""
+    if not os.path.exists(ABILITY_CACHE):
+        return {}
+    with open(ABILITY_CACHE, "r") as f:
+        return json.load(f)

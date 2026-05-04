@@ -35,6 +35,8 @@ def fetch_and_cache_pokemon(name):
         "name":         data["name"].capitalize(),
         "type":         [t["type"]["name"].capitalize() for t in data["types"]],
         "moves":        [m["move"]["name"] for m in data["moves"]],
+        "abilities":    [a["ability"]["name"] for a in data["abilities"]
+                         if int(a["ability"]["url"].split("/")[-2]) <= 10000],  # filter invalid IDs
         "hp":           next(s["base_stat"] for s in data["stats"] if s["stat"]["name"] == "hp"),
         "stat_attk":    next(s["base_stat"] for s in data["stats"] if s["stat"]["name"] == "attack"),
         "stat_def":     next(s["base_stat"] for s in data["stats"] if s["stat"]["name"] == "defense"),

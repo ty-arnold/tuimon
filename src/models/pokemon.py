@@ -48,6 +48,7 @@ class Pokemon:
         self.minor_status: list[StatusEffect]      = []      # multiple allowed
         self.modifiers:    list[Modifier]          = []
         self.accumulator:  int                     = 0
+        self.ability:      Optional                = None    # set externally or via cache
 
     def _calc_hp(self, base: int, iv: int, ev: int, lvl: int) -> int:
         return round((((base + iv) * 2 + ev) * lvl / 100) + lvl + 10)
@@ -103,6 +104,12 @@ class Pokemon:
     
     def apply_status_effect(self, effect: StatusEffect) -> bool:
         import random
+
+        # Check ability-based status immunity
+        from battle.abilities import check_ability_prevents
+        if check_ability_prevents(self, effect.name):
+            return False
+
         if effect.is_major:
             # only one major status allowed at a time
             if self.major_status is not None:
