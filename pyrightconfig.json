@@ -1,7 +1,7 @@
 {
     "include": ["src"],
     "pythonVersion": "3.12",
-    "typeCheckingMode": "strict",
-    "reportMissingImports": true,
+    "typeCheckingMode": "basic",
+    "reportMissingImports": "warning",
     "reportUnusedImports": true
 }

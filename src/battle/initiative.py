@@ -12,10 +12,11 @@ def get_turn_order(
     npc:            Trainer,
     npc_choice:     BattleAction,
     player_can_act: bool,
-    npc_can_act:    bool
+    npc_can_act:    bool,
+    weather:        str | None = None,
 ) -> TurnOrder:
 
-    player_goes_first = _determine_first(player, player_choice, npc, npc_choice)
+    player_goes_first = _determine_first(player, player_choice, npc, npc_choice, weather)
 
     if player_goes_first:
         return TurnOrder(
@@ -36,7 +37,8 @@ def get_turn_order(
             second_can_act = player_can_act
         )
 
-def _determine_first(player: Trainer, player_choice: BattleAction, npc: Trainer, npc_choice: BattleAction) -> bool:
+def _determine_first(player: Trainer, player_choice: BattleAction, npc: Trainer, npc_choice: BattleAction,
+                     weather: str | None = None) -> bool:
     # priority takes precedence over speed
     if player_choice.priority != npc_choice.priority:
         return player_choice.priority > npc_choice.priority
@@ -45,6 +47,10 @@ def _determine_first(player: Trainer, player_choice: BattleAction, npc: Trainer,
     player_spd = player.active().get_stat("stat_spd")
     npc_spd    = npc.active().get_stat("stat_spd")
 
+    from battle.abilities import modify_speed_by_weather
+    player_spd = modify_speed_by_weather(player.active(), player_spd, weather)
+    npc_spd    = modify_speed_by_weather(npc.active(), npc_spd, weather)
+
     if player_spd != npc_spd:
         return player_spd > npc_spd
 
@@ -52,6 +58,15 @@ def _determine_first(player: Trainer, player_choice: BattleAction, npc: Trainer,
     return random.random() > 0.5
 
 def check_can_act(pokemon: Pokemon, events: list[TurnEvent] | None = None) -> tuple[bool, Optional[str]]:
+    from battle.abilities import _name
+    if _name(pokemon) == "Truant":
+        if pokemon.truant_skip:
+            pokemon.truant_skip = False
+            if events is not None:
+                events.append(Message(text=f"{pokemon.name} is loafing around!"))
+            return False, "Truant"
+        pokemon.truant_skip = True
+
     all_effects = get_all_effects(pokemon)
     for effect in all_effects:
         if effect.name == "Confusion":

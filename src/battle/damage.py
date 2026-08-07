@@ -22,7 +22,8 @@ def apply_damage(
     attacker:     Trainer,
     defender:     Trainer,
     current_turn: int,
-    events:       list[TurnEvent] | None = None
+    events:       list[TurnEvent] | None = None,
+    weather:      str | None = None
 ) -> int:
     power_modifier  = get_modifier_value("power_modifier",  move, attacker.active(), current_turn)
     damage_modifier = get_modifier_value("damage_modifier", move, attacker.active(), current_turn)
@@ -36,6 +37,14 @@ def apply_damage(
     damage             = round(damage * damage_modifier)
 
     target    = defender.active()
+
+    # Ability damage modifiers
+    from battle.abilities import check_ability_before_damage, modify_damage_by_ability, modify_damage_by_weather
+    damage = check_ability_before_damage(defender, damage, events)
+    dmg_mult = modify_damage_by_ability(attacker, defender, move, damage, events)
+    dmg_mult *= modify_damage_by_weather(move.type[0], weather)
+    damage = round(damage * dmg_mult)
+
     hp_before = target.hp
     target.hp = max(0, target.hp - damage)
 
@@ -68,6 +77,13 @@ def apply_damage(
         
     if events is not None:
         events.append(msg("took_damage", pokemon=target.name, damage=damage))
+
+    # Color Change: change type to the move's type when hit
+    from battle.abilities import _name
+    if damage > 0 and _name(target) == "Color Change" and move.type[0] not in target.type:
+        target.type = [move.type[0]]
+        if events is not None:
+            events.append(Message(text=f"{target.name} became {move.type[0]} type!"))
 
     return damage 
 

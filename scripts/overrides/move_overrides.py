@@ -385,3 +385,14 @@ MOVE_EFFECT_OVERRIDES = {
         }
     ),
 }
+
+
+# ── WEATHER OVERRIDES ────────────────────────────────────────────────────
+# Moves that set weather
+
+WEATHER_OVERRIDES: dict[str, str] = {
+    "rain-dance": "rain",
+    "sunny-day":  "sun",
+    "sandstorm":  "sandstorm",
+    "hail":       "hail",
+}

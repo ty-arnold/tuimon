@@ -23,8 +23,8 @@ def load_cache(filepath):
 
 def save_cache(filepath, data):
     ensure_cache_dir()
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=4)
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
 def get_move_cache():
     return load_cache(MOVE_CACHE)
@@ -63,6 +63,9 @@ def move_to_dict(move: Move) -> dict:
         if move.multi_turn.accumulator:
             mt["accumulator"]          = move.multi_turn.accumulator
         result["multi_turn"] = mt
+
+    if move.weather is not None:
+        result["weather"] = move.weather
 
     return result
 
@@ -138,6 +141,7 @@ def dict_to_move(data: dict) -> Move:
         immune_types       = data.get("immune_types", []),
         immune_moves       = data.get("immune_moves", []),
         move_effect        = move_effect,
+        weather            = data.get("weather", None),
         description        = data.get("description", ""),
     )
 

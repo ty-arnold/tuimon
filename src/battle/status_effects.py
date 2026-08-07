@@ -6,20 +6,46 @@ from models.turn_result import Message, HPChange, StatusApplied, StatusRemoved, 
 
 
 def apply_status_effect_from_move(
-    move: Move, defender: Trainer, events: list[TurnEvent] | None = None
+    move: Move, defender: Trainer, attacker: Trainer = None, events: list[TurnEvent] | None = None
 ) -> tuple[str, Optional[StatusEffect]]:
     import copy
     
     if move.status_effect is None:
         return "failed", None
+
+    from battle.abilities import check_ability_shield_dust
+    if check_ability_shield_dust(defender.active()):
+        return "failed", None
     
     effect = copy.deepcopy(move.status_effect)
+
+    chance = effect.chance_to_apply
+    if attacker is not None:
+        from battle.abilities import check_ability_serene_grace
+        if check_ability_serene_grace(attacker.active()):
+            chance *= 2
     
-    if random.random() < effect.chance_to_apply:
+    if random.random() < chance:
         success = defender.active().apply_status_effect(effect)
         if success:
             if events is not None:
                 events.append(StatusApplied(trainer=defender.name))
+
+            # Synchronize: pass major status back to attacker
+            if effect.is_major and attacker is not None:
+                from battle.abilities import _name
+                if _name(defender.active()) == "Synchronize":
+                    target = attacker.active()
+                    if _name(target) != "Synchronize":
+                        import copy
+                        sync_effect = copy.deepcopy(effect)
+                        if target.apply_status_effect(sync_effect):
+                            if events is not None:
+                                events.append(Message(
+                                    text=f"{defender.active().name}'s Synchronize afflicted {target.name}!"
+                                ))
+                                events.append(StatusApplied(trainer=attacker.name))
+
             return "afflicted", effect
         else:
             return "already", effect  # blocked because major status already exists

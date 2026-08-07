@@ -18,6 +18,7 @@ class BattleController:
         self.player_action:  BattleAction | None = None
         self.npc_action:     BattleAction | None = None
         self.battle_log:     list = []
+        self.weather:        str | None = None
 
     def select_player_move(self, move: Move) -> None:
         self.player_action = BattleAction(kind="move",move=move)
@@ -49,14 +50,18 @@ class BattleController:
             self.npc.locked_turns -= 1
 
         events: list[TurnEvent] = []
+        weather_container: list = []
 
         logger.debug(f"execute_turn: player hp={self.player.active().hp} npc hp={self.npc.active().hp}")
         
         winner = resolve_turn(
             self.player, self.player_action,
             self.npc,    self.npc_action,
-            self.turn, events
+            self.turn, events, weather_container
         )
+
+        if weather_container:
+            self.weather = weather_container[0]
         
         logger.debug(f"execute_turn: winner={winner}")
         logger.debug(f"execute_turn: player hp after={self.player.active().hp} npc hp after={self.npc.active().hp}")

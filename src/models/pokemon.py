@@ -49,6 +49,7 @@ class Pokemon:
         self.modifiers:    list[Modifier]          = []
         self.accumulator:  int                     = 0
         self.ability:      Optional                = None    # set externally or via cache
+        self.truant_skip:  bool                    = False   # Truant ability — skip every other turn
 
     def _calc_hp(self, base: int, iv: int, ev: int, lvl: int) -> int:
         return round((((base + iv) * 2 + ev) * lvl / 100) + lvl + 10)
@@ -79,11 +80,18 @@ class Pokemon:
             calculated = round(base * stat_table[stage])
 
         if self.major_status is not None and stat in self.major_status.stat_modifier:
-            calculated = round(calculated * self.major_status.stat_modifier[stat])
+            from battle.abilities import modify_stat_by_ability
+            # Guts ignores Burn's attack halving
+            name = self.ability.name if self.ability else ""
+            if not (name == "Guts" and self.major_status.name == "Burn" and stat == "stat_attk"):
+                calculated = round(calculated * self.major_status.stat_modifier[stat])
 
         for effect in self.minor_status:
             if stat in effect.stat_modifier:
                 calculated = round(calculated * effect.stat_modifier[stat])
+
+        from battle.abilities import modify_stat_by_ability
+        calculated = modify_stat_by_ability(self, stat, calculated)
         return calculated
 
     def apply_stage_change(self, stat: str, change: int) -> int:
@@ -120,6 +128,9 @@ class Pokemon:
                 setattr(self, stat, int(original * multiplier))
             if effect.use_turn_counter:
                 effect.turn_counter = random.randint(1, 3)
+                from battle.abilities import check_ability_halves_sleep_turns
+                if effect.name == "Sleep" and check_ability_halves_sleep_turns(self):
+                    effect.turn_counter = max(1, effect.turn_counter // 2)
             self.major_status = effect
         else:
             # check if this specific minor status is already applied

@@ -228,6 +228,8 @@ def convert_move(move_data: dict) -> Optional[dict]:
         result["status_effect"]      = status_effect_to_dict(status_effect)
     if move_effect is not None:
         result["move_effect"] = move_effect
+    if move_name in WEATHER_OVERRIDES:
+        result["weather"] = WEATHER_OVERRIDES[move_name]
     if description:
         result["description"] = description
 

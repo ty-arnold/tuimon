@@ -5,3 +5,4 @@ from dataclasses import dataclass
 class Ability:
     """Pokemon ability. Constructed from cached PokeAPI data."""
     name: str
+    description: str = ""

@@ -13,7 +13,8 @@ from data import acc_table
 
 def apply_move(
     move: Move, attacker: Trainer, defender: Trainer,
-    current_turn: int, events: list[TurnEvent] | None = None
+    current_turn: int, events: list[TurnEvent] | None = None,
+    weather: str | None = None
 ) -> Optional[bool]:
     logger.debug(f"Attacker: {attacker.active().name} HP: {attacker.active().hp}/{attacker.active().max_hp}")
     logger.debug(f"Defender: {defender.active().name} HP: {defender.active().hp}/{defender.active().max_hp}")
@@ -41,7 +42,7 @@ def apply_move(
             return None
 
     # 4. check accuracy
-    if not check_accuracy(move, attacker, defender):
+    if not check_accuracy(move, attacker, defender, weather):
         if events is not None:
             events.append(msg("missed", pokemon=attacker.active().name))
         attacker.active().accumulator = 0
@@ -53,7 +54,8 @@ def apply_move(
         return None
 
     # 6. decrement pp
-    move.pp -= 1
+    from battle.abilities import apply_ability_pp_pressure
+    move.pp -= 2 if apply_ability_pp_pressure(defender) else 1
 
     # 7. apply move effect for status moves
     if move.move_effect is not None:
@@ -80,7 +82,7 @@ def apply_move(
                 roll        = random.randint(move.min_hits, move.max_hits)
                 hits_landed = 0
                 for _ in range(roll):
-                    hit_damage = apply_damage(move, attacker, defender, current_turn, events=events)
+                    hit_damage = apply_damage(move, attacker, defender, current_turn, events=events, weather=weather)
                     damage    += hit_damage
                     hits_landed += 1
                     if not defender.active().is_alive():
@@ -88,10 +90,15 @@ def apply_move(
                 if events is not None:
                     events.append(msg("hit_x_times", times=hits_landed))
             else:
-                damage = apply_damage(move, attacker, defender, current_turn, events=events)
+                damage = apply_damage(move, attacker, defender, current_turn, events=events, weather=weather)
+
+    # 9b. contact abilities (Static, Poison Point, Rough Skin, etc.)
+    from battle.abilities import apply_contact_abilities
+    apply_contact_abilities(attacker, defender, move, events)
 
     # 10. apply recoil
-    if move.recoil > 0 and damage > 0:
+    from battle.abilities import check_ability_recoil_prevention
+    if move.recoil > 0 and damage > 0 and not check_ability_recoil_prevention(attacker):
         recoil_damage  = round(damage * move.recoil)
         hp_before      = attacker.active().hp
         attacker.active().hp = max(0, attacker.active().hp - recoil_damage)
@@ -103,14 +110,24 @@ def apply_move(
             events.append(msg("recoil", pokemon=attacker.active().name, hp=recoil_damage))
 
     # 11. apply lifesteal
+    from battle.abilities import check_ability_liquid_ooze_defender
     if move.lifesteal > 0 and damage > 0:
-        hp_before = attacker.active().hp
-        apply_lifesteal(move, attacker, damage, events=events)
-        if events is not None:
-            events.append(HPChange(
-                trainer=attacker.name, pokemon_name=attacker.active().name,
-                old_hp=hp_before, new_hp=attacker.active().hp, max_hp=attacker.active().max_hp,
-            ))
+        if check_ability_liquid_ooze_defender(defender, attacker, damage, move):
+            if events is not None:
+                events.append(Message(text=f"{attacker.active().name} was hurt by Liquid Ooze!"))
+                events.append(HPChange(
+                    trainer=attacker.name, pokemon_name=attacker.active().name,
+                    old_hp=attacker.active().hp + round(damage * move.lifesteal),
+                    new_hp=attacker.active().hp, max_hp=attacker.active().max_hp,
+                ))
+        else:
+            hp_before = attacker.active().hp
+            apply_lifesteal(move, attacker, damage, events=events)
+            if events is not None:
+                events.append(HPChange(
+                    trainer=attacker.name, pokemon_name=attacker.active().name,
+                    old_hp=hp_before, new_hp=attacker.active().hp, max_hp=attacker.active().max_hp,
+                ))
 
     # 12. apply heal
     if move.heal > 0:
@@ -133,7 +150,7 @@ def apply_move(
 
     # 14. apply status effect
     if move.status_effect is not None:
-        result, effect = apply_status_effect_from_move(move, defender, events=events)
+        result, effect = apply_status_effect_from_move(move, defender, attacker, events=events)
         if effect is not None and events is not None:
             _emit_status_message(events, defender.active(), effect, result)
 
@@ -173,13 +190,21 @@ def handle_multiturn(move: Move, attacker: Trainer, events: list[TurnEvent] | No
     return False
 
 
-def check_accuracy(move: Move, attacker: Trainer, defender: Trainer) -> bool:
+def check_accuracy(move: Move, attacker: Trainer, defender: Trainer, weather: str | None = None) -> bool:
     if move.acc is None:
         logger.debug(f"{move.name} never misses!")
         return True
 
     move_acc = move.acc * acc_table[attacker.active().stage_acc]
-    evasion  = acc_table[defender.active().stage_eva]
+    eva_stage = defender.active().stage_eva
+
+    from battle.abilities import modify_evasion_by_weather
+    eva_stage = modify_evasion_by_weather(defender.active(), eva_stage, weather)
+    evasion = acc_table[eva_stage]
+
+    from battle.abilities import check_ability_accuracy_modifier
+    move_acc *= check_ability_accuracy_modifier(attacker)
+
     if random.random() > move_acc * evasion:
         return False
     return True
@@ -232,6 +257,22 @@ def check_immunity(
                 events.append(msg("protect_self", pokemon=defender.active().name))
             return True
 
+    # Check ability-based type immunity (Levitate, Volt Absorb, etc.)
+    from battle.abilities import check_ability_type_immunity, is_sound_move, check_ability_blocks_sound, is_explosion_move, check_ability_blocks_explosion
+    if check_ability_type_immunity(defender, move, events):
+        return True
+
+    if is_sound_move(move.name) and check_ability_blocks_sound(defender.active()):
+        if events is not None:
+            events.append(msg("doesnt_effect", pokemon=defender.active().name))
+        return True
+
+    if is_explosion_move(move.name) and check_ability_blocks_explosion(defender.active()):
+        if events is not None:
+            from core.game_print import game_print
+            events.append(Message(text=msg("no_effect")))
+        return True
+
     multiplier = get_type_multiplier(move.type[0], defender.active().type)
     if multiplier == 0:
         if events is not None:
@@ -242,9 +283,13 @@ def check_immunity(
 
 def apply_stat_change(move: Move, attacker: Trainer, defender: Trainer, old_stats) -> dict:
     # roll against stat change chance before applying
-    if move.stat_change_chance < 1.0:
-        if random.random() > move.stat_change_chance:
-            logger.debug(f"Stat change failed to trigger ({move.stat_change_chance * 100}% chance)")
+    from battle.abilities import check_ability_serene_grace, check_ability_shield_dust
+    if check_ability_shield_dust(defender.active()):
+        return old_stats
+    chance = move.stat_change_chance * 2 if check_ability_serene_grace(attacker.active()) else move.stat_change_chance
+    if chance < 1.0:
+        if random.random() > chance:
+            logger.debug(f"Stat change failed to trigger ({chance * 100}% chance)")
             return old_stats  # stat change didn't trigger, return unchanged
 
     for target_type, stat_changes in move.stat_change.items():
