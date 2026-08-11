@@ -1,6 +1,6 @@
 import json
 import os
-from models import Move
+from models.move import Move
 
 CACHE_DIR     = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "cache")
 POKEMON_CACHE = os.path.join(CACHE_DIR, "pokemon_cache.json")
@@ -71,7 +71,8 @@ def move_to_dict(move: Move) -> dict:
 
 
 def dict_to_move(data: dict) -> Move:
-    from models import Move, MultiTurn, MoveEffect
+    from models.move import Move, MultiTurn
+    from models.modifier import MoveEffect
     from data.status_effects import poison, paralysis, sleep, burn, freeze
     import copy
 
@@ -169,7 +170,7 @@ def pokemon_to_dict(pokemon):
     }
 
 def dict_to_pokemon(data, lvl=50, moveset=None):
-    from models import Pokemon
+    from models.pokemon import Pokemon
     from data.abilities import Ability
 
     ability = None

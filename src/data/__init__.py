@@ -1,5 +1,0 @@
-from data.mult_tables    import stat_table, acc_table, crit_rate_table
-from data.type_chart     import TYPE_CHART
-from data.status_effects import poison, burn, paralysis, sleep, freeze, confusion, curse
-from data.messages       import MESSAGE_TEMPLATES, MessageTemplate
-from data.abilities      import Ability

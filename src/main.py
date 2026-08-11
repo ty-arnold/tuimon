@@ -9,22 +9,24 @@ if ENABLE_LOGS:
 
 logger = logging.getLogger("tuimon")
 
-from models       import Trainer, BattleAction
-from battle       import resolve_turn
-from ui           import dump_battle_state, dump_move
-from cli.input    import get_turn
-from core         import game_print, msg
-from core.presets import get_test_player, get_test_npc
-from pokemon      import create_pokemon_from_api
+from models.trainer     import Trainer
+from models.turn_order  import BattleAction
+from battle.battle      import resolve_turn
+from ui.debug           import dump_battle_state, dump_move
+from cli.input          import get_turn
+from ui.game_print       import game_print
+from battle.messages     import msg
+from app.fixtures        import get_test_player, get_test_npc
+from pokemon.pokemon_factory import create_pokemon_from_api
 
 if DEBUG:
-    from core.presets import get_test_player, get_test_npc
+    from app.fixtures import get_test_player, get_test_npc
     player = get_test_player()
     npc    = get_test_npc()
 else:
     from cli.print import build_party
     from pokemon.pokemon_factory import create_pokemon_from_api
-    from models import Trainer
+    from models.trainer import Trainer
     player_party = build_party("Ash", party_size=2)
     player       = Trainer(name="Ash", party=player_party)
     npc_party    = [

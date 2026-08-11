@@ -1,4 +1,4 @@
-from models import StatusEffect
+from models.status_effect import StatusEffect
 
 poison = StatusEffect(
     name = "Poison",

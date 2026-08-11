@@ -96,7 +96,7 @@ class TitleScreen(Screen):
                 return
 
     def action_vs_ai(self) -> None:
-        from core.presets import get_test_player, get_test_npc
+        from app.fixtures import get_test_player, get_test_npc
         from ui.screens.battle_screen import BattleScreen
         player = get_test_player()
         npc    = get_test_npc()

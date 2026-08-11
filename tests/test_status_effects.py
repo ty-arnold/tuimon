@@ -7,8 +7,10 @@ import unittest.mock
 import copy
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from battle import process_status_effects, get_all_effects, check_can_act, apply_move
-from data import *
+from battle.status_effects import process_status_effects, get_all_effects
+from battle.initiative import check_can_act
+from battle.move_handler import apply_move
+from data.status_effects import *
 from helpers import make_pokemon, make_trainer, make_move
 
 class TestStatusEffects(unittest.TestCase):

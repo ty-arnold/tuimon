@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any
 import asyncio
 from textual.widgets import RichLog, Label
 from core.logger     import logger
-from core.colors     import log_color
+from ui.colors        import log_color
 from core.battle_state import BattlePhase
 from models.turn_result import Message, HPChange, StatusApplied, StatusRemoved, EffectChange, StatChange, Switch, Faint
 from ui.widgets.hp_bar import HpBar

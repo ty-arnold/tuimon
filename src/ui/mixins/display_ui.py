@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from textual.widgets import Label, Static, RichLog
-from core.colors     import status_markup
+from ui.colors        import status_markup
 from ui.widgets.hp_bar import HpBar
 from ui.type_colors    import TYPE_COLORS
 from ui.palette        import Colors

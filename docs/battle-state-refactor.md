@@ -48,6 +48,16 @@ Battle state currently lives in six places with no owner:
 9. **Unbounded queue growth in the TUI** — `battle_screen.message_queue` has no
    consumer, and `_start_battle` is rescheduled ~6.7x/sec forever by
    `_animate_sprites`. See Step 12.
+10. **Protect-fail path raises `KeyError('target')`** — `move_effects.py:60` calls
+    `msg("target_effect", pokemon=..., message=...)` but the template is
+    `"{target} {message}"`. Triggers on a failed consecutive Protect.
+    Pinned by `test_move_effects.TestProtectEffect` (`@expectedFailure`).
+11. **Modifier consume path raises `TypeError`** — `modifiers.py:37` calls
+    `msg(message=...)` with no `key` argument. Triggers when an expiring modifier
+    has a `consume_message`. Pinned by `test_modifiers` (`@expectedFailure`).
+
+Both #10 and #11 are one-line fixes and can be done any time — they are independent
+of the refactor. Delete the `@unittest.expectedFailure` decorator when you do.
 
 ### Root cause of #4, #5, #6
 
@@ -105,15 +115,18 @@ the test suite find every call site for you.
 
 ## Steps
 
-Two phases, fifteen steps. **Each ends with tests green and is one commit.**
+Two phases, eighteen steps. **Each ends with tests green and is one commit.**
 
-**Phase 0 (A–D)** untangles the import graph. Do it first — threading `state`
-through a clean graph is far easier than fighting deferred imports at every call site.
-All four steps are mechanical and near-zero risk.
+**Phase 0 (A–E)** untangles the import graph and consolidates the duplicated
+infrastructure. Do it first — threading `state` through a clean graph is far easier
+than fighting deferred imports at every call site. All five steps are mechanical and
+near-zero risk.
 
-**Phase 1 (0–11)** is the `BattleState` work. Steps 0–7 are behaviour-preserving;
+**Phase 1 (0–13)** is the `BattleState` work. Steps 0–7 are behaviour-preserving;
 steps 8+ are the actual bug fixes, deliberately last so that when regression numbers
 move, you know it was intentional.
+
+See also the **Appendix** for redundancy that does not slot into either phase.
 
 | Step | Change | Risk | Behaviour changes? |
 |---|---|---|---|
@@ -121,6 +134,7 @@ move, you know it was intentional.
 | B | Re-home `core/` by layer | low | no |
 | C | Delete presentation methods on models | none | no |
 | D | Architecture test | none | no |
+| E | Consolidate paths + JSON plumbing | low | no |
 | 0 | Characterization tests | none | — |
 | 1 | Create `BattleState` + `clone()` | none | no |
 | 2 | Instantiate in controller | none | no |
@@ -134,6 +148,7 @@ move, you know it was intentional.
 | 10 | Fix double stat modifier | medium | **yes** — fixes #3 |
 | 11 | NPC AI out of UI + fix `winner` | low | **yes** — fixes #8 |
 | 12 | Drain/delete the message queue | low | **yes** — fixes #9 |
+| 13 | Dedupe the UI event/pane handling | low | no |
 
 ## Before you start
 
@@ -142,10 +157,42 @@ move, you know it was intentional.
   status_effects}.py`, `models/{move,pokemon}.py`). Land or shelve that work before
   Step A — you do not want an unrelated diff tangled into a 15-step refactor.
 - **`git add docs/`.** This file is currently untracked.
-- **Mind the coverage gaps.** `move_effects.py`, `modifiers.py`, `accumulator.py`, and
-  `controller.py` have **zero direct tests**, yet Step 7 migrates mutation sites in
-  three of them and Step 0 drives everything through `controller.py`. Write targeted
-  unit tests for those four modules as part of Step 0, before touching them.
+- **Coverage gaps: closed.** `move_effects.py`, `modifiers.py`, `accumulator.py`, and
+  `controller.py` previously had zero direct tests. Now covered by
+  `tests/test_{move_effects,modifiers,accumulator,controller}.py` — 92 tests, taking
+  the suite from 219 to 311. Five are `@unittest.expectedFailure` markers pinning
+  known bugs (#4, #8, #10, #11 and weather persistence); each names the step that
+  fixes it. **When a fix lands, the decorator turns the test into an "unexpected
+  success" failure** — that is the signal to delete the decorator.
+- **Cover `move_handler.py` before Step 7.** Engine coverage is healthy overall
+  (`battle/` 82.5%, `models/` 93.9%, combined **85.1%**), but `move_handler.py` sits
+  at **54%** with 122 missed statements — and it is both the largest engine module
+  and the one Step 7 rewrites most. The uncovered region includes `_emit_stat_events`
+  (lines 372-399), precisely the function Step 7 item 5 collapses into
+  `state.change_stage()`. `status_effects.py` (75.6%) has the same problem: the
+  missed lines 68-88 are the Poison/Curse/Burn end-of-turn damage branches that
+  Step 7 migrates.
+
+  Write ~12 targeted tests first, covering only what Step 7 touches:
+  `apply_stat_change` (rise/fall, +-6 cap, multi-stat dedup, self vs opponent,
+  `stat_change_chance` roll), `_emit_status_message` (afflicted / already-same /
+  already-different-major), `process_effect` ticks (damage amount, HP floor,
+  event emitted), and `apply_move`'s recoil / lifesteal / heal blocks.
+
+  Ignore the 37% project-wide figure — it is dominated by ~1,400 statements of
+  Textual UI that unit tests cannot reach. Scope coverage to the engine instead:
+
+  ```toml
+  [tool.coverage.run]
+  branch  = true                        # line coverage overstates; this engine is
+  source  = ["src/battle", "src/models"]  # dense with `if events is not None` guards
+
+  [tool.coverage.report]
+  fail_under = 80
+  ```
+
+  Caveat: coverage measures execution, not verification. `accumulator.py` reports
+  100% and still contains bug #4.
 - **`Move.__init__` has shared mutable defaults.** `immune_types: list[str] = []` and
   `immune_moves` are assigned straight to `self`, so *every* Move built without those
   args shares one list object — verified: appending to one leaks into all others.
@@ -344,6 +391,71 @@ first-party import anywhere.
 
 ---
 
+### Step E — Consolidate paths and JSON plumbing
+
+Two pieces of infrastructure are copy-pasted across the codebase. Both become
+dependency-free Layer 0 modules, so this belongs in Phase 0 with the rest of the
+layering work.
+
+#### E1 — Project-path resolution is duplicated 8x
+
+```
+src/core/logger.py            src/saves/inventory_save.py   src/assets/sprite_cache.py
+src/pokemon/cache_manager.py  src/saves/teams_save.py       src/assets/icon_cache.py
+src/pokemon/gen3_names.py     src/saves/party_save.py
+```
+
+Every one contains a variant of:
+
+```python
+os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+```
+
+The dirname count encodes each file's nesting depth. **Move any of these files one
+directory and it silently resolves to the wrong folder** — no error, just an empty
+cache or a save written somewhere unexpected. `battle_screen.py`'s `CSS_PATH` uses the
+same trick at a different depth.
+
+1. Create `src/core/paths.py` exporting `PROJECT_ROOT`, `CACHE_DIR`, `SAVES_DIR`,
+   `LOG_DIR`, `STYLES_DIR`. Zero first-party imports — pure Layer 0.
+2. Replace all 8 sites plus `CSS_PATH`.
+3. Prefer `pathlib.Path` over `os.path` while you are here; `PROJECT_ROOT /
+   "cache" / "move_cache.json"` reads better than nested `join`s.
+
+**Verify:** `grep -rn "dirname(os.path.dirname(os.path.dirname" src/` -> empty.
+
+#### E2 — JSON load/save is reimplemented 7x
+
+`cache_manager`, `gen3_names`, all three `saves/*`, `sprite_cache`, `icon_cache` each
+hand-roll:
+
+```python
+if os.path.exists(path):
+    with open(path) as f:
+        content = f.read().strip()
+        return json.loads(content) if content else default
+```
+
+...with **inconsistent error handling**. `cache_manager` catches `JSONDecodeError`;
+the `saves/` modules do not — so a truncated `teams.json` crashes the app at startup
+while a truncated `move_cache.json` degrades gracefully.
+
+1. Create `src/core/json_store.py` with `load_json(path, default)` and
+   `save_json(path, data)`. Catch `JSONDecodeError` in one place.
+2. Make `save_json` **atomic**: write to `path.with_suffix(".tmp")`, then
+   `os.replace()`. Right now a crash mid-write corrupts the save; `saves/` is
+   gitignored, so there is no recovery.
+3. Migrate all 7 modules.
+
+⚠️ `sprite_cache.py` and `icon_cache.py` also duplicate the lazy module-global
+(`_cache = None` + `def _load(): global _cache ...`). Collapse both onto the shared
+loader, or wrap with `functools.lru_cache`.
+
+**Verify:** delete `cache/` and `saves/`, launch the app, confirm clean re-seeding.
+Then truncate `saves/teams.json` mid-file and confirm it no longer crashes.
+
+---
+
 # Phase 1 — BattleState
 
 ### Step 0 — Build a safety net
@@ -507,9 +619,10 @@ Order by risk, easiest first:
 2. **`status_effects.py`** (2 sites) — poison/burn tick. **`trainer=""` becomes a real
    name.** Expected diff.
 3. **`initiative.py`** (1 site) — confusion self-hit. Same `trainer=""` fix.
-4. **`damage.py`** (3 sites) — main damage path, plus the dead `apply_recoil` /
-   `apply_lifesteal` helpers. Check whether those two are called anywhere
-   (`move_handler` re-implements recoil inline); if dead, **delete them**.
+4. **`damage.py`** (3 sites) — main damage path. Coverage settles the open question
+   about the two helpers: `apply_recoil` (line 150) is **dead — delete it**;
+   `apply_lifesteal` is live, called from `move_handler.py:125`. Note
+   `battle/__init__.py` re-exports `apply_lifesteal`, so Step A touches this too.
 5. **`move_handler.py`** (2 HP sites + stat changes) — recoil, lifesteal, heal.
    Then collapse `apply_stat_change` + `_emit_stat_events` into `state.change_stage()`:
    the `old_stats` accumulator list, the `actual_change == 0` "won't go any further"
@@ -593,6 +706,44 @@ base × stage with no ability awareness. Then drop
 5. Test: paralysed base-162 Pokémon → `get_stat("stat_spd") == 121` and
    `pokemon.stat_spd` stays `162`.
 
+#### Also: collapse the six parallel stat tables
+
+You are rewriting `get_stat` anyway, and `"stat_attk"` currently appears **24 times
+across 11 files**. Six of those are lookup tables enumerating the identical stat set:
+
+| Table | Location |
+|---|---|
+| `stage_map` | `Pokemon.get_stat` |
+| `stage_attr` | `Pokemon.apply_stage_change` |
+| `STAT_NAMES` | `move_handler` |
+| `STAT_MESSAGES` | `move_handler` |
+| `STAT_ATTR_MAP` | `move_handler` |
+| `stat_map` | `pokemon_factory` (API name -> internal) |
+
+`display_ui` and `party_builder_screen` enumerate them again for rendering. Adding a
+stat means editing six tables — and `move_handler` already carries a defensive
+fallback (`STAT_ATTR_MAP.get(stat, "stage_" + stat.replace(...))`) because the author
+did not trust them to stay in sync.
+
+Create `src/data/stats.py` with one record per stat:
+
+```python
+@dataclass(frozen=True)
+class Stat:
+    key:          str   # "stat_attk"
+    stage_attr:   str   # "stage_attk"
+    display_name: str   # "Attack"
+    rise_msg:     str   # "'s attack rose"
+    fall_msg:     str   # "'s attack fell"
+    api_name:     str   # "attack"  (PokeAPI)
+
+STATS: dict[str, Stat] = {...}
+```
+
+Then iterate `STATS` everywhere instead of re-listing. Pairs naturally with Step 7's
+`state.change_stage()`, which already absorbs `STAT_MESSAGES` and `STAT_NAMES`.
+Zero imports — `data/stats.py` is Layer 0.
+
 ⚠️ `tests/test_status_effects.py:149::test_major_status_stat_modifier_applied` will
 likely fail — read it first and confirm it was asserting the doubled value.
 
@@ -657,13 +808,55 @@ if you deleted it.
 
 ---
 
+### Step 13 — Dedupe the UI event and pane handling
+
+Must come **after Step 7** — the mutator work changes which events fire and when, so
+refactoring the consumer first means doing it twice.
+
+#### 13a — `battle_ui.resolve_and_display` has two byte-identical branches
+
+The `StatusApplied` and `StatusRemoved` handlers are **character-for-character the
+same** 11 lines. `EffectChange` is the same shape with a different formatter. These
+also repeat down the chain:
+
+```python
+trainer   = self.npc if item.trainer == self.npc.name else self.player   # x5
+widget_id = "#npc-status" if trainer == self.npc else "#player-status"   # x4
+```
+
+1. Add `_side_of(event) -> tuple[Trainer, str]` returning the trainer and its
+   `"npc"` / `"player"` widget prefix. Once Step 7 fills in real trainer names on
+   every event, this can key off `event.trainer` directly instead of comparing names.
+2. Replace the `isinstance` chain with a dispatch dict:
+   `{HPChange: self._on_hp, StatusApplied: self._on_status, ...}`.
+3. Fold `StatusApplied` / `StatusRemoved` into one handler.
+
+Roughly 60 lines -> 25.
+
+#### 13b — `menu_ui` toggles the same four panes in three places
+
+`_show_items`, `show_move_menu`, and `show_party_menu` each manually set `.display`
+on `#menu-moves`, `#menu-moves-rule`, `#menu-party`, `#menu-items`. Replace with a
+single `_show_only(pane_id)` helper so adding a fifth pane does not require edits in
+three methods.
+
+#### 13c — fix the HP-bar routing bug (known bug #6)
+
+`_get_hp_widget_id` matches by **species name**, checking the NPC party first, so in a
+mirror match every HP animation hits the NPC bar. Step 7 supplies a real `trainer` on
+every `HPChange`; route on that instead and delete the name lookup.
+
+**Verify:** play a full battle including a status effect, a stat drop, a switch, and a
+faint — all four panels still update. Then run a mirror match (same species both
+sides) and confirm HP animates on the correct bar.
+
+---
+
 ## Follow-ups (not in this refactor)
 
 - Move `locked_move` / `locked_turns` / `invulnerable_state` from `Trainer` → `Pokemon`.
   Today, switching out mid-Fly carries invulnerability to the incoming Pokémon.
   Deliberately separate so a regression can be bisected.
-- Fix `battle_ui._get_hp_widget_id` to route by `event.trainer` instead of species
-  name (Step 7 supplies the real trainer; this consumes it).
 - Fix the 44 `pyright` errors and add CI. A gate that's never green protects nothing.
 - **Ability hook registry** — replaces `abilities.py`'s name-matching chains *and*
   removes the remaining ~26 deferred imports. Instead of every engine module importing
@@ -678,6 +871,85 @@ if you deleted it.
   `abilities -> damage` becomes the only edge; the back-edge is gone. Best done
   **after Step 7**, since it touches the same call sites the mutator migration does.
   Empties the rest of `KNOWN_VIOLATIONS`.
+
+---
+
+# Appendix — Other redundancy
+
+Found during review but outside both phases. Items A1 and A2 are independent of the
+refactor and can be done at any time.
+
+## A1 — `scripts/` image pipeline has duplicated *and diverged*
+
+**Highest priority item in this appendix** — this is an active correctness
+divergence, not merely duplication.
+
+`fetch_icons.py` and `fetch_sprite.py` both define `crop_to_content`,
+`image_to_rich_markup`, `download_image`, `_hex`, and `rich_to_ansi_approx`. Diffing
+them:
+
+```
+_hex:                  IDENTICAL
+crop_to_content:       differs
+image_to_rich_markup:  differs
+download_image:        differs
+rich_to_ansi_approx:   differs
+```
+
+Four of five have drifted. Icons and battle sprites are now rendered by two different
+implementations of the same algorithm, so they can look subtly inconsistent and a fix
+to one never reaches the other.
+
+`CLAUDE.md` currently claims both "use the same half-block rendering approach."
+That is no longer true — update it either way.
+
+**Fix:** extract `scripts/lib/imaging.py`. Diff the two versions first and decide
+which behaviour is correct rather than blindly keeping one; the differences are the
+reason the outputs disagree.
+
+## A2 — Colors are defined in four places, two of them overlapping
+
+```
+src/core/colors.py     26 hex values   Rich markup for the combat log
+src/ui/type_colors.py  19 hex values   type -> color
+src/ui/theme.py        37 hex values   Textual theme variables
+src/ui/palette.py       0              accessor for theme vars  <- the right idea
+```
+
+`core/colors.py` and `ui/theme.py` share **10 identical hex literals**
+(`#cdd6f4`, `#f38ba8`, `#a6e3a1`, `#89b4fa`, `#cba6f7`, `#f9e2af`, `#fab387`,
+`#6c7086`, `#585b70`, `#313244`). Switch to `catppuccin-mocha` and the Textual chrome
+changes while the combat log stays hardcoded on the old palette.
+
+**Fix:** `palette.Colors` already does the right thing — reading
+`app.get_css_variables()`. Make `colors.py` resolve through it so the theme is the
+single source of truth. Note this makes `colors.py` presentation-layer, which is
+consistent with its move to `ui/` in Step B.
+
+`type_colors.py` is legitimately separate — Pokémon type colors are not
+theme-dependent. Leave it.
+
+## A3 — Deliberately not doing
+
+These look like smells but the fix costs more than the problem.
+
+**`Move`'s 25 constructor parameters.** Textbook "data clump," and the textbook fix is
+composition (`DamageProfile`, `StatusProfile`). Don't. `Move` mirrors the
+`move_cache.json` schema directly and `dict_to_move` is a flat field-for-field
+mapping; splitting it adds indirection at every access site to satisfy a metric. The
+only real defect here is the shared mutable default, already covered in
+"Before you start."
+
+**The four `BattleScreen` mixins.** Genuinely well separated — layout, display, menus,
+phases. The alternative (composition with four collaborator objects) needs explicit
+wiring for what Textual provides free via `self.query_one`. Leave them.
+
+**`Pokemon.active()` returning `self`.** It is a hack — it lets functions accept
+either a `Trainer` or a `Pokemon` without caring which, which is why
+`apply_lifesteal(attacker: Pokemon)` then calls `attacker.active()`. Do **not** fix it
+standalone: Step 3 rewrites every one of those signatures anyway. Pick `Trainer`
+consistently while threading `state`, then delete `Pokemon.active()` at the end —
+free, in the right order.
 
 ## What this unlocks
 

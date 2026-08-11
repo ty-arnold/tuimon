@@ -4,8 +4,12 @@ import os
 from typing import Optional
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from models import Pokemon, Move, Trainer, StatusEffect, MultiTurn, Modifier, MoveEffect
-from data import poison, paralysis, sleep, burn, freeze
+from models.pokemon import Pokemon
+from models.move import Move, MultiTurn
+from models.trainer import Trainer
+from models.status_effect import StatusEffect
+from models.modifier import Modifier, MoveEffect
+from data.status_effects import poison, paralysis, sleep, burn, freeze
 import copy
 
 def make_pokemon(name="Testmon", lvl=50, type=["Normal"],
@@ -40,12 +44,12 @@ def make_move(
     status_effect:      Optional[StatusEffect]  = None,
     multi_turn:         Optional[MultiTurn]     = None,
     hits_invulnerable:  Optional[list[str]]     = None,
-    # modifier:           Optional[StatusEffect]  = None,
+    modifier:           Optional[Modifier]      = None,
     stat_change_chance: float                   = 1.0,
     priority:           int                     = 0,  # add this
-    # immune_types:       list[str]               = [],
-    # immune_moves:       list[str]               = [],
-    # move_effect:        Optional[MoveEffect]    = None
+    immune_types:       Optional[list[str]]     = None,
+    immune_moves:       Optional[list[str]]     = None,
+    move_effect:        Optional[MoveEffect]    = None,
 ) -> Move:
     return Move(
         name               = name,
@@ -63,10 +67,60 @@ def make_move(
         status_effect      = status_effect,
         multi_turn         = multi_turn,
         hits_invulnerable  = hits_invulnerable or [],
-        # modifier           = modifier,
+        modifier           = modifier,
         stat_change_chance = stat_change_chance,
         priority           = priority,  # add this
+        immune_types       = immune_types or [],
+        immune_moves       = immune_moves or [],
+        move_effect        = move_effect,
     )
+
+
+def make_modifier(
+    name:               str            = "Test Modifier",
+    turns:              int            = 1,
+    target:             str            = "self",
+    power_modifier:     float          = 1.0,
+    accuracy_modifier:  float          = 1.0,
+    damage_modifier:    float          = 1.0,
+    type_condition:     Optional[str]  = None,
+    category_condition: Optional[str]  = None,
+    consume_message:    str            = "",
+    clears_on_switch:   bool           = True,
+) -> Modifier:
+    return Modifier(
+        name               = name,
+        turns              = turns,
+        target             = target,
+        power_modifier     = power_modifier,
+        accuracy_modifier  = accuracy_modifier,
+        damage_modifier    = damage_modifier,
+        type_condition     = type_condition,
+        category_condition = category_condition,
+        consume_message    = consume_message,
+        clears_on_switch   = clears_on_switch,
+    )
+
+
+def make_move_effect(
+    effect_type:  str                 = "protect",
+    target:       str                 = "self",
+    turns:        int                 = 1,
+    properties:   Optional[dict]      = None,
+    bypass_moves: Optional[list[str]] = None,
+    message:      str                 = "protected itself!",
+    fail_message: str                 = "but it failed!",
+) -> MoveEffect:
+    return MoveEffect(
+        effect_type  = effect_type,
+        target       = target,
+        turns        = turns,
+        properties   = properties   or {},
+        bypass_moves = bypass_moves or [],
+        message      = message,
+        fail_message = fail_message,
+    )
+
 
 def make_trainer(name="Trainer", pokemon=None):
     if pokemon is None:

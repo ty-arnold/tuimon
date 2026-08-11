@@ -1,6 +1,7 @@
 from typing import Optional
-from models import Move, Trainer, Accumulator
-from core import msg
+from models.move import Move, Accumulator
+from models.trainer import Trainer
+from battle.messages import msg
 from models.turn_result import Message, TurnEvent
 from battle.damage import calculate_damage, get_type_multiplier
 

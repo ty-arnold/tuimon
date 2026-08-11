@@ -4,9 +4,14 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from battle import check_winner, resolve_turn, apply_move, get_turn_order
+from battle.battle import check_winner, resolve_turn
+from battle.move_handler import apply_move
+from battle.initiative import get_turn_order
 from helpers import make_pokemon, make_move, make_trainer
-from models import Trainer, Pokemon, Move, BattleAction
+from models.trainer import Trainer
+from models.pokemon import Pokemon
+from models.move import Move
+from models.turn_order import BattleAction
 
 class TestBattle(unittest.TestCase):
 

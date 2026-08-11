@@ -1,7 +1,16 @@
 import requests
-from models import Pokemon, Move
-from pokemon import *
-from core import game_print
+from models.pokemon import Pokemon
+from models.move import Move
+from pokemon.cache_manager import (
+    get_pokemon_cache,
+    save_pokemon_cache,
+    get_move_cache,
+    save_move_cache,
+    dict_to_move,
+    dict_to_pokemon,
+    move_to_dict,
+)
+from ui.game_print import game_print
 
 BASE_URL = "https://pokeapi.co/api/v2"
 

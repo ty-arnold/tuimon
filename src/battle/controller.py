@@ -1,7 +1,9 @@
 # battle/controller.py
 import sys
 from typing import Optional
-from models import Trainer, Move, BattleAction
+from models.trainer import Trainer
+from models.move import Move
+from models.turn_order import BattleAction
 from models.turn_result import TurnResult, Faint, TurnEvent
 from battle.battle import resolve_turn, get_npc_move
 from core.battle_state import BattlePhase

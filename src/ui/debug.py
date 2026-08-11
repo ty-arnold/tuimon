@@ -1,5 +1,7 @@
 from core.logger import logger
-from models import Pokemon, Trainer, Move
+from models.pokemon import Pokemon
+from models.trainer import Trainer
+from models.move import Move
 
 def dump_pokemon(pokemon: Pokemon):
     logger.debug(f"--- {pokemon.name} ---")

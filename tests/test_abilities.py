@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from helpers import make_pokemon, make_move, make_trainer
-from data import poison, paralysis, sleep, burn, freeze, confusion
+from data.status_effects import poison, paralysis, sleep, burn, freeze, confusion
 from data.abilities import Ability
 from battle.abilities import check_ability_prevents
 from battle.damage import calculate_damage
@@ -225,7 +225,7 @@ class TestStatBoostAbilities(unittest.TestCase):
         self.assertEqual(modify_stat_by_ability(poke, "stat_attk", 100), 200)
 
     def test_guts_boosts_attack_when_statused(self):
-        from data import burn
+        from data.status_effects import burn
         poke = make_pokemon(stat_attk=100)
         poke.ability = Ability("Guts")
         poke.apply_status_effect(copy.deepcopy(burn))
@@ -360,7 +360,7 @@ class TestRemainingStatAbilities(unittest.TestCase):
         self.assertEqual(modify_stat_by_ability(poke, "stat_attk", 100), 200)
 
     def test_marvel_scale_boosts_defense_when_statused(self):
-        from data import burn
+        from data.status_effects import burn
         poke = make_pokemon(stat_def=100)
         poke.ability = Ability("Marvel Scale")
         poke.apply_status_effect(copy.deepcopy(burn))
@@ -453,7 +453,7 @@ class TestShedSkin(unittest.TestCase):
 
     def test_shed_skin_cures_status(self):
         import unittest.mock
-        from data import burn
+        from data.status_effects import burn
         poke = make_pokemon()
         poke.ability = Ability("Shed Skin")
         poke.apply_status_effect(copy.deepcopy(burn))
@@ -465,7 +465,7 @@ class TestShedSkin(unittest.TestCase):
 
     def test_shed_skin_does_not_always_cure(self):
         import unittest.mock
-        from data import burn
+        from data.status_effects import burn
         poke = make_pokemon()
         poke.ability = Ability("Shed Skin")
         poke.apply_status_effect(copy.deepcopy(burn))
@@ -524,7 +524,7 @@ class TestSwitchAbilities(unittest.TestCase):
         self.assertEqual(atk_poke.stage_attk, 0)
 
     def test_natural_cure_cures_on_switch_out(self):
-        from data import burn
+        from data.status_effects import burn
         poke = make_pokemon()
         poke.ability = Ability("Natural Cure")
         poke.apply_status_effect(copy.deepcopy(burn))
@@ -845,7 +845,7 @@ class TestIntegrationEdges(unittest.TestCase):
 
     def test_guts_burn_boost_ignores_burn_halving(self):
         """Guts gives 1.5x Atk and ignores Burn's 0.5x when statused."""
-        from data import burn
+        from data.status_effects import burn
         poke = make_pokemon(stat_attk=100)
         # Without abilities: Burn halves attack
         poke_no_ability = make_pokemon(stat_attk=100)

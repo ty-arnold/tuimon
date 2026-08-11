@@ -1,7 +1,10 @@
 import random
 from typing import Optional
-from models import Move, Pokemon, Trainer, StatusEffect
-from core import msg
+from models.move import Move
+from models.pokemon import Pokemon
+from models.trainer import Trainer
+from models.status_effect import StatusEffect
+from battle.messages import msg
 from models.turn_result import Message, HPChange, StatusApplied, StatusRemoved, TurnEvent
 
 

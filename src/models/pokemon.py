@@ -2,7 +2,7 @@ from typing import Optional
 from models.move          import Move
 from models.status_effect import StatusEffect
 from models.modifier      import Modifier
-from data import acc_table, stat_table
+from data.mult_tables import acc_table, stat_table
 from core.config import DEFAULT_IV, DEFAULT_EV
 
 class Pokemon:
@@ -165,9 +165,3 @@ class Pokemon:
         else:
             # only clear modifiers that should clear on switch
             self.modifiers = [m for m in self.modifiers if not m.clears_on_switch]
-
-    def print_moves(self) -> None:
-        from core.game_print import game_print
-        for i, move in enumerate(self.moveset):
-            game_print(f"{i + 1}. {move.name}")
-        game_print(f"{len(self.moveset) + 1}. Cancel")

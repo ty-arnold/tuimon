@@ -6,9 +6,10 @@ import unittest.mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from battle import apply_move, handle_multiturn, check_accuracy, apply_stat_change, apply_damage, apply_lifesteal
+from battle.move_handler import apply_move, handle_multiturn, check_accuracy, apply_stat_change
+from battle.damage import apply_damage, apply_lifesteal
 from helpers import make_pokemon, make_move, make_trainer
-from models import MultiTurn
+from models.move import MultiTurn
 
 class TestMoves(unittest.TestCase):
 

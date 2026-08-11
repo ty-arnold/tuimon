@@ -221,7 +221,7 @@ def apply_contact_abilities(attacker, defender, move, events=None) -> None:
         chance = 1.0  # already rolled
 
     if status and random.random() < chance:
-        from data import poison, paralysis, sleep, burn
+        from data.status_effects import poison, paralysis, sleep, burn
         from models.status_effect import StatusEffect
         effect_map = {"poison": poison, "paralysis": paralysis, "sleep": sleep, "burn": burn}
         effect = effect_map.get(status)

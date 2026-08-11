@@ -2,12 +2,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from textual.widgets    import ListView, ListItem, Label, Static, Tabs
 from textual.containers import Horizontal
-from core.logger     import logger
-from data.type_chart import TYPE_CHART
-from core.colors     import markup
-from ui.palette      import Colors
-from core            import BattlePhase
-from ui.type_colors  import TYPE_COLORS
+from core.logger        import logger
+from data.type_chart    import TYPE_CHART
+from ui.colors           import markup
+from ui.palette         import Colors
+from core.battle_state  import BattlePhase
+from ui.type_colors     import TYPE_COLORS
 
 if TYPE_CHECKING:
     from models.trainer import Trainer

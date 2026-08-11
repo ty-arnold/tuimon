@@ -1,11 +1,14 @@
 import random
 from typing import Optional
-from models import Move, Trainer, Pokemon
-from data import TYPE_CHART, crit_rate_table
+from models.move import Move
+from models.trainer import Trainer
+from models.pokemon import Pokemon
+from data.type_chart  import TYPE_CHART
+from data.mult_tables import crit_rate_table
 from battle.modifiers import get_modifier_value
 from battle.move_effects import get_screen_modifier
 from core.logger import logger
-from core import msg
+from battle.messages import msg
 from models.turn_result import Message, HPChange, TurnEvent
 
 

@@ -1,9 +1,12 @@
 import random
 from typing import Optional
-from models import Move, Pokemon, Trainer, TurnOrder
+from models.move import Move
+from models.pokemon import Pokemon
+from models.trainer import Trainer
+from models.turn_order import TurnOrder
 from models.turn_order import BattleAction
 from models.turn_result import Message, HPChange, TurnEvent
-from core import msg
+from battle.messages import msg
 from battle.status_effects import get_all_effects
 
 def get_turn_order(

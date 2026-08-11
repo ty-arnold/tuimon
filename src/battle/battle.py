@@ -1,6 +1,8 @@
 import random
-from core import msg
-from models import Move, Trainer, BattleAction, TurnOrder
+from battle.messages import msg
+from models.move import Move
+from models.trainer import Trainer
+from models.turn_order import BattleAction, TurnOrder
 from models.turn_result import Message, Switch, TurnEvent
 from battle.initiative   import check_can_act, get_turn_order
 from battle.move_handler   import apply_move, clear_move_lock

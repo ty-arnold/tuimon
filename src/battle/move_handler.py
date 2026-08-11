@@ -1,15 +1,18 @@
 import random
 from typing import Optional
-from models import Move, Trainer, Pokemon, StatusEffect
+from models.move import Move
+from models.trainer import Trainer
+from models.pokemon import Pokemon
+from models.status_effect import StatusEffect
 from core.logger import logger
-from core import msg
+from battle.messages import msg
 from models.turn_result import Message, HPChange, EffectChange, StatChange, StatusApplied, TurnEvent
 from battle.damage import apply_damage, apply_lifesteal, get_type_multiplier
 from battle.move_effects import is_protected, apply_move_effect
 from battle.modifiers import apply_modifier
 from battle.status_effects import apply_status_effect_from_move
 from battle.accumulator import release_accumulator
-from data import acc_table
+from data.mult_tables import acc_table
 
 def apply_move(
     move: Move, attacker: Trainer, defender: Trainer,
@@ -269,7 +272,6 @@ def check_immunity(
 
     if is_explosion_move(move.name) and check_ability_blocks_explosion(defender.active()):
         if events is not None:
-            from core.game_print import game_print
             events.append(Message(text=msg("no_effect")))
         return True
 

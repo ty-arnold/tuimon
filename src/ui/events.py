@@ -1,5 +1,6 @@
 from textual.message import Message
-from models import Move, Pokemon
+from models.move import Move
+from models.pokemon import Pokemon
 
 class MoveChosen(Message):
     """Posted when the player selects a move from the move screen."""

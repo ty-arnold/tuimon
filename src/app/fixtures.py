@@ -1,6 +1,7 @@
 from typing import Optional
 from pokemon.cache_manager import get_move_cache, dict_to_move, get_pokemon_cache, dict_to_pokemon
-from models import Trainer, Pokemon
+from models.trainer import Trainer
+from models.pokemon import Pokemon
 from pokemon.pokemon_factory import create_pokemon_from_api
 from core.logger import logger
 

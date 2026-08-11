@@ -1,7 +1,9 @@
 import random, copy
-from models import Move, Trainer, MoveEffect
+from models.move import Move
+from models.trainer import Trainer
+from models.modifier import MoveEffect
 from core.logger import logger
-from core import msg
+from battle.messages import msg
 from models.turn_result import Message, EffectChange, TurnEvent
 
 

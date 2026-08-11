@@ -1,6 +1,19 @@
-from models import Move, Trainer, Pokemon
-from core import game_print
+from models.move import Move
+from models.trainer import Trainer
+from models.pokemon import Pokemon
+from ui.game_print import game_print
 from cli.print import print_actions
+
+def print_moves(pokemon: Pokemon) -> None:
+    for i, move in enumerate(pokemon.moveset):
+        game_print(f"{i + 1}. {move.name}")
+    game_print(f"{len(pokemon.moveset) + 1}. Cancel")
+
+def print_party(trainer: Trainer) -> None:
+    game_print(f"{trainer.name}'s Party:")
+    for i, pokemon in enumerate(trainer.party):
+        game_print(f"{i + 1}. {pokemon.name}")
+    game_print(f"{len(trainer.party) + 1}. Cancel")
 
 def get_turn(trainer: Trainer) -> Move | None:
     if trainer.locked_move is not None:
@@ -15,12 +28,12 @@ def get_turn(trainer: Trainer) -> Move | None:
     while not action_selected:
         action = print_actions(trainer)
         if action == 1:
-            trainer.active().print_moves()
+            print_moves(trainer.active())
             move = get_move(trainer.party[trainer.selected_mon])
             if move is not None:
                 action_selected = True
         elif action == 2:
-            trainer.print_party()
+            print_party(trainer)
             pokemon = get_party(trainer)
         elif action == 3:
             # placeholder for items :)
@@ -69,4 +82,4 @@ def get_move(pokemon: Pokemon) -> Move | None:
             return pokemon.moveset[choice - 1]
         except (ValueError, IndexError):
             game_print("Invalid choice, please select again")
-            pokemon.print_moves()
+            print_moves(pokemon)

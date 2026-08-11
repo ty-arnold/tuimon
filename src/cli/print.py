@@ -1,6 +1,7 @@
 from pokemon.pokemon_factory import create_pokemon_from_api
-from core.game_print import game_print
-from models import Pokemon, Trainer
+from ui.game_print import game_print
+from models.pokemon import Pokemon
+from models.trainer import Trainer
 
 
 def print_actions(trainer: Trainer):

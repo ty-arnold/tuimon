@@ -6,9 +6,9 @@ from textual.containers import Horizontal, Vertical, Container, Grid
 from textual.screen     import Screen
 from models.trainer     import Trainer
 from battle.controller  import BattleController
-from core.game_print    import game_print, set_async_queue
+from ui.game_print       import game_print, set_async_queue
 from core.logger        import logger
-from core.msg             import msg
+from battle.messages      import msg
 from core.battle_state  import BattlePhase
 from ui.widgets.hp_bar  import HpBar
 

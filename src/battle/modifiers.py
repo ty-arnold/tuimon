@@ -1,6 +1,7 @@
 import copy
-from models import Pokemon, Move
-from core import msg
+from models.pokemon import Pokemon
+from models.move import Move
+from battle.messages import msg
 from models.turn_result import Message, TurnEvent
 
 

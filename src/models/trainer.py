@@ -17,12 +17,5 @@ class Trainer:
         self.active_effects:      list[MoveEffect]     = []  # tracks active field effects
         self.consecutive_protect: int                  = 0   # tracks consecutive protect uses
 
-    def print_party(self) -> None:
-        from core.game_print import game_print
-        game_print(f"{self.name}'s Party:")
-        for i, pokemon in enumerate(self.party):
-            game_print(f"{i + 1}. {pokemon.name}")
-        game_print(f"{len(self.party) + 1}. Cancel")
-
     def active(self) -> Pokemon:
         return self.party[self.selected_mon]
