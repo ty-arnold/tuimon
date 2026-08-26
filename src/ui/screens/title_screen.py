@@ -1,11 +1,10 @@
-# ui/screens/title_screen.py
-import os
 from textual.app        import App
 from textual.screen     import Screen
 from textual.app        import ComposeResult
 from textual.widgets    import Static, Footer, ListView, ListItem, Label
 from textual.containers import Vertical, Horizontal, Center
 from textual.binding    import Binding
+from core.paths         import STYLES_DIR
 
 ASCII_ART = """████████╗██╗   ██╗██╗███╗   ███╗ ██████╗ ███╗   ██╗
 ╚══██╔══╝██║   ██║██║████╗ ████║██╔═══██╗████╗  ██║
@@ -16,10 +15,7 @@ ASCII_ART = """████████╗██╗   ██╗██╗██�
 
 class TitleScreen(Screen):
 
-    CSS_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "styles", "title.tcss"
-    )
+    CSS_PATH = STYLES_DIR / "title.tcss"
 
     BINDINGS = [
         Binding("a",     "vs_ai",     "vs. AI"),

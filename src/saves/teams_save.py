@@ -1,9 +1,9 @@
 import json
 import os
+from core.paths import SAVES_DIR
 
-_SAVES_DIR  = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "saves")
-_TEAMS_FILE = os.path.join(_SAVES_DIR, "teams.json")
-_PARTY_FILE = os.path.join(_SAVES_DIR, "party.json")
+_TEAMS_FILE = os.path.join(SAVES_DIR, "teams.json")
+_PARTY_FILE = os.path.join(SAVES_DIR, "party.json")
 
 _DEFAULT_TEAM_NAMES = ["Team 1", "Team 2", "Team 3", "Team 4", "Team 5", "Team 6"]
 
@@ -27,7 +27,7 @@ def load_teams() -> list[dict]:
 
 
 def save_teams(teams: list[dict]) -> None:
-    os.makedirs(_SAVES_DIR, exist_ok=True)
+    os.makedirs(SAVES_DIR, exist_ok=True)
     with open(_TEAMS_FILE, "w") as f:
         json.dump(teams, f, indent=2)
 

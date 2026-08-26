@@ -3,8 +3,8 @@ import requests
 import json
 import os
 import sys
+import _bootstrap
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 from pokemon.cache_manager import ensure_cache_dir
 
 CACHE_DIR  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")

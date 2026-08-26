@@ -2,12 +2,7 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional
-
-# calculate project root relative to this file
-# core/logger.py is at src/core/logger.py
-# so project root is two levels up
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-LOG_DIR      = os.path.join(PROJECT_ROOT, "logs")
+from core.paths import LOG_DIR 
 
 # current log path - can be accessed externally
 current_log_path: Optional[str] = None

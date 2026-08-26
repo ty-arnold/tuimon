@@ -1,10 +1,6 @@
 import json
 import os
-
-_CACHE_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "cache", "icon_cache.json"
-)
+from core.paths import CACHE_DIR
 
 _cache: dict | None = None
 
@@ -21,8 +17,8 @@ _FALLBACK: list[str] = [
 def _load() -> dict:
     global _cache
     if _cache is None:
-        if os.path.exists(_CACHE_PATH):
-            with open(_CACHE_PATH) as f:
+        if os.path.exists(CACHE_DIR):
+            with open(CACHE_DIR) as f:
                 _cache = json.load(f)
         else:
             _cache = {}

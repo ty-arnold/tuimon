@@ -9,14 +9,14 @@ if ENABLE_LOGS:
 
 logger = logging.getLogger("tuimon")
 
-from models.trainer     import Trainer
-from models.turn_order  import BattleAction
-from battle.battle      import resolve_turn
-from ui.debug           import dump_battle_state, dump_move
-from cli.input          import get_turn
-from ui.game_print       import game_print
-from battle.messages     import msg
-from app.fixtures        import get_test_player, get_test_npc
+from models.trainer          import Trainer
+from models.turn_order       import BattleAction
+from battle.battle           import resolve_turn
+from ui.debug                import dump_battle_state, dump_move
+from cli.input               import get_turn
+from ui.game_print           import game_print
+from battle.messages         import msg
+from app.fixtures            import get_test_player, get_test_npc
 from pokemon.pokemon_factory import create_pokemon_from_api
 
 if DEBUG:

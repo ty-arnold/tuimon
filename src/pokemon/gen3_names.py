@@ -8,12 +8,9 @@ saved so subsequent calls are instant.
 import json
 import os
 import urllib.request
+from core.paths import CACHE_DIR
 
-_CACHE_DIR  = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "cache",
-)
-_NAMES_FILE = os.path.join(_CACHE_DIR, "gen3_names.json")
+_NAMES_FILE = os.path.join(CACHE_DIR, "gen3_names.json")
 _GEN3_LIMIT = 386
 _API_URL    = f"https://pokeapi.co/api/v2/pokemon?limit={_GEN3_LIMIT}&offset=0"
 
@@ -39,7 +36,7 @@ def get_gen3_names() -> list[str]:
 
 
 def _fetch_and_save() -> list[str]:
-    os.makedirs(_CACHE_DIR, exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
     req = urllib.request.Request(_API_URL, headers={"User-Agent": "tuimon/0.1 (pokemon-tui)"})
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read().decode())

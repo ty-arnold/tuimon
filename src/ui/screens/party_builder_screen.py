@@ -1,37 +1,49 @@
-import os
 from enum import Enum, auto
+from textual.app import ComposeResult
+from textual.containers import Container, Horizontal, ScrollableContainer, Vertical
+from textual.events import Key
+from textual.message import Message
+from textual.screen import ModalScreen, Screen
+from textual.worker import Worker, WorkerState
+from textual.widgets import (
+    Footer,
+    Input,
+    Label,
+    ListItem,
+    ListView,
+    Rule,
+    Static,
+    Tab,
+    Tabs,
+)
 
-from textual.app        import ComposeResult
-from textual.screen     import Screen, ModalScreen
-from textual.widgets    import Footer, ListView, ListItem, Label, Static, Input, Rule, Tabs, Tab
-from textual.containers import Horizontal, Vertical, Container, ScrollableContainer
-from textual.worker     import Worker, WorkerState
-from textual.message    import Message
-from textual.events     import Key
-
-from pokemon.cache_manager  import (
-    get_pokemon_cache, get_move_cache,
-    dict_to_pokemon, dict_to_move, move_to_dict, save_move_cache,
+from assets.icon_cache import get_icon
+from core.logger import logger
+from core.paths import STYLES_DIR
+from pokemon.cache_manager import (
+    dict_to_move,
+    dict_to_pokemon,
+    get_move_cache,
+    get_pokemon_cache,
+    move_to_dict,
+    save_move_cache,
     save_pokemon_cache,
 )
-from pokemon.gen3_names    import get_gen3_names
-from saves.teams_save      import load_teams, save_teams
-from saves.inventory_save  import load_inventory
-from assets.icon_cache       import get_icon
-from ui.palette            import Colors
-from ui.type_colors         import TYPE_COLORS
-from core.logger           import logger
-
+from pokemon.gen3_names import get_gen3_names
+from saves.inventory_save import load_inventory
+from saves.teams_save import load_teams, save_teams
+from ui.palette import Colors
+from ui.type_colors import TYPE_COLORS
 
 MAX_PARTY = 6
 MAX_MOVES = 4
 
 
 class State(Enum):
-    PARTY       = auto()   # left panel focused
-    INVENTORY   = auto()   # middle grid focused
-    POKEMON     = auto()   # right detail focused (move slots active)
-    MOVE_SEARCH = auto()   # move search pane visible
+    PARTY = auto()  # left panel focused
+    INVENTORY = auto()  # middle grid focused
+    POKEMON = auto()  # right detail focused (move slots active)
+    MOVE_SEARCH = auto()  # move search pane visible
 
 
 class RenameTeamModal(Screen):
@@ -121,40 +133,38 @@ class PokemonCell(Static):
 
 class PartyBuilderScreen(Screen):
 
-    CSS_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "styles", "party_builder.tcss"
-    )
-
     BINDINGS = [
-        ("escape",     "back",        "Back"),
-        ("d",          "delete",      "Delete"),
-        ("shift+up",   "move_up",     "Move Up"),
-        ("shift+down", "move_down",   "Move Down"),
-        ("r",          "rename_team", "Rename"),
-        ("q",          "quit_screen", "Quit"),
+        ("escape", "back", "Back"),
+        ("d", "delete", "Delete"),
+        ("shift+up", "move_up", "Move Up"),
+        ("shift+down", "move_down", "Move Down"),
+        ("r", "rename_team", "Rename"),
+        ("q", "quit_screen", "Quit"),
     ]
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 
     def __init__(self) -> None:
         super().__init__()
-        self._teams:        list[dict] = load_teams()
-        self._inventory:    list[dict] = load_inventory()
-        self._active_team:  int        = 0
-        self._party:        list[dict] = self._teams[0]["party"]
-        self._state:        State      = State.PARTY
-        self._selected_slot: int       = 0
-        self._selected_move: int       = 0
-        self._fetching:     bool       = False
-        self._detail_name:  str | None = None  # Pokémon currently shown in right pane
+        self._teams: list[dict] = load_teams()
+        self._inventory: list[dict] = load_inventory()
+        self._active_team: int = 0
+        self._party: list[dict] = self._teams[0]["party"]
+        self._state: State = State.PARTY
+        self._selected_slot: int = 0
+        self._selected_move: int = 0
+        self._fetching: bool = False
+        self._detail_name: str | None = None  # Pokémon currently shown in right pane
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="pb-main"):
             # ── Left: team tabs + party slots ──────────────────────────────
             with Container(id="party-panel"):
                 yield Tabs(
-                    *[Tab(t["name"], id=f"team-{i}") for i, t in enumerate(self._teams)],
+                    *[
+                        Tab(t["name"], id=f"team-{i}")
+                        for i, t in enumerate(self._teams)
+                    ],
                     id="team-tabs",
                 )
                 for i in range(MAX_PARTY):
@@ -185,9 +195,9 @@ class PartyBuilderScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#party-panel").border_title   = "party"
+        self.query_one("#party-panel").border_title = "party"
         self.query_one("#inventory-panel").border_title = "inventory"
-        self.query_one("#detail-panel").border_title  = "detail"
+        self.query_one("#detail-panel").border_title = "detail"
         for i in range(MAX_PARTY):
             self.query_one(f"#slot-{i}").can_focus = True
         for i in range(MAX_MOVES):
@@ -227,11 +237,11 @@ class PartyBuilderScreen(Screen):
         c = Colors(self.app)
         for i in range(MAX_PARTY):
             label = self.query_one(f"#slot-label-{i}", Label)
-            item  = self.query_one(f"#slot-{i}",       ListItem)
+            item = self.query_one(f"#slot-{i}", ListItem)
 
             if i < len(self._party):
-                slot  = self._party[i]
-                name  = slot["name"].capitalize()
+                slot = self._party[i]
+                name = slot["name"].capitalize()
                 types = self._poke_type_markup(slot["name"], c)
                 label.update(f"[bold]{name}[/bold]  {types}")
             else:
@@ -246,9 +256,11 @@ class PartyBuilderScreen(Screen):
 
     def _mount_inventory(self) -> None:
         """Mount all cells once. Use _filter_inventory() to show/hide by query."""
-        grid  = self.query_one("#inv-grid", Container)
+        grid = self.query_one("#inv-grid", Container)
         cells = [
-            PokemonCell(entry["name"], classes="pokemon-cell", id=f"cell-{entry['name']}")
+            PokemonCell(
+                entry["name"], classes="pokemon-cell", id=f"cell-{entry['name']}"
+            )
             for entry in self._inventory
         ]
         grid.mount(*cells)
@@ -263,15 +275,17 @@ class PartyBuilderScreen(Screen):
 
     def _show_detail(self, name: str) -> None:
         self._detail_name = name
-        c    = Colors(self.app)
+        c = Colors(self.app)
         data = get_pokemon_cache().get(name.lower(), {})
-        lvl  = next(
+        lvl = next(
             (e.get("level", 50) for e in self._inventory if e["name"] == name.lower()),
             50,
         )
 
-        self.query_one("#poke-name",  Label).update(f"[bold]{name.capitalize()}[/bold]")
-        self.query_one("#poke-level", Label).update(f"[{c.text_muted_ui}]Lv.{lvl}[/{c.text_muted_ui}]")
+        self.query_one("#poke-name", Label).update(f"[bold]{name.capitalize()}[/bold]")
+        self.query_one("#poke-level", Label).update(
+            f"[{c.text_muted_ui}]Lv.{lvl}[/{c.text_muted_ui}]"
+        )
         self.query_one("#poke-types", Label).update(self._poke_type_markup(name, c))
         self.query_one("#poke-stats", Static).update(self._format_stats(data, c))
 
@@ -282,17 +296,19 @@ class PartyBuilderScreen(Screen):
         move_cache = get_move_cache()
         for i in range(MAX_MOVES):
             label = self.query_one(f"#move-label-{i}", Label)
-            item  = self.query_one(f"#move-slot-{i}",  ListItem)
+            item = self.query_one(f"#move-slot-{i}", ListItem)
             slugs = party_slot.get("moves", []) if party_slot else []
 
             if i < len(slugs):
-                slug       = slugs[i]
-                move_data  = move_cache.get(slug, {})
-                move_name  = move_data.get("name", slug.replace("-", " ").title())
-                move_type  = (move_data.get("type") or ["?"])[0]
+                slug = slugs[i]
+                move_data = move_cache.get(slug, {})
+                move_name = move_data.get("name", slug.replace("-", " ").title())
+                move_type = (move_data.get("type") or ["?"])[0]
                 type_color = TYPE_COLORS.get(move_type, {}).get("text", c.text_ui)
                 cat_markup = self._cat_markup(move_data.get("category", ""), c)
-                label.update(f"[{c.text_ui}]{move_name}[/{c.text_ui}]  [{type_color}]{move_type}[/{type_color}]  {cat_markup}")
+                label.update(
+                    f"[{c.text_ui}]{move_name}[/{c.text_ui}]  [{type_color}]{move_type}[/{type_color}]  {cat_markup}"
+                )
             else:
                 label.update(f"[{c.text_dim}](empty)[/{c.text_dim}]")
 
@@ -340,7 +356,7 @@ class PartyBuilderScreen(Screen):
         if self._state != State.INVENTORY:
             return
         """Fill the selected party slot with this Pokémon."""
-        name      = event.name
+        name = event.name
         slot_data = {"name": name, "level": 50, "moves": []}
 
         if self._selected_slot < len(self._party):
@@ -362,8 +378,8 @@ class PartyBuilderScreen(Screen):
             idx = int(tab_id.split("-")[1])
         except (IndexError, ValueError):
             return
-        self._active_team   = idx
-        self._party         = self._teams[idx]["party"]
+        self._active_team = idx
+        self._party = self._teams[idx]["party"]
         self._selected_slot = 0
         self._refresh_party_list()
 
@@ -451,26 +467,26 @@ class PartyBuilderScreen(Screen):
         results.clear()
 
         # Get learnset from the Pokémon currently shown in detail pane
-        name       = self._detail_name
+        name = self._detail_name
         if not name:
             return
-        all_slugs  = get_pokemon_cache().get(name.lower(), {}).get("moves", [])
-        q          = query.lower().strip().replace(" ", "-")
-        matches    = [s for s in all_slugs if q in s][:20]
+        all_slugs = get_pokemon_cache().get(name.lower(), {}).get("moves", [])
+        q = query.lower().strip().replace(" ", "-")
+        matches = [s for s in all_slugs if q in s][:20]
         move_cache = get_move_cache()
-        c          = Colors(self.app)
+        c = Colors(self.app)
 
         for slug in matches:
             cached = move_cache.get(slug)
             if cached:
-                move_name  = cached.get("name", slug.replace("-", " ").title())
-                move_type  = (cached.get("type") or ["?"])[0]
+                move_name = cached.get("name", slug.replace("-", " ").title())
+                move_type = (cached.get("type") or ["?"])[0]
                 type_color = TYPE_COLORS.get(move_type, {}).get("text", c.text_ui)
-                cat        = self._cat_markup(cached.get("category", ""), c)
-                text       = f"[{c.text_ui}]{move_name}[/{c.text_ui}]  [{type_color}]{move_type}[/{type_color}]  {cat}"
+                cat = self._cat_markup(cached.get("category", ""), c)
+                text = f"[{c.text_ui}]{move_name}[/{c.text_ui}]  [{type_color}]{move_type}[/{type_color}]  {cat}"
             else:
                 text = f"[{c.text_muted_ui}]{slug.replace('-', ' ').title()}[/{c.text_muted_ui}]"
-            item      = ListItem(Label(text, markup=True))
+            item = ListItem(Label(text, markup=True))
             item.data = slug  # type: ignore[attr-defined]
             results.append(item)
 
@@ -498,16 +514,21 @@ class PartyBuilderScreen(Screen):
             return
         self._fetching = True
         loading = self.query_one("#move-loading", Label)
-        c       = Colors(self.app)
+        c = Colors(self.app)
         loading.update(f"[{c.warning}]Loading…[/{c.warning}]")
         loading.display = True
 
         def _do_fetch() -> str | None:
+            from pokemon.cache_manager import (
+                get_move_cache,
+                move_to_dict,
+                save_move_cache,
+            )
             from pokemon.pokemon_factory import fetch_move_data
-            from pokemon.cache_manager  import move_to_dict, get_move_cache, save_move_cache
+
             move = fetch_move_data(slug)
             if move is not None:
-                cache       = get_move_cache()
+                cache = get_move_cache()
                 cache[slug] = move_to_dict(move)
                 save_move_cache(cache)
             return slug if move is not None else None
@@ -525,13 +546,15 @@ class PartyBuilderScreen(Screen):
                 self._add_move(slug)
             else:
                 c = Colors(self.app)
-                self.query_one("#move-loading", Label).update(f"[{c.error}]Move not found.[/{c.error}]")
+                self.query_one("#move-loading", Label).update(
+                    f"[{c.error}]Move not found.[/{c.error}]"
+                )
                 self.query_one("#move-loading").display = True
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 
     def _poke_type_markup(self, name: str, c: Colors) -> str:
-        data  = get_pokemon_cache().get(name.lower(), {})
+        data = get_pokemon_cache().get(name.lower(), {})
         types = data.get("type", [])
         parts = []
         for t in types:
@@ -543,15 +566,17 @@ class PartyBuilderScreen(Screen):
         if not data:
             return ""
         stats = [
-            ("HP",  data.get("hp",           0)),
-            ("ATK", data.get("stat_attk",     0)),
-            ("DEF", data.get("stat_def",      0)),
-            ("SpA", data.get("stat_sp_attk",  0)),
-            ("SpD", data.get("stat_sp_def",   0)),
-            ("SPD", data.get("stat_spd",      0)),
+            ("HP", data.get("hp", 0)),
+            ("ATK", data.get("stat_attk", 0)),
+            ("DEF", data.get("stat_def", 0)),
+            ("SpA", data.get("stat_sp_attk", 0)),
+            ("SpD", data.get("stat_sp_def", 0)),
+            ("SPD", data.get("stat_spd", 0)),
         ]
-        parts = [f"[{c.text_label}]{lbl}[/{c.text_label}] [{c.text_ui}]{val}[/{c.text_ui}]"
-                 for lbl, val in stats]
+        parts = [
+            f"[{c.text_label}]{lbl}[/{c.text_label}] [{c.text_ui}]{val}[/{c.text_ui}]"
+            for lbl, val in stats
+        ]
         return "  ".join(parts)
 
     def _cat_markup(self, category: str, c: Colors) -> str:

@@ -11,19 +11,29 @@ Usage:
 
 import io
 import json
-import sys
 import os
+import sys
+
 import requests
 from PIL import Image
 
-POKEAPI    = "https://pokeapi.co/api/v2/pokemon"
-CACHE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache", "icon_cache.json")
-POK_CACHE  = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache", "pokemon_cache.json")
+POKEAPI = "https://pokeapi.co/api/v2/pokemon"
+CACHE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "cache",
+    "icon_cache.json",
+)
+POK_CACHE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "cache",
+    "pokemon_cache.json",
+)
 
 ICON_W, ICON_H = 12, 6
 
 
 # ── Fetching ──────────────────────────────────────────────────────────────────
+
 
 def fetch_icon_url(name: str) -> str:
     resp = requests.get(f"{POKEAPI}/{name.lower()}", timeout=10)
@@ -39,6 +49,7 @@ def download_image(url: str) -> Image.Image:
 
 # ── Conversion ────────────────────────────────────────────────────────────────
 
+
 def _hex(r: int, g: int, b: int) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
@@ -49,8 +60,8 @@ def crop_to_content(img: Image.Image) -> Image.Image:
 
 
 def image_to_rich_markup(img: Image.Image, width: int, height: int) -> list[str]:
-    img  = crop_to_content(img)
-    img  = img.resize((width, height * 2), Image.NEAREST)
+    img = crop_to_content(img)
+    img = img.resize((width, height * 2), Image.NEAREST)
     rows = []
 
     for row in range(height):
@@ -81,6 +92,7 @@ def image_to_rich_markup(img: Image.Image, width: int, height: int) -> list[str]
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
 
+
 def load_cache() -> dict:
     if os.path.exists(CACHE_PATH):
         with open(CACHE_PATH) as f:
@@ -101,8 +113,8 @@ def cache_icon(name: str, cache: dict, force: bool = False) -> bool:
         return False
 
     try:
-        url  = fetch_icon_url(key)
-        img  = download_image(url).convert("RGBA")
+        url = fetch_icon_url(key)
+        img = download_image(url).convert("RGBA")
         rows = image_to_rich_markup(img, ICON_W, ICON_H)
         cache[key] = rows
         print(f"  {name}: cached ({ICON_W}×{ICON_H})")
@@ -114,17 +126,25 @@ def cache_icon(name: str, cache: dict, force: bool = False) -> bool:
 
 # ── Preview (ANSI, for terminal testing) ─────────────────────────────────────
 
+
 def rich_to_ansi_approx(rows: list[str]) -> list[str]:
     import re
+
     out = []
     for row in rows:
-        line = re.sub(r"\[#([0-9a-f]{6}) on #([0-9a-f]{6})\](.)\[/[^\]]+\]",
-                      lambda m: f"\033[38;2;{int(m[1][0:2],16)};{int(m[1][2:4],16)};{int(m[1][4:6],16)}m"
-                                f"\033[48;2;{int(m[2][0:2],16)};{int(m[2][2:4],16)};{int(m[2][4:6],16)}m"
-                                f"{m[3]}\033[0m", row)
-        line = re.sub(r"\[#([0-9a-f]{6})\](.)\[/#[0-9a-f]{6}\]",
-                      lambda m: f"\033[38;2;{int(m[1][0:2],16)};{int(m[1][2:4],16)};{int(m[1][4:6],16)}m"
-                                f"{m[2]}\033[0m", line)
+        line = re.sub(
+            r"\[#([0-9a-f]{6}) on #([0-9a-f]{6})\](.)\[/[^\]]+\]",
+            lambda m: f"\033[38;2;{int(m[1][0:2],16)};{int(m[1][2:4],16)};{int(m[1][4:6],16)}m"
+            f"\033[48;2;{int(m[2][0:2],16)};{int(m[2][2:4],16)};{int(m[2][4:6],16)}m"
+            f"{m[3]}\033[0m",
+            row,
+        )
+        line = re.sub(
+            r"\[#([0-9a-f]{6})\](.)\[/#[0-9a-f]{6}\]",
+            lambda m: f"\033[38;2;{int(m[1][0:2],16)};{int(m[1][2:4],16)};{int(m[1][4:6],16)}m"
+            f"{m[2]}\033[0m",
+            line,
+        )
         out.append(line)
     return out
 
@@ -132,9 +152,9 @@ def rich_to_ansi_approx(rows: list[str]) -> list[str]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    args  = sys.argv[1:]
+    args = sys.argv[1:]
     force = "--force" in args
-    args  = [a for a in args if a != "--force"]
+    args = [a for a in args if a != "--force"]
 
     if not args:
         print("Usage: fetch_icons.py [--force] <name> [name ...] | --all")
@@ -144,8 +164,9 @@ if __name__ == "__main__":
 
     if "--all" in args:
         # Use gen3_names as the authoritative source (covers all 386)
-        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
+        import _bootstrap
         from pokemon.gen3_names import get_gen3_names
+
         names = get_gen3_names()
         print(f"Caching icons for {len(names)} pokemon...")
         for name in names:

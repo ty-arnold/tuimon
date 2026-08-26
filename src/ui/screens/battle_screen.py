@@ -1,50 +1,60 @@
-import os
 import asyncio
-from textual.app        import ComposeResult
-from textual.widgets    import RichLog, Static, Footer, ListView, ListItem, Label, Rule, Tabs, Tab
-from textual.containers import Horizontal, Vertical, Container, Grid
-from textual.screen     import Screen
-from models.trainer     import Trainer
-from battle.controller  import BattleController
-from ui.game_print       import game_print, set_async_queue
-from core.logger        import logger
-from battle.messages      import msg
-from core.battle_state  import BattlePhase
-from ui.widgets.hp_bar  import HpBar
 
-from ui.mixins.battle_ui     import BattleUIMixin
-from ui.mixins.menu_ui       import MenuUIMixin
-from ui.mixins.display_ui    import DisplayUIMixin
+from textual.app import ComposeResult
+from textual.containers import Container, Grid, Horizontal, Vertical
+from textual.screen import Screen
+from textual.widgets import (
+    Footer,
+    Label,
+    ListItem,
+    ListView,
+    RichLog,
+    Rule,
+    Static,
+    Tab,
+    Tabs,
+)
+
+from battle.controller import BattleController
+from battle.messages import msg
+from core.battle_state import BattlePhase
+from core.logger import logger
+from core.paths import STYLES_DIR
+from models.trainer import Trainer
+from ui.game_print import game_print, set_async_queue
+from ui.mixins.battle_ui import BattleUIMixin
+from ui.mixins.display_ui import DisplayUIMixin
+from ui.mixins.menu_ui import MenuUIMixin
 from ui.mixins.phase_handler import PhaseHandlerMixin
+from ui.widgets.hp_bar import HpBar
 
-class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin, Screen):
 
-    CSS_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "styles",
-        "battle.tcss"
-    )
+class BattleScreen(
+    BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin, Screen
+):
+
+    CSS_PATH = STYLES_DIR / "battle.tcss"
 
     BINDINGS = [
-        ("left",   "prev_tab", ""),
-        ("right",  "next_tab", ""),
-        ("enter",  "confirm",  ""),
-        ("f",      "fight",    "Fight"),
-        ("p",      "party",    "Party"),
-        ("b",      "bag",      "Bag"),
-        ("r",      "run",      "Run"),
-        ("escape", "cancel",   "Cancel"),
-        ("q",      "quit",     "Quit"),
+        ("left", "prev_tab", ""),
+        ("right", "next_tab", ""),
+        ("enter", "confirm", ""),
+        ("f", "fight", "Fight"),
+        ("p", "party", "Party"),
+        ("b", "bag", "Bag"),
+        ("r", "run", "Run"),
+        ("escape", "cancel", "Cancel"),
+        ("q", "quit", "Quit"),
     ]
 
     def __init__(self, player: Trainer, npc: Trainer) -> None:
         super().__init__()
-        self.player         = player
-        self.npc            = npc
-        self._input_enabled      = True
-        self._battle_ready       = False
-        self._prev_arrow_label   = None
-        self._prev_text          = None
+        self.player = player
+        self.npc = npc
+        self._input_enabled = True
+        self._battle_ready = False
+        self._prev_arrow_label = None
+        self._prev_text = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main"):
@@ -54,8 +64,8 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                         Tab("Moves", id="tab-moves"),
                         Tab("Party", id="tab-party"),
                         Tab("Items", id="tab-items"),
-                        Tab("Run",   id="tab-run"),
-                        Tab("Menu",  id="tab-menu"),
+                        Tab("Run", id="tab-run"),
+                        Tab("Menu", id="tab-menu"),
                         id="menu-tabs",
                     )
                     yield ListView(id="menu-moves")
@@ -65,7 +75,7 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
                     with Container(id="detail-pane"):
                         yield Label("", id="detail-name")
                         yield Grid(id="detail-grid")
-                        yield Rule(id="menu-moves-rule") 
+                        yield Rule(id="menu-moves-rule")
                         yield Label("", id="detail-description", markup=True)
                 with Container(id="combat-log-panel"):
                     yield RichLog(id="combat-log", markup=True)
@@ -105,23 +115,23 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
         set_async_queue(self.message_queue)
         self.controller = BattleController(self.player, self.npc)
 
-        self.query_one("#action-pane").border_title      = "actions"
+        self.query_one("#action-pane").border_title = "actions"
         self.query_one("#combat-log-panel").border_title = "log"
-        self.query_one("#sprite-panel").border_title     = "vs"
+        self.query_one("#sprite-panel").border_title = "vs"
 
-        self.query_one("#menu-moves").display      = False
+        self.query_one("#menu-moves").display = False
         self.query_one("#menu-moves-rule").display = False
-        self.query_one("#menu-party").display      = False
-        self.query_one("#menu-items").display      = False
-        self.query_one("#detail-pane").display     = False
+        self.query_one("#menu-party").display = False
+        self.query_one("#menu-items").display = False
+        self.query_one("#detail-pane").display = False
 
-        self.query_one("#npc-type").styles.margin      = (0, 0, 1, 0)
-        self.query_one("#player-type").styles.margin   = (0, 0, 1, 0)
-        self.query_one("#npc-panel").styles.padding    = (1, 1, 0, 1)
+        self.query_one("#npc-type").styles.margin = (0, 0, 1, 0)
+        self.query_one("#player-type").styles.margin = (0, 0, 1, 0)
+        self.query_one("#npc-panel").styles.padding = (1, 1, 0, 1)
         self.query_one("#player-panel").styles.padding = (1, 1, 0, 1)
-        self.query_one("#npc-effects").styles.margin    = (1, 0, 0, 0)
+        self.query_one("#npc-effects").styles.margin = (1, 0, 0, 0)
         self.query_one("#player-effects").styles.margin = (1, 0, 0, 0)
-        self.query_one("#action-pane").styles.padding   = (1, 2, 0, 2)
+        self.query_one("#action-pane").styles.padding = (1, 2, 0, 2)
 
         self.update_display()
         self._battle_ready = True
@@ -132,11 +142,12 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
 
     def _animate_sprites(self) -> None:
         from assets.sprite_cache import get_sprite_frames
+
         self._anim_frame += 1
-        npc    = self.npc.active()
+        npc = self.npc.active()
         player = self.player.active()
 
-        npc_frames    = get_sprite_frames(npc.name,    "front")
+        npc_frames = get_sprite_frames(npc.name, "front")
         player_frames = get_sprite_frames(player.name, "back")
 
         if npc_frames:
@@ -170,7 +181,10 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
     def action_party(self) -> None:
         if not self._input_enabled:
             return
-        if self.controller.phase in (BattlePhase.PLAYER_ACTION, BattlePhase.SWITCH_PROMPT):
+        if self.controller.phase in (
+            BattlePhase.PLAYER_ACTION,
+            BattlePhase.SWITCH_PROMPT,
+        ):
             self.query_one("#menu-tabs", Tabs).active = "tab-party"
 
     def action_bag(self) -> None:
@@ -191,7 +205,8 @@ class BattleScreen(BattleUIMixin, MenuUIMixin, DisplayUIMixin, PhaseHandlerMixin
     def action_confirm(self) -> None:
         tabs = self.query_one("#menu-tabs", Tabs)
         match tabs.active:
-            case "tab-run": self.action_quit()
+            case "tab-run":
+                self.action_quit()
 
     def action_cancel(self) -> None:
         pass

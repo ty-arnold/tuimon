@@ -1,8 +1,8 @@
 import json
 import os
+from core.paths import SAVES_DIR
 
-_SAVES_DIR  = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "saves")
-_PARTY_FILE = os.path.join(_SAVES_DIR, "party.json")
+_PARTY_FILE = os.path.join(SAVES_DIR, "party.json")
 
 
 def load_party_data() -> list[dict]:
@@ -16,7 +16,7 @@ def load_party_data() -> list[dict]:
 
 def save_party_data(party: list[dict]) -> None:
     """Persist raw party data to disk immediately."""
-    os.makedirs(_SAVES_DIR, exist_ok=True)
+    os.makedirs(SAVES_DIR, exist_ok=True)
     with open(_PARTY_FILE, "w") as f:
         json.dump(party, f, indent=2)
 

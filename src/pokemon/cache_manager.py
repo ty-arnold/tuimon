@@ -1,8 +1,8 @@
 import json
 import os
 from models.move import Move
+from core.paths import CACHE_DIR
 
-CACHE_DIR     = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "cache")
 POKEMON_CACHE = os.path.join(CACHE_DIR, "pokemon_cache.json")
 MOVE_CACHE    = os.path.join(CACHE_DIR, "move_cache.json")
 ABILITY_CACHE = os.path.join(CACHE_DIR, "abilities.json")

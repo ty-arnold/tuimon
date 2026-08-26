@@ -1,8 +1,8 @@
 import json
 import os
+from core.paths import SAVES_DIR
 
-_SAVES_DIR      = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "saves")
-_INVENTORY_FILE = os.path.join(_SAVES_DIR, "inventory.json")
+_INVENTORY_FILE = os.path.join(SAVES_DIR, "inventory.json")
 
 
 def load_inventory() -> list[dict]:
@@ -16,7 +16,7 @@ def load_inventory() -> list[dict]:
 
 
 def save_inventory(inventory: list[dict]) -> None:
-    os.makedirs(_SAVES_DIR, exist_ok=True)
+    os.makedirs(SAVES_DIR, exist_ok=True)
     with open(_INVENTORY_FILE, "w") as f:
         json.dump(inventory, f, indent=2)
 
