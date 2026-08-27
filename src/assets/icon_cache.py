@@ -17,8 +17,8 @@ _FALLBACK: list[str] = [
 def _load() -> dict:
     global _cache
     if _cache is None:
-        if os.path.exists(CACHE_DIR):
-            with open(CACHE_DIR) as f:
+        if os.path.exists(CACHE_DIR/"icon_cache.json"):
+            with open(CACHE_DIR/"icon_cache.json") as f:
                 _cache = json.load(f)
         else:
             _cache = {}
